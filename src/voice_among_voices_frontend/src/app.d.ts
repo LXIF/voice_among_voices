@@ -7,6 +7,13 @@ declare global {
     // interface PageData {}
     // interface Platform {}
   }
+
+  type VoiceNode = {
+    id: bigint;
+    x: bigint;
+    y: bigint;
+    sample: string;
+  };
 }
 
 export {};

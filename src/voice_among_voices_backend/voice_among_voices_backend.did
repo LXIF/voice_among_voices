@@ -1,3 +1,12 @@
+type VoiceNode = record {
+    id : nat16;
+    x : nat64;
+    y : nat64;
+    sample : text;
+};
+type VoiceNodeStore = vec VoiceNode;
+
 service : {
-    "greet": (text) -> (text) query;
-}
+    "add_voice_node" : (VoiceNode) -> ();
+    "voice_nodes" : () -> (VoiceNodeStore) query;
+};

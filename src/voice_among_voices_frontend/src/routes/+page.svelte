@@ -1,26 +1,75 @@
-<script>
-  import "../index.scss";
-  import { backend } from "$lib/canisters";
+<script lang="ts">
+    import {backend} from '$lib/canisters';
+    import {onMount} from 'svelte';
+    import NodeMap from '$lib/components/NodeMap.svelte';
 
-  let greeting = "";
+    let voiceNodes: VoiceNode[] = [];
+    let id = '';
+    let x = '';
+    let y = '';
+    let sample = '';
 
-  function onSubmit(event) {
-    const name = event.target.name.value;
-    backend.greet(name).then((response) => {
-      greeting = response;
+    async function onSubmit(event: SubmitEvent) {
+        const voiceNode = {
+            id: Number(id),
+            x: Number(x),
+            y: Number(y),
+            sample: sample,
+        };
+
+        // Add the voice node to the backend
+        await backend.add_voice_node(voiceNode);
+
+        // Fetch the updated list of voice nodes
+        voiceNodes = await backend.voice_nodes();
+    }
+
+    onMount(async () => {
+        voiceNodes = await backend.voice_nodes();
     });
-    return false;
-  }
 </script>
 
-<main>
-  <img src="/logo2.svg" alt="DFINITY logo" />
-  <br />
-  <br />
-  <form action="#" on:submit|preventDefault={onSubmit}>
-    <label for="name">Enter your name: &nbsp;</label>
-    <input id="name" alt="Name" type="text" />
-    <button type="submit">Click Me!</button>
-  </form>
-  <section id="greeting">{greeting}</section>
+<main class="flex justify-center items-center flex-col">
+    <h1>VOICE AMONG VOICES</h1>
+    <form on:submit|preventDefault={onSubmit}>
+        <label for="id">Enter ID (u16): &nbsp;</label>
+        <input
+            id="id"
+            alt="ID"
+            type="number"
+            bind:value={id}
+        />
+        <br /><br />
+
+        <label for="x">Enter X coordinate (u32): &nbsp;</label>
+        <input
+            id="x"
+            alt="X"
+            type="number"
+            bind:value={x}
+        />
+        <br /><br />
+
+        <label for="y">Enter Y coordinate (u32): &nbsp;</label>
+        <input
+            id="y"
+            alt="Y"
+            type="number"
+            bind:value={y}
+        />
+        <br /><br />
+
+        <label for="sample">Enter Sample: &nbsp;</label>
+        <input
+            id="sample"
+            alt="Sample"
+            type="text"
+            bind:value={sample}
+        />
+        <br /><br />
+
+        <button type="submit">Add Voice Node</button>
+    </form>
+
+    <NodeMap nodes={voiceNodes} />
 </main>
