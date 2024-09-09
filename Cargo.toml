@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/voice_among_voices_backend"
+]
+resolver = "2"
