@@ -8,11 +8,16 @@ declare global {
     // interface Platform {}
   }
 
-  type VoiceNode = {
-    id: bigint;
-    x: bigint;
-    y: bigint;
+  type VoiceNodeIngress = {
+    x: number;
+    y: number;
     sample: string;
+  };
+
+  type VoiceNodeEgress = {
+    id: bigint;
+    x: number;
+    y: number;
   };
 }
 

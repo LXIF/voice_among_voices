@@ -1,18 +1,25 @@
 <script lang="ts">
     import {onMount} from 'svelte';
+    import {mapRange, clamp} from '$lib/utils/mathUtils';
+    import DroppableNode from './DroppableNode.svelte';
+    import {createEventDispatcher} from 'svelte';
 
-    export let nodes: VoiceNode[] = [];
+    export let nodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
     let physicsActive = false;
     let rendering = false;
     let resetting = false;
+    let moving = false;
+    const velocityCutoff = 0.2; // TODO: get from canister
+    const forceCutoff = 100; // TODO: get from can
+    const dispatch = createEventDispatcher();
 
     type PhysicsBody = {
         collider: any;
         rigidBody: any;
-        voiceNode: VoiceNode;
+        voiceNode: VoiceNodeEgress;
     };
 
     onMount(() => {
@@ -21,9 +28,14 @@
         }
     });
 
-    $: if (context && nodes.length > 1 && !rendering && !resetting) {
+    $: if (context && nodes.length >= 1 && !rendering && !resetting) {
         rendering = true;
         setupAndRender();
+    }
+
+    $: if (!!nodes) {
+        console.log('bargle');
+        resetPhysics();
     }
 
     ///////////PHYSICS//////////
@@ -37,9 +49,9 @@
             world = new RAPIER.World(gravity);
 
             // Magnetism parameters in logical coords
-            const maxDistance = 20;
-            const forceStrength = 1000; // TODO: get this from sample length too
-            const linearDamping = 2;
+            const maxDistance = 20; // TODO: get these params from canister
+            const forceStrength = 3000; // TODO: get this from sample length too
+            const linearDamping = 10;
 
             function applyMagnetismForces() {
                 physicsBodies.forEach((body, i) => {
@@ -59,12 +71,16 @@
                             const localBody = collider.parent();
                             if (!localBody) return true;
                             const localBodyUserData =
-                                localBody?.userData as VoiceNode;
-                            if (localBodyUserData.id === body.voiceNode.id)
-                                return true;
+                                localBody?.userData as VoiceNodeEgress;
+                            // if (localBodyUserData.id === body.voiceNode.id)
+                            //     return true;
                             bodiesWithinReach.push(localBody);
                             return true;
-                        }
+                        },
+                        null,
+                        null,
+                        null,
+                        body.rigidBody
                     );
 
                     // Create resultant force out of all their vectors
@@ -95,8 +111,15 @@
                         );
                     });
 
-                    // Apply the force
+                    // reset the forces
                     body.rigidBody.resetForces(true);
+                    // check if resultant is above threshold
+                    const resultant = magneticForces.reduce((acc, current) => {
+                        return acc + Math.sqrt(current.x ** 2 + current.y ** 2);
+                    }, 0);
+
+                    if (resultant < forceCutoff) return;
+
                     magneticForces.forEach((force) =>
                         body.rigidBody.addForce(force, true)
                     );
@@ -169,6 +192,13 @@
         return (logicalY / logicalHeight) * canvasHeight;
     }
 
+    // Converts canvas pixel coordinates to logical coordinates
+    function canvasToLogical(x: number, y: number) {
+        const logicalX = (x / canvasWidth) * logicalWidth;
+        const logicalY = (y / canvasHeight) * logicalHeight;
+        return {logicalX, logicalY};
+    }
+
     // Draw the nodes on the canvas
     function render(
         bodies: PhysicsBody[],
@@ -181,6 +211,7 @@
         if (world && physicsActive) {
             magnetismFunction();
             world.step();
+            checkIfStillMoving(bodies);
         }
 
         if (context && bodies && bodies.length > 1) {
@@ -190,15 +221,38 @@
             // Draw each VoiceNode as a circle using the mapped coordinates
             bodies.forEach((body) => {
                 const bodyPos = body.rigidBody.translation();
+                const linVel = body.rigidBody.linvel();
+                const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
+                const colorVel = clamp(mapRange(absVel, 0, 2, 0, 255), 0, 255);
                 const canvasX = mapToCanvasX(Number(bodyPos.x));
                 const canvasY = mapToCanvasY(Number(bodyPos.y));
 
                 context!.beginPath();
-                context!.arc(canvasX, canvasY, 10, 0, Math.PI * 2);
-                context!.fillStyle = 'blue';
+                context!.ellipse(canvasX, canvasY, 10, 10, 0, 0, Math.PI * 2);
+                context!.fillStyle = `rgb(${colorVel},${colorVel},0)`;
                 context!.fill();
                 context!.stroke();
                 context!.closePath();
+            });
+        }
+
+        function checkIfStillMoving(bodies: PhysicsBody[]) {
+            moving = false;
+            bodies.forEach((body) => {
+                if (body.rigidBody.isMoving()) {
+                    moving = true;
+                }
+            });
+        }
+
+        function stopSlowNodes(bodies: PhysicsBody[]) {
+            bodies.forEach((body) => {
+                const linVel = body.rigidBody.linvel();
+                const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
+
+                if (absVel < velocityCutoff) {
+                    body.rigidBody.setLinvel({x: 0, y: 0}, true);
+                }
             });
         }
 
@@ -224,7 +278,6 @@
 
     function togglePhysics() {
         physicsActive = !physicsActive;
-        console.log(physicsActive);
     }
 
     function resetPhysics() {
@@ -238,6 +291,32 @@
             setupAndRender();
         }, 20);
     }
+
+    /////for drag and drop/////
+
+    function handleDragOver(e: DragEvent) {
+        e.preventDefault();
+    }
+
+    async function handleDrop(e: DragEvent) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const canvasX = e.clientX - rect.left;
+        const canvasY = e.clientY - rect.top;
+
+        const {logicalX, logicalY} = canvasToLogical(canvasX, canvasY);
+
+        console.log('dropped at logical coordinates:', {logicalX, logicalY});
+
+        const voiceNode = {
+            x: logicalX,
+            y: logicalY,
+            sample: 'test',
+        };
+
+        dispatch('dropNewNode', voiceNode as VoiceNodeIngress);
+        rendering = false;
+    }
 </script>
 
 <main>
@@ -246,17 +325,20 @@
         width={canvasWidth}
         height={canvasHeight}
         on:click={handleClick}
+        on:dragover={handleDragOver}
+        on:drop={handleDrop}
         style="border: 1px solid black;"
     ></canvas>
-    <button on:click={togglePhysics}>toggle physics</button>
-    <button on:click={resetPhysics}>reset physics</button>
+    <button
+        class="bg-slate-500 rounded-full"
+        on:click={togglePhysics}>toggle physics</button
+    >
+    <button
+        class="bg-slate-500 rounded-full"
+        on:click={resetPhysics}>reset physics</button
+    >
+    <div>
+        moving: {moving}
+    </div>
+    <DroppableNode />
 </main>
-
-<style>
-    main {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-    }
-</style>

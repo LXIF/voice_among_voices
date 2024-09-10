@@ -1,12 +1,18 @@
-type VoiceNode = record {
-    id : nat16;
-    x : nat64;
-    y : nat64;
+type VoiceNodeIngress = record {
+    x : float64;
+    y : float64;
     sample : text;
 };
-type VoiceNodeStore = vec VoiceNode;
+
+type VoiceNodeEgress = record {
+    id : nat64;
+    x : float64;
+    y : float64;
+};
+
+type VoiceNodeStoreEgress = vec VoiceNodeEgress;
 
 service : {
-    "add_voice_node" : (VoiceNode) -> ();
-    "voice_nodes" : () -> (VoiceNodeStore) query;
+    "add_voice_node" : (VoiceNodeIngress) -> ();
+    "voice_nodes" : () -> (VoiceNodeStoreEgress) query;
 };

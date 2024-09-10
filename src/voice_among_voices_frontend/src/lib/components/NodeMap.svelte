@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from 'svelte';
 
-    export let nodes: VoiceNode[] = [];
+    export let nodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
@@ -35,7 +35,7 @@
                 const canvasY = mapToCanvasY(Number(node.y));
 
                 context!.beginPath();
-                context!.arc(canvasX, canvasY, 10, 0, Math.PI * 2);
+                context!.ellipse(canvasX, canvasY, 10, 10, 0, 0, Math.PI * 2);
                 context!.fillStyle = 'blue';
                 context!.fill();
                 context!.stroke();

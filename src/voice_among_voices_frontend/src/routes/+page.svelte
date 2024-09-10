@@ -4,7 +4,7 @@
     import NodeMap from '$lib/components/NodeMap.svelte';
     import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
 
-    let voiceNodes: VoiceNode[] = [];
+    let voiceNodes: VoiceNodeEgress[] = [];
     let id = '';
     let x = '';
     let y = '';
@@ -12,7 +12,6 @@
 
     async function onSubmit(event: SubmitEvent) {
         const voiceNode = {
-            id: Number(id),
             x: Number(x),
             y: Number(y),
             sample: sample,
@@ -28,20 +27,16 @@
     onMount(async () => {
         voiceNodes = await backend.voice_nodes();
     });
+
+    const handleDropNewNode = async (event: CustomEvent) => {
+        await backend.add_voice_node(event.detail);
+        voiceNodes = await backend.voice_nodes();
+    };
 </script>
 
 <main class="flex justify-center items-center flex-col">
     <h1>VOICE AMONG VOICES</h1>
     <form on:submit|preventDefault={onSubmit}>
-        <label for="id">Enter ID (u16): &nbsp;</label>
-        <input
-            id="id"
-            alt="ID"
-            type="number"
-            bind:value={id}
-        />
-        <br /><br />
-
         <label for="x">Enter X coordinate (u64): &nbsp;</label>
         <input
             id="x"
@@ -73,5 +68,8 @@
     </form>
 
     <NodeMap nodes={voiceNodes} />
-    <NodeMapPhysics nodes={voiceNodes} />
+    <NodeMapPhysics
+        nodes={voiceNodes}
+        on:dropNewNode={handleDropNewNode}
+    />
 </main>
