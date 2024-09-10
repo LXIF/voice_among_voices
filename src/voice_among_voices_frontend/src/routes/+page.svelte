@@ -2,6 +2,7 @@
     import {backend} from '$lib/canisters';
     import {onMount} from 'svelte';
     import NodeMap from '$lib/components/NodeMap.svelte';
+    import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
 
     let voiceNodes: VoiceNode[] = [];
     let id = '';
@@ -41,7 +42,7 @@
         />
         <br /><br />
 
-        <label for="x">Enter X coordinate (u32): &nbsp;</label>
+        <label for="x">Enter X coordinate (u64): &nbsp;</label>
         <input
             id="x"
             alt="X"
@@ -50,7 +51,7 @@
         />
         <br /><br />
 
-        <label for="y">Enter Y coordinate (u32): &nbsp;</label>
+        <label for="y">Enter Y coordinate (u64): &nbsp;</label>
         <input
             id="y"
             alt="Y"
@@ -72,4 +73,5 @@
     </form>
 
     <NodeMap nodes={voiceNodes} />
+    <NodeMapPhysics nodes={voiceNodes} />
 </main>

@@ -13,7 +13,7 @@ type UserStore = BTreeMap<Principal, User>;
 
 #[derive(Clone, Debug, Deserialize, CandidType)]
 struct VoiceNode {
-    id: u64,
+    id: u16,
     x: u64,
     y: u64,
     sample: String, // TODO: update with audio type when we get to it. probably use hound crate. Might make sense to keep audio files separately or only return positions to FE + compiled audio

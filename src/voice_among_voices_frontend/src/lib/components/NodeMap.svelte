@@ -12,8 +12,8 @@
     const canvasHeight = 500;
 
     // Logical coordinates for internal mapping
-    const logicalWidth = 10;
-    const logicalHeight = 10;
+    const logicalWidth = 100;
+    const logicalHeight = 100;
 
     function mapToCanvasX(logicalX: number) {
         return (logicalX / logicalWidth) * canvasWidth;
@@ -64,7 +64,7 @@
         }
     });
 
-    $: if (context) {
+    $: if (context && nodes) {
         drawNodes();
     }
 </script>
