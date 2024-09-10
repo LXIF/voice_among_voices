@@ -6,6 +6,8 @@
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
     let physicsActive = false;
+    let rendering = false;
+    let resetting = false;
 
     type PhysicsBody = {
         collider: any;
@@ -13,12 +15,20 @@
         voiceNode: VoiceNode;
     };
 
-    ///////////PHYSICS//////////
-
     onMount(() => {
         if (canvas) {
             context = canvas.getContext('2d');
         }
+    });
+
+    $: if (context && nodes.length > 1 && !rendering && !resetting) {
+        rendering = true;
+        setupAndRender();
+    }
+
+    ///////////PHYSICS//////////
+
+    const setupAndRender = () => {
         import('@dimforge/rapier2d').then((RAPIER) => {
             let world: any;
             let physicsBodies: PhysicsBody[] = [];
@@ -27,12 +37,11 @@
             world = new RAPIER.World(gravity);
 
             // Magnetism parameters in logical coords
-            const maxDistance = 2;
-            const forceStrength = 5; // TODO: get this from sample length too
-            const linearDamping = 0.5;
+            const maxDistance = 20;
+            const forceStrength = 1000; // TODO: get this from sample length too
+            const linearDamping = 2;
 
             function applyMagnetismForces() {
-                console.log('applying magnetisms');
                 physicsBodies.forEach((body, i) => {
                     // Create array of all bodies within reach
                     const cutoffPosition = body.rigidBody.translation();
@@ -68,12 +77,11 @@
                             bodyWithinReach.translation();
 
                         const distanceBetweenBodies = Math.sqrt(
-                            (bodyPos.x - bodyWithinReachPos.x) ^
-                                (2 + (bodyPos.y - bodyWithinReachPos.y)) ^
-                                2
+                            (bodyWithinReachPos.x - bodyPos.x) ** 2 +
+                                (bodyWithinReachPos.y - bodyPos.y) ** 2
                         );
                         const magneticForceScalar =
-                            (1 / (distanceBetweenBodies ^ 2)) * forceStrength;
+                            (1 / distanceBetweenBodies ** 2) * forceStrength;
                         const vectorBetweenBodies = new RAPIER.Vector2(
                             bodyPos.x - bodyWithinReachPos.x,
                             bodyPos.y - bodyWithinReachPos.y
@@ -95,6 +103,30 @@
                 });
             }
 
+            // create world colliders
+
+            const topCollider = RAPIER.ColliderDesc.cuboid(
+                logicalWidth / 2,
+                0.1
+            ).setTranslation(logicalWidth / 2, 0);
+            const leftCollider = RAPIER.ColliderDesc.cuboid(
+                0.1,
+                logicalHeight / 2
+            ).setTranslation(0, logicalHeight / 2);
+            const bottomCollider = RAPIER.ColliderDesc.cuboid(
+                logicalWidth / 2,
+                0.1
+            ).setTranslation(logicalWidth / 2, logicalHeight);
+            const rightCollider = RAPIER.ColliderDesc.cuboid(
+                0.1,
+                logicalHeight / 2
+            ).setTranslation(logicalWidth, logicalHeight / 2);
+
+            world.createCollider(topCollider);
+            world.createCollider(leftCollider);
+            world.createCollider(bottomCollider);
+            world.createCollider(rightCollider);
+
             // create rigid bodies
             physicsBodies = nodes.map((node) => {
                 let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
@@ -102,8 +134,7 @@
                     .setLinearDamping(linearDamping)
                     .setTranslation(Number(node.x), Number(node.y))
                     .setUserData(node);
-                let colliderDesc =
-                    RAPIER.ColliderDesc.ball(0.5).setDensity(2.0); // TODO: get this from node size / sample length.
+                let colliderDesc = RAPIER.ColliderDesc.ball(2).setDensity(2.0); // TODO: get this from node size / sample length.
 
                 const rigidBody = world.createRigidBody(rigidBodyDesc);
                 const collider = world.createCollider(colliderDesc, rigidBody);
@@ -117,7 +148,7 @@
 
             render(physicsBodies, world, applyMagnetismForces);
         });
-    });
+    };
 
     ////////////////////////////
 
@@ -172,7 +203,9 @@
         }
 
         setTimeout(() => {
-            render(bodies, world, magnetismFunction);
+            if (rendering) {
+                render(bodies, world, magnetismFunction);
+            }
         }, 16);
     }
 
@@ -193,6 +226,18 @@
         physicsActive = !physicsActive;
         console.log(physicsActive);
     }
+
+    function resetPhysics() {
+        resetting = true;
+        rendering = false;
+
+        setTimeout(() => {
+            //let last frame play out
+            rendering = true;
+            resetting = false;
+            setupAndRender();
+        }, 20);
+    }
 </script>
 
 <main>
@@ -204,6 +249,7 @@
         style="border: 1px solid black;"
     ></canvas>
     <button on:click={togglePhysics}>toggle physics</button>
+    <button on:click={resetPhysics}>reset physics</button>
 </main>
 
 <style>
