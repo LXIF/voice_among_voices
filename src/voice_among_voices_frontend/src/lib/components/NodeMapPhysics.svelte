@@ -3,6 +3,7 @@
     import {mapRange, clamp} from '$lib/utils/mathUtils';
     import DroppableNode from './DroppableNode.svelte';
     import {createEventDispatcher} from 'svelte';
+    import RAPIER from '@dimforge/rapier2d-compat';
 
     export let nodes: VoiceNodeEgress[] = [];
 
@@ -41,7 +42,7 @@
     ///////////PHYSICS//////////
 
     const setupAndRender = () => {
-        import('@dimforge/rapier2d').then((RAPIER) => {
+        RAPIER.init().then(() => {
             let world: any;
             let physicsBodies: PhysicsBody[] = [];
             let gravity = {x: 0, y: 0};

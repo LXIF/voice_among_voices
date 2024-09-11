@@ -4,8 +4,6 @@
     import NodeMap from '$lib/components/NodeMap.svelte';
     import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
 
-    console.log(browser);
-
     let voiceNodes: VoiceNodeEgress[] = [];
     let id = '';
     let x = '';
