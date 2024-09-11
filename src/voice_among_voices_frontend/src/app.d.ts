@@ -8,17 +8,9 @@ declare global {
     // interface Platform {}
   }
 
-  type VoiceNodeIngress = {
-    x: number;
-    y: number;
-    sample: string;
-  };
-
-  type VoiceNodeEgress = {
-    id: bigint;
-    x: number;
-    y: number;
-  };
+  type VoiceNodeIngress = import('../../declarations/voice_among_voices_backend/voice_among_voices_backend.did').VoiceNodeIngress;
+  type VoiceNodeEgress = import('../../declarations/voice_among_voices_backend/voice_among_voices_backend.did').VoiceNodeEgress;
+  type SimulationParameters = import('../../declarations/voice_among_voices_backend/voice_among_voices_backend.did').SimulationParameters;
 }
 
 export {};

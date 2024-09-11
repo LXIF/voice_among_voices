@@ -9,7 +9,8 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+rapier2d = { version = "0.22.0", features = ["enhanced-determinism"] }
 candid = "0.10"
 ic-cdk = "0.16.0"
-ic-cdk-timers = "0.10.0" # Feel free to remove this dependency if you don't need timers
+ic-cdk-timers = "0.10.0"                                               # Feel free to remove this dependency if you don't need timers
 serde = "^1.0"

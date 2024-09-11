@@ -1,3 +1,5 @@
+mod physics;
+
 use candid::{CandidType, Principal};
 use ic_cdk::{query, update};
 use serde::{Deserialize, Serialize};
@@ -43,7 +45,7 @@ struct VoiceNodeLocal {
     sample: String, // TODO: update with audio type when we get to it. probably use hound crate. Might make sense to keep audio files separately or only return positions to FE + compiled audio
 }
 
-type VoiceNodeStore = Vec<VoiceNodeLocal>;
+type VoiceNodeLocalStore = Vec<VoiceNodeLocal>;
 type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 
 #[derive(Debug)]
@@ -68,7 +70,7 @@ struct SimulationParameters {
 
 thread_local! {
     static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
-    static VOICE_NODES: RefCell<VoiceNodeStore> = RefCell::new(vec![]);
+    static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
     static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
     static SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
         velocity_cutoff: 0.2,

@@ -5,22 +5,31 @@
     import {createEventDispatcher} from 'svelte';
     import RAPIER from '@dimforge/rapier2d-compat';
     import {browser} from '$app/environment';
+    import {backend} from '$lib/canisters';
 
     export let nodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
+
+    let simulationParameters: SimulationParameters | null;
+
+    let max_distance: number,
+        force_strength: number,
+        force_cutoff: number,
+        linear_damping: number,
+        logical_height: number,
+        logical_width: number;
+
     let physicsActive = false;
     let rendering = false;
     let resetting = false;
     let moving = false;
-    const velocityCutoff = 0.2; // TODO: get from canister
-    const forceCutoff = 100; // TODO: get from can
     const dispatch = createEventDispatcher();
 
     type PhysicsBody = {
-        collider: any;
-        rigidBody: any;
+        collider: RAPIER.Collider;
+        rigidBody: RAPIER.RigidBody;
         voiceNode: VoiceNodeEgress;
     };
 
@@ -30,18 +39,32 @@
         }
     });
 
+    onMount(async () => {
+        simulationParameters = await backend.get_simulation_parameters();
+
+        if (!simulationParameters) return;
+
+        max_distance = simulationParameters?.max_distance;
+        force_strength = simulationParameters?.force_strength;
+        force_cutoff = simulationParameters?.force_cutoff;
+        linear_damping = simulationParameters?.linear_damping;
+        logical_height = simulationParameters?.logical_height;
+        logical_width = simulationParameters?.logical_width;
+    });
+
     $: if (
         browser &&
         context &&
         nodes.length >= 1 &&
         !rendering &&
-        !resetting
+        !resetting &&
+        simulationParameters
     ) {
         rendering = true;
         setupAndRender();
     }
 
-    $: if (browser && !!nodes) {
+    $: if (browser && !!nodes && simulationParameters) {
         resetPhysics();
     }
 
@@ -49,23 +72,21 @@
 
     const setupAndRender = () => {
         RAPIER.init().then(() => {
-            let world: any;
+            if (!simulationParameters) return;
+            let world: RAPIER.World;
             let physicsBodies: PhysicsBody[] = [];
             let gravity = {x: 0, y: 0};
 
             world = new RAPIER.World(gravity);
 
             // Magnetism parameters in logical coords
-            const maxDistance = 20; // TODO: get these params from canister
-            const forceStrength = 3000; // TODO: get this from sample length too
-            const linearDamping = 10;
 
             function applyMagnetismForces() {
                 physicsBodies.forEach((body, i) => {
                     // Create array of all bodies within reach
                     const cutoffPosition = body.rigidBody.translation();
                     const cutoffRotation = body.rigidBody.rotation();
-                    const cutoffShape = new RAPIER.Ball(maxDistance);
+                    const cutoffShape = new RAPIER.Ball(max_distance);
 
                     let bodiesWithinReach: any[] = [];
                     let magneticForces: any[] = [];
@@ -84,9 +105,9 @@
                             bodiesWithinReach.push(localBody);
                             return true;
                         },
-                        null,
-                        null,
-                        null,
+                        undefined,
+                        undefined,
+                        undefined,
                         body.rigidBody
                     );
 
@@ -104,7 +125,7 @@
                                 (bodyWithinReachPos.y - bodyPos.y) ** 2
                         );
                         const magneticForceScalar =
-                            (1 / distanceBetweenBodies ** 2) * forceStrength;
+                            (1 / distanceBetweenBodies ** 2) * force_strength;
                         const vectorBetweenBodies = new RAPIER.Vector2(
                             bodyPos.x - bodyWithinReachPos.x,
                             bodyPos.y - bodyWithinReachPos.y
@@ -125,7 +146,7 @@
                         return acc + Math.sqrt(current.x ** 2 + current.y ** 2);
                     }, 0);
 
-                    if (resultant < forceCutoff) return;
+                    if (resultant < force_cutoff) return;
 
                     magneticForces.forEach((force) =>
                         body.rigidBody.addForce(force, true)
@@ -136,32 +157,37 @@
             // create world colliders
 
             const topCollider = RAPIER.ColliderDesc.cuboid(
-                logicalWidth / 2,
+                logical_width / 2,
                 0.1
-            ).setTranslation(logicalWidth / 2, 0);
+            ).setTranslation(logical_width / 2, 0);
             const leftCollider = RAPIER.ColliderDesc.cuboid(
                 0.1,
-                logicalHeight / 2
-            ).setTranslation(0, logicalHeight / 2);
+                logical_height / 2
+            ).setTranslation(0, logical_height / 2);
             const bottomCollider = RAPIER.ColliderDesc.cuboid(
-                logicalWidth / 2,
+                logical_width / 2,
                 0.1
-            ).setTranslation(logicalWidth / 2, logicalHeight);
+            ).setTranslation(logical_width / 2, logical_height);
             const rightCollider = RAPIER.ColliderDesc.cuboid(
                 0.1,
-                logicalHeight / 2
-            ).setTranslation(logicalWidth, logicalHeight / 2);
+                logical_height / 2
+            ).setTranslation(logical_width, logical_height / 2);
 
             world.createCollider(topCollider);
             world.createCollider(leftCollider);
             world.createCollider(bottomCollider);
             world.createCollider(rightCollider);
 
+            const ballCollider = RAPIER.ColliderDesc.ball(
+                logical_width / 2
+            ).setTranslation(logical_width / 2, logical_height / 2);
+            world.createCollider(ballCollider);
+
             // create rigid bodies
             physicsBodies = nodes.map((node) => {
                 let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
                     .lockRotations()
-                    .setLinearDamping(linearDamping)
+                    .setLinearDamping(linear_damping)
                     .setTranslation(Number(node.x), Number(node.y))
                     .setUserData(node);
                 let colliderDesc = RAPIER.ColliderDesc.ball(2).setDensity(2.0); // TODO: get this from node size / sample length.
@@ -187,22 +213,18 @@
     const canvasWidth = 500;
     const canvasHeight = 500;
 
-    // Logical coordinates for internal mapping
-    const logicalWidth = 100; // TODO: get from backend
-    const logicalHeight = 100;
-
-    function mapToCanvasX(logicalX: number) {
+    function mapToCanvasX(logicalX: number, logicalWidth: number) {
         return (logicalX / logicalWidth) * canvasWidth;
     }
 
-    function mapToCanvasY(logicalY: number) {
+    function mapToCanvasY(logicalY: number, logicalHeight: number) {
         return (logicalY / logicalHeight) * canvasHeight;
     }
 
     // Converts canvas pixel coordinates to logical coordinates
     function canvasToLogical(x: number, y: number) {
-        const logicalX = (x / canvasWidth) * logicalWidth;
-        const logicalY = (y / canvasHeight) * logicalHeight;
+        const logicalX = (x / canvasWidth) * logical_width;
+        const logicalY = (y / canvasHeight) * logical_height;
         return {logicalX, logicalY};
     }
 
@@ -231,8 +253,8 @@
                 const linVel = body.rigidBody.linvel();
                 const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
                 const colorVel = clamp(mapRange(absVel, 0, 2, 0, 255), 0, 255);
-                const canvasX = mapToCanvasX(Number(bodyPos.x));
-                const canvasY = mapToCanvasY(Number(bodyPos.y));
+                const canvasX = mapToCanvasX(Number(bodyPos.x), logical_width);
+                const canvasY = mapToCanvasY(Number(bodyPos.y), logical_width);
 
                 context!.beginPath();
                 context!.ellipse(canvasX, canvasY, 10, 10, 0, 0, Math.PI * 2);
@@ -252,7 +274,7 @@
             });
         }
 
-        function stopSlowNodes(bodies: PhysicsBody[]) {
+        function stopSlowNodes(bodies: PhysicsBody[], velocityCutoff: number) {
             bodies.forEach((body) => {
                 const linVel = body.rigidBody.linvel();
                 const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
@@ -277,8 +299,8 @@
         const canvasY = event.clientY - rect.top;
 
         // Convert canvas coordinates to logical coordinates
-        const logicalX = (canvasX / canvasWidth) * logicalWidth;
-        const logicalY = (canvasY / canvasHeight) * logicalHeight;
+        const logicalX = (canvasX / canvasWidth) * logical_width;
+        const logicalY = (canvasY / canvasHeight) * logical_height;
 
         console.log('Clicked coordinates (logical):', {logicalX, logicalY});
     }

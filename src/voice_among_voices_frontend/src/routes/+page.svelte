@@ -5,7 +5,6 @@
     import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
 
     let voiceNodes: VoiceNodeEgress[] = [];
-    let id = '';
     let x = '';
     let y = '';
     let sample = '';
