@@ -221,7 +221,7 @@
             checkIfStillMoving(bodies);
         }
 
-        if (context && bodies && bodies.length > 1) {
+        if (context && bodies && bodies.length > 0) {
             // Clear the canvas
             context.clearRect(0, 0, canvasWidth, canvasHeight);
 
