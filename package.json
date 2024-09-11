@@ -5,11 +5,11 @@
   },
   "name": "voice_among_voices",
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "prebuild": "npm run prebuild --workspaces --if-present",
-    "pretest": "npm run prebuild --workspaces --if-present",
-    "start": "npm start --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "build": "pnpm run build --workspaces --if-present",
+    "prebuild": "pnpm run prebuild --workspaces --if-present",
+    "pretest": "pnpm run prebuild --workspaces --if-present",
+    "start": "pnpm start --workspaces --if-present",
+    "test": "pnpm test --workspaces --if-present"
   },
   "type": "module",
   "workspaces": [
