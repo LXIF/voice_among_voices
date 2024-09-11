@@ -35,7 +35,7 @@ impl From<VoiceNodeLocal> for VoiceNodeEgress {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, CandidType)]
+#[derive(Clone, Debug, CandidType)]
 struct VoiceNodeLocal {
     id: usize,
     x: f64,
@@ -55,10 +55,30 @@ struct HistoryFrame {
     nodes_states: Vec<VoiceNodeLocal>,
 }
 
+#[derive(Debug, Clone, Copy, CandidType)]
+struct SimulationParameters {
+    velocity_cutoff: f64,
+    force_cutoff: f64,
+    max_distance: f64,
+    force_strength: f64,
+    linear_damping: f64,
+    logical_width: f64,
+    logical_height: f64,
+}
+
 thread_local! {
     static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     static VOICE_NODES: RefCell<VoiceNodeStore> = RefCell::new(vec![]);
     static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
+    static SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
+        velocity_cutoff: 0.2,
+        force_cutoff: 100.,
+        max_distance: 20.,
+        force_strength: 3000.,
+        linear_damping: 10.,
+        logical_height: 100.,
+        logical_width: 100.
+    }
 }
 
 #[update]
@@ -86,4 +106,9 @@ fn voice_nodes() -> VoiceNodeEgressStore {
             .map(|node| node.into())
             .collect()
     })
+}
+
+#[query]
+fn get_simulation_parameters() -> SimulationParameters {
+    SIMULATION_PARAMETERS.with(|params| params.clone())
 }

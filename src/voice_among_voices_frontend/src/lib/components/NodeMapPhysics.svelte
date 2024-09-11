@@ -4,6 +4,7 @@
     import DroppableNode from './DroppableNode.svelte';
     import {createEventDispatcher} from 'svelte';
     import RAPIER from '@dimforge/rapier2d-compat';
+    import {browser} from '$app/environment';
 
     export let nodes: VoiceNodeEgress[] = [];
 
@@ -29,13 +30,18 @@
         }
     });
 
-    $: if (context && nodes.length >= 1 && !rendering && !resetting) {
+    $: if (
+        browser &&
+        context &&
+        nodes.length >= 1 &&
+        !rendering &&
+        !resetting
+    ) {
         rendering = true;
         setupAndRender();
     }
 
-    $: if (!!nodes) {
-        console.log('bargle');
+    $: if (browser && !!nodes) {
         resetPhysics();
     }
 
@@ -182,7 +188,7 @@
     const canvasHeight = 500;
 
     // Logical coordinates for internal mapping
-    const logicalWidth = 100;
+    const logicalWidth = 100; // TODO: get from backend
     const logicalHeight = 100;
 
     function mapToCanvasX(logicalX: number) {

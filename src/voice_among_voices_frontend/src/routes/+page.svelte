@@ -34,8 +34,8 @@
     };
 </script>
 
-<main class="flex justify-center items-center flex-col">
-    <h1>VOICE AMONG VOICES</h1>
+<main class="flex justify-center items-center flex-col h-[100vh]">
+    <!-- <h1>VOICE AMONG VOICES</h1>
     <form on:submit|preventDefault={onSubmit}>
         <label for="x">Enter X coordinate (u64): &nbsp;</label>
         <input
@@ -67,7 +67,7 @@
         <button type="submit">Add Voice Node</button>
     </form>
 
-    <NodeMap nodes={voiceNodes} />
+    <NodeMap nodes={voiceNodes} /> -->
     <NodeMapPhysics
         nodes={voiceNodes}
         on:dropNewNode={handleDropNewNode}

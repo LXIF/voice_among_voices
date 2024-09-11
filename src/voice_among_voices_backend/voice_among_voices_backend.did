@@ -10,9 +10,20 @@ type VoiceNodeEgress = record {
     y : float64;
 };
 
+type SimulationParameters = record {
+    velocity_cutoff : float64;
+    force_cutoff : float64;
+    max_distance : float64;
+    force_strength : float64;
+    linear_damping : float64;
+    logical_width : float64;
+    logical_height : float64;
+};
+
 type VoiceNodeStoreEgress = vec VoiceNodeEgress;
 
 service : {
     "add_voice_node" : (VoiceNodeIngress) -> ();
     "voice_nodes" : () -> (VoiceNodeStoreEgress) query;
+    "get_simulation_parameters" : () -> (SimulationParameters) query;
 };
