@@ -12,6 +12,12 @@
         SimulationParameters,
         VoiceNodeIngress,
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    import {
+        convertColliderCoordinatesToFloat32Array,
+        mapToCanvasX,
+        mapToCanvasY,
+        canvasToLogical,
+    } from '$lib/utils/convUtils';
 
     export let nodes: VoiceNodeEgress[] = [];
 
@@ -32,6 +38,7 @@
     let rendering = false;
     let resetting = false;
     let moving = false;
+    let scaled = false;
     const dispatch = createEventDispatcher();
 
     type PhysicsBody = {
@@ -40,12 +47,33 @@
         voiceNode: VoiceNodeEgress;
     };
 
+    // Canvas dimensions
+    const canvasWidth = 500;
+    const canvasHeight = 500;
+    let canvasRatio: number | undefined = undefined;
+
     onMount(() => {
         if (canvas) {
             context = canvas.getContext('2d');
-            context?.scale(canvasRatio, canvasRatio);
+            canvasRatio = window.devicePixelRatio;
         }
     });
+
+    $: {
+        if (
+            !scaled &&
+            context &&
+            logical_height &&
+            logical_width &&
+            canvasRatio
+        ) {
+            scaled = true;
+            context?.scale(
+                canvasRatio * (canvasWidth / logical_width),
+                canvasRatio * (canvasHeight / logical_height)
+            );
+        }
+    }
 
     onMount(async () => {
         simulationParameters = await backend.get_simulation_parameters();
@@ -166,32 +194,11 @@
 
             // create world colliders
 
-            const topCollider = RAPIER.ColliderDesc.cuboid(
-                logical_width / 2,
-                0.1
-            ).setTranslation(logical_width / 2, 0);
-            const leftCollider = RAPIER.ColliderDesc.cuboid(
-                0.1,
-                logical_height / 2
-            ).setTranslation(0, logical_height / 2);
-            const bottomCollider = RAPIER.ColliderDesc.cuboid(
-                logical_width / 2,
-                0.1
-            ).setTranslation(logical_width / 2, logical_height);
-            const rightCollider = RAPIER.ColliderDesc.cuboid(
-                0.1,
-                logical_height / 2
-            ).setTranslation(logical_width, logical_height / 2);
-
-            world.createCollider(topCollider);
-            world.createCollider(leftCollider);
-            world.createCollider(bottomCollider);
-            world.createCollider(rightCollider);
-
-            const ballCollider = RAPIER.ColliderDesc.ball(
-                logical_width / 2
-            ).setTranslation(logical_width / 2, logical_height / 2);
-            world.createCollider(ballCollider);
+            const roundInnerColliderDesc = RAPIER.ColliderDesc.polyline(
+                convertColliderCoordinatesToFloat32Array(colliderCoordinates)
+            );
+            console.log(roundInnerColliderDesc);
+            world.createCollider(roundInnerColliderDesc);
 
             // create rigid bodies
             physicsBodies = nodes.map((node) => {
@@ -224,28 +231,21 @@
     ////////////////////////////
 
     /////////RENDERING///////////
-    // Canvas dimensions
-    const canvasWidth = 500;
-    const canvasHeight = 500;
-    let canvasRatio = 1;
-    onMount(() => {
-        canvasRatio = window.devicePixelRatio;
-    });
 
-    function mapToCanvasX(logicalX: number) {
-        return (logicalX / logical_width) * canvasWidth;
-    }
+    // function mapToCanvasX(logicalX: number) {
+    //     return (logicalX / logical_width) * canvasWidth;
+    // }
 
-    function mapToCanvasY(logicalY: number) {
-        return (logicalY / logical_height) * canvasHeight;
-    }
+    // function mapToCanvasY(logicalY: number) {
+    //     return (logicalY / logical_height) * canvasHeight;
+    // }
 
-    // Converts canvas pixel coordinates to logical coordinates
-    function canvasToLogical(x: number, y: number) {
-        const logicalX = (x / canvasWidth) * logical_width;
-        const logicalY = (y / canvasHeight) * logical_height;
-        return {logicalX, logicalY};
-    }
+    // // Converts canvas pixel coordinates to logical coordinates
+    // function canvasToLogical(x: number, y: number) {
+    //     const logicalX = (x / canvasWidth) * logical_width;
+    //     const logicalY = (y / canvasHeight) * logical_height;
+    //     return {logicalX, logicalY};
+    // }
 
     // Draw the nodes on the canvas
     function render(
@@ -271,18 +271,13 @@
 
             if (colliderCoords?.length > 0) {
                 context.beginPath();
-                context.moveTo(
-                    mapToCanvasX(colliderCoords[0].x),
-                    mapToCanvasY(colliderCoords[0].y)
-                );
+                context.moveTo(colliderCoords[0].x, colliderCoords[0].y);
                 colliderCoords.forEach((coordinate) => {
-                    context?.lineTo(
-                        mapToCanvasX(coordinate.x),
-                        mapToCanvasY(coordinate.y)
-                    );
+                    context?.lineTo(coordinate.x, coordinate.y);
                 });
                 context.closePath();
                 context.strokeStyle = 'black';
+
                 context.stroke();
             }
 
@@ -292,11 +287,11 @@
                 const linVel = body.rigidBody.linvel();
                 const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
                 const colorVel = clamp(mapRange(absVel, 0, 2, 0, 255), 0, 255);
-                const canvasX = mapToCanvasX(Number(bodyPos.x));
-                const canvasY = mapToCanvasY(Number(bodyPos.y));
+                const canvasX = bodyPos.x;
+                const canvasY = bodyPos.y;
 
                 context!.beginPath();
-                context!.ellipse(canvasX, canvasY, 10, 10, 0, 0, Math.PI * 2);
+                context!.ellipse(canvasX, canvasY, 2, 2, 0, 0, Math.PI * 2);
                 context!.fillStyle = `rgb(${colorVel},${colorVel},0)`;
                 context!.fill();
                 context!.stroke();
@@ -372,14 +367,36 @@
         const canvasX = e.clientX - rect.left;
         const canvasY = e.clientY - rect.top;
 
-        const {logicalX, logicalY} = canvasToLogical(canvasX, canvasY);
+        const {logicalX, logicalY} = canvasToLogical(
+            canvasX,
+            canvasY,
+            canvasWidth,
+            canvasHeight,
+            logical_width,
+            logical_height
+        );
 
         console.log('dropped at logical coordinates:', {logicalX, logicalY});
+
+        const nodeRadius = parseFloat(
+            e.dataTransfer?.getData('nodeRadius') || '5'
+        );
+
+        const distanceFromCenter = Math.sqrt(
+            (logicalX - logical_width / 2) ** 2 +
+                (logicalY - logical_height / 2) ** 2
+        );
+        const maxDistance = logical_width / 2 - nodeRadius;
+
+        if (distanceFromCenter > maxDistance) {
+            console.log('oiut');
+            return;
+        }
 
         const voiceNode = {
             x: logicalX,
             y: logicalY,
-            sample: 'test',
+            sample: 'todo',
         };
 
         dispatch('dropNewNode', voiceNode as VoiceNodeIngress);
@@ -390,8 +407,8 @@
 <main>
     <canvas
         bind:this={canvas}
-        width={canvasWidth * canvasRatio}
-        height={canvasHeight * canvasRatio}
+        width={canvasWidth * (canvasRatio || 1)}
+        height={canvasHeight * (canvasRatio || 1)}
         on:click={handleClick}
         on:dragover={handleDragOver}
         on:drop={handleDrop}
@@ -408,5 +425,6 @@
     <div>
         moving: {moving}
     </div>
-    <DroppableNode />
+    <!-- TODO: update nodeWidth with sample length -->
+    <DroppableNode nodeWidth={4} />
 </main>

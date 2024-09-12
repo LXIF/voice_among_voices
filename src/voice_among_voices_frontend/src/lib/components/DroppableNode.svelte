@@ -1,4 +1,6 @@
 <script lang="ts">
+    export let nodeWidth = 5; // TODO: get from sample length, adjust for logical/canvas
+
     let dragging = false;
 
     function handleDragStart(e: DragEvent) {
@@ -19,6 +21,7 @@
             rect.width / 2,
             rect.height / 2
         );
+        e.dataTransfer?.setData('nodeRadius', String(nodeWidth / 2));
     }
 
     function handleDragEnd() {
