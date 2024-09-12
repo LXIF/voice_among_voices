@@ -19,6 +19,7 @@ type SimulationParameters = record {
     logical_width : float64;
     logical_height : float64;
     n_collider_vertices : nat64;
+    friction : float64;
 };
 
 type ColliderCoordinate = record {

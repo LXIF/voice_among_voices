@@ -32,7 +32,8 @@
         force_cutoff: number,
         linear_damping: number,
         logical_height: number,
-        logical_width: number;
+        logical_width: number,
+        friction: number;
 
     let physicsActive = false;
     let rendering = false;
@@ -95,6 +96,7 @@
         linear_damping = simulationParameters?.linear_damping;
         logical_height = simulationParameters?.logical_height;
         logical_width = simulationParameters?.logical_width;
+        friction = simulationParameters?.friction;
     });
 
     $: if (
@@ -199,12 +201,11 @@
                 });
             }
 
-            // create world colliders
+            // create world collider
 
             const roundInnerColliderDesc = RAPIER.ColliderDesc.polyline(
                 convertColliderCoordinatesToFloat32Array(colliderCoordinates)
-            );
-            console.log(roundInnerColliderDesc);
+            ).setFriction(friction);
             world.createCollider(roundInnerColliderDesc);
 
             // create rigid bodies
@@ -214,7 +215,9 @@
                     .setLinearDamping(linear_damping)
                     .setTranslation(Number(node.x), Number(node.y))
                     .setUserData(node);
-                let colliderDesc = RAPIER.ColliderDesc.ball(2).setDensity(2.0); // TODO: get this from node size / sample length.
+                let colliderDesc = RAPIER.ColliderDesc.ball(2)
+                    .setDensity(2.0) // TODO: get this from node size / sample length.
+                    .setFriction(friction);
 
                 const rigidBody = world.createRigidBody(rigidBodyDesc);
                 const collider = world.createCollider(colliderDesc, rigidBody);
@@ -270,7 +273,7 @@
             checkIfStillMoving(bodies);
         }
 
-        if (context && bodies && bodies.length > 0) {
+        if (context) {
             // Clear the canvas
             context.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -281,10 +284,12 @@
                 colliderCoords.forEach((coordinate) => {
                     context?.lineTo(coordinate.x, coordinate.y);
                 });
+                // context.strokeStyle = 'black';
+                // context.lineWidth = 0.5;
+                // context.stroke();
+                context!.fillStyle = `hsl(200 50% 50%)`;
+                context!.fill();
                 context.closePath();
-                context.strokeStyle = 'black';
-
-                context.stroke();
             }
 
             // Draw each VoiceNode as a circle using the mapped coordinates
@@ -292,15 +297,16 @@
                 const bodyPos = body.rigidBody.translation();
                 const linVel = body.rigidBody.linvel();
                 const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
-                const colorVel = clamp(mapRange(absVel, 0, 2, 0, 255), 0, 255);
+                const colorVel = clamp(mapRange(absVel, 0, 2, 0, 100), 0, 100);
                 const canvasX = bodyPos.x;
                 const canvasY = bodyPos.y;
 
                 context!.beginPath();
                 context!.ellipse(canvasX, canvasY, 2, 2, 0, 0, Math.PI * 2);
-                context!.fillStyle = `rgb(${colorVel},${colorVel},0)`;
+                context!.fillStyle = `hsl(${30 + colorVel / 10} 80% ${colorVel}% )`;
                 context!.fill();
-                context!.stroke();
+                // context!.lineWidth = 0.5;
+                // context!.stroke();
                 context!.closePath();
             });
         }

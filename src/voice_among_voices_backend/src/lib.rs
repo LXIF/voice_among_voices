@@ -78,6 +78,7 @@ struct SimulationParameters {
     logical_width: f64,
     logical_height: f64,
     n_collider_vertices: u64,
+    friction: f64,
 }
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
@@ -94,6 +95,7 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
         logical_height: 100.,
         logical_width: 100.,
         n_collider_vertices: 360,
+        friction: 0.5
     };
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
