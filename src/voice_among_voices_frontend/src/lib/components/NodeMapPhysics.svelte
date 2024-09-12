@@ -48,8 +48,10 @@
     };
 
     // Canvas dimensions
-    const canvasWidth = 500;
-    const canvasHeight = 500;
+    const canvasWidth = 600;
+    const canvasHeight = 600;
+    const usableCanvasWidth = 500;
+    const usableCanvasHeight = 500;
     let canvasRatio: number | undefined = undefined;
 
     onMount(() => {
@@ -68,9 +70,14 @@
             canvasRatio
         ) {
             scaled = true;
+
+            const translateX = (canvasWidth - usableCanvasWidth) / 2;
+            const translateY = (canvasHeight - usableCanvasHeight) / 2;
+            context?.translate(translateX, translateY);
+
             context?.scale(
-                canvasRatio * (canvasWidth / logical_width),
-                canvasRatio * (canvasHeight / logical_height)
+                canvasRatio * (usableCanvasWidth / logical_width),
+                canvasRatio * (usableCanvasHeight / logical_height)
             );
         }
     }
@@ -268,7 +275,6 @@
             context.clearRect(0, 0, canvasWidth, canvasHeight);
 
             // Draw the collider
-
             if (colliderCoords?.length > 0) {
                 context.beginPath();
                 context.moveTo(colliderCoords[0].x, colliderCoords[0].y);
@@ -327,14 +333,21 @@
     }
 
     // Handle the click event and map it back to logical coordinates
-    function handleClick(event: MouseEvent) {
+    function handleClick(e: MouseEvent) {
         const rect = canvas.getBoundingClientRect();
-        const canvasX = event.clientX - rect.left;
-        const canvasY = event.clientY - rect.top;
+        const canvasX =
+            e.clientX - rect.left - (canvasWidth - usableCanvasWidth) / 2;
+        const canvasY =
+            e.clientY - rect.top - (canvasHeight - usableCanvasHeight) / 2;
 
-        // Convert canvas coordinates to logical coordinates
-        const logicalX = (canvasX / canvasWidth) * logical_width;
-        const logicalY = (canvasY / canvasHeight) * logical_height;
+        const {logicalX, logicalY} = canvasToLogical(
+            canvasX,
+            canvasY,
+            usableCanvasWidth,
+            usableCanvasHeight,
+            logical_width,
+            logical_height
+        );
 
         console.log('Clicked coordinates (logical):', {logicalX, logicalY});
     }
@@ -364,14 +377,16 @@
     async function handleDrop(e: DragEvent) {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        const canvasX = e.clientX - rect.left;
-        const canvasY = e.clientY - rect.top;
+        const canvasX =
+            e.clientX - rect.left - (canvasWidth - usableCanvasWidth) / 2;
+        const canvasY =
+            e.clientY - rect.top - (canvasHeight - usableCanvasHeight) / 2;
 
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            canvasWidth,
-            canvasHeight,
+            usableCanvasWidth,
+            usableCanvasHeight,
             logical_width,
             logical_height
         );
