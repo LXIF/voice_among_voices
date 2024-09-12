@@ -1,5 +1,6 @@
 <script lang="ts">
     import {onMount} from 'svelte';
+    import type {VoiceNodeEgress} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
     export let nodes: VoiceNodeEgress[] = [];
 

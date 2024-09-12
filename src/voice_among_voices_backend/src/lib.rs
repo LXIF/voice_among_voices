@@ -1,7 +1,7 @@
 mod physics;
 
 use candid::{CandidType, Principal};
-use ic_cdk::{api::time, init, query, update};
+use ic_cdk::{api::time, init, post_upgrade, query, update};
 use physics::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -96,22 +96,32 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
         logical_width: 100.,
         n_collider_vertices: 360,
     };
-    static COLLIDER_VERTICES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
+    static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
 
-#[init]
-fn init() {
+// abstracting this because during dev things change and i don't want to restart dfx all the time
+fn collider_init() {
     SIMULATION_PARAMETERS.with(|simulation_parameters| {
-        COLLIDER_VERTICES.with(|collider_vertices| {
+        COLLIDER_COORDINATES.with(|collider_coordinates| {
             let fresh_vertices = create_circular_collider_coordinates(
                 simulation_parameters.n_collider_vertices,
                 simulation_parameters.logical_width,
                 simulation_parameters.logical_height,
             );
 
-            collider_vertices.borrow_mut().extend(fresh_vertices);
+            collider_coordinates.borrow_mut().extend(fresh_vertices);
         });
     });
+}
+
+#[init]
+fn init() {
+    collider_init();
+}
+
+#[post_upgrade]
+fn post_upgrade() {
+    collider_init();
 }
 
 #[update]
@@ -156,6 +166,11 @@ fn get_simulation_parameters() -> SimulationParameters {
     SIMULATION_PARAMETERS.with(|params| params.clone())
 }
 
+#[query]
+fn get_collider_coordinates() -> Vec<ColliderCoordinate> {
+    COLLIDER_COORDINATES.with(|coords| coords.borrow().clone())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,9 +205,9 @@ mod tests {
     fn init_creates_coordinates() {
         init();
         SIMULATION_PARAMETERS.with(|simulation_parameters| {
-            COLLIDER_VERTICES.with(|collider_vertices| {
+            COLLIDER_COORDINATES.with(|collider_coordinates| {
                 let n = simulation_parameters.n_collider_vertices;
-                let len = collider_vertices.borrow().len();
+                let len = collider_coordinates.borrow().len();
 
                 assert_eq!(n, len as u64);
             });

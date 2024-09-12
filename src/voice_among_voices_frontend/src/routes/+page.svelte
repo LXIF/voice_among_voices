@@ -1,8 +1,9 @@
 <script lang="ts">
-    import {backend} from '$lib/canisters';
+    import {backend} from '$lib/canisters'; // complains but works
     import {onMount} from 'svelte';
     import NodeMap from '$lib/components/NodeMap.svelte';
     import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
+    import type {VoiceNodeEgress} from '../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let x = '';

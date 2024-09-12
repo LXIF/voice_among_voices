@@ -4,8 +4,14 @@
     import DroppableNode from './DroppableNode.svelte';
     import {createEventDispatcher} from 'svelte';
     import RAPIER from '@dimforge/rapier2d-compat';
-    import {browser} from '$app/environment';
-    import {backend} from '$lib/canisters';
+    import {browser} from '$app/environment'; // ts keeps motzing but it works
+    import {backend} from '$lib/canisters'; // motzes but works
+    import type {
+        ColliderCoordinate,
+        VoiceNodeEgress,
+        SimulationParameters,
+        VoiceNodeIngress,
+    } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
     export let nodes: VoiceNodeEgress[] = [];
 
@@ -13,6 +19,7 @@
     let context: CanvasRenderingContext2D | null;
 
     let simulationParameters: SimulationParameters | null;
+    let colliderCoordinates: ColliderCoordinate[] = [];
 
     let max_distance: number,
         force_strength: number,
@@ -36,13 +43,16 @@
     onMount(() => {
         if (canvas) {
             context = canvas.getContext('2d');
+            context?.scale(canvasRatio, canvasRatio);
         }
     });
 
     onMount(async () => {
         simulationParameters = await backend.get_simulation_parameters();
+        colliderCoordinates = await backend.get_collider_coordinates();
 
         if (!simulationParameters) return;
+        if (colliderCoordinates.length === 0) return;
 
         max_distance = simulationParameters?.max_distance;
         force_strength = simulationParameters?.force_strength;
@@ -202,7 +212,12 @@
                 };
             });
 
-            render(physicsBodies, world, applyMagnetismForces);
+            render(
+                physicsBodies,
+                colliderCoordinates,
+                world,
+                applyMagnetismForces
+            );
         });
     };
 
@@ -212,13 +227,17 @@
     // Canvas dimensions
     const canvasWidth = 500;
     const canvasHeight = 500;
+    let canvasRatio = 1;
+    onMount(() => {
+        canvasRatio = window.devicePixelRatio;
+    });
 
-    function mapToCanvasX(logicalX: number, logicalWidth: number) {
-        return (logicalX / logicalWidth) * canvasWidth;
+    function mapToCanvasX(logicalX: number) {
+        return (logicalX / logical_width) * canvasWidth;
     }
 
-    function mapToCanvasY(logicalY: number, logicalHeight: number) {
-        return (logicalY / logicalHeight) * canvasHeight;
+    function mapToCanvasY(logicalY: number) {
+        return (logicalY / logical_height) * canvasHeight;
     }
 
     // Converts canvas pixel coordinates to logical coordinates
@@ -231,6 +250,7 @@
     // Draw the nodes on the canvas
     function render(
         bodies: PhysicsBody[],
+        colliderCoords: ColliderCoordinate[],
         world: any,
         magnetismFunction: Function
     ) {
@@ -247,14 +267,33 @@
             // Clear the canvas
             context.clearRect(0, 0, canvasWidth, canvasHeight);
 
+            // Draw the collider
+
+            if (colliderCoords?.length > 0) {
+                context.beginPath();
+                context.moveTo(
+                    mapToCanvasX(colliderCoords[0].x),
+                    mapToCanvasY(colliderCoords[0].y)
+                );
+                colliderCoords.forEach((coordinate) => {
+                    context?.lineTo(
+                        mapToCanvasX(coordinate.x),
+                        mapToCanvasY(coordinate.y)
+                    );
+                });
+                context.closePath();
+                context.strokeStyle = 'black';
+                context.stroke();
+            }
+
             // Draw each VoiceNode as a circle using the mapped coordinates
             bodies.forEach((body) => {
                 const bodyPos = body.rigidBody.translation();
                 const linVel = body.rigidBody.linvel();
                 const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
                 const colorVel = clamp(mapRange(absVel, 0, 2, 0, 255), 0, 255);
-                const canvasX = mapToCanvasX(Number(bodyPos.x), logical_width);
-                const canvasY = mapToCanvasY(Number(bodyPos.y), logical_width);
+                const canvasX = mapToCanvasX(Number(bodyPos.x));
+                const canvasY = mapToCanvasY(Number(bodyPos.y));
 
                 context!.beginPath();
                 context!.ellipse(canvasX, canvasY, 10, 10, 0, 0, Math.PI * 2);
@@ -287,7 +326,7 @@
 
         setTimeout(() => {
             if (rendering) {
-                render(bodies, world, magnetismFunction);
+                render(bodies, colliderCoordinates, world, magnetismFunction);
             }
         }, 16);
     }
@@ -351,12 +390,12 @@
 <main>
     <canvas
         bind:this={canvas}
-        width={canvasWidth}
-        height={canvasHeight}
+        width={canvasWidth * canvasRatio}
+        height={canvasHeight * canvasRatio}
         on:click={handleClick}
         on:dragover={handleDragOver}
         on:drop={handleDrop}
-        style="border: 1px solid black;"
+        class={`w-[${canvasWidth}px] h-[${canvasHeight}px]`}
     ></canvas>
     <button
         class="bg-slate-500 rounded-full"

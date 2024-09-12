@@ -18,6 +18,12 @@ type SimulationParameters = record {
     linear_damping : float64;
     logical_width : float64;
     logical_height : float64;
+    n_collider_vertices : nat64;
+};
+
+type ColliderCoordinate = record {
+    x : float64;
+    y : float64;
 };
 
 type VoiceNodeStoreEgress = vec VoiceNodeEgress;
@@ -26,4 +32,5 @@ service : {
     "add_voice_node" : (VoiceNodeIngress) -> ();
     "voice_nodes" : () -> (VoiceNodeStoreEgress) query;
     "get_simulation_parameters" : () -> (SimulationParameters) query;
+    "get_collider_coordinates" : () -> (vec ColliderCoordinate) query;
 };
