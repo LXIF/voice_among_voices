@@ -42,11 +42,19 @@ struct VoiceNodeLocal {
     id: usize,
     x: f64,
     y: f64,
-    sample: String, // TODO: update with audio type when we get to it. probably use hound crate. Might make sense to keep audio files separately or only return positions to FE + compiled audio
+    sample_id: usize,
 }
 
 type VoiceNodeLocalStore = Vec<VoiceNodeLocal>;
 type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
+
+#[derive(Debug, CandidType)]
+struct AudioSample {
+    id: usize,
+    sample: String, // TODO: replace this with audio type
+}
+
+type AudioSampleStore = Vec<AudioSample>;
 
 #[derive(Debug)]
 struct NFTMap; // TODO: this is one of the last things to implement to make the whole thing NFT-compliant.
@@ -68,9 +76,10 @@ struct SimulationParameters {
     logical_height: f64,
 }
 
-thread_local! {
+thread_local! { // TODO: replace with stable structures and make auto-scaling
     static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
+    static SAMPLES: RefCell<AudioSampleStore> = RefCell::new(vec![]);
     static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
     static SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
         velocity_cutoff: 0.2,
@@ -85,13 +94,23 @@ thread_local! {
 
 #[update]
 fn add_voice_node(node: VoiceNodeIngress) {
+    let mut sample_id = 0;
+    SAMPLES.with(|samples| {
+        let new_sample = AudioSample {
+            id: samples.borrow().len(),
+            sample: node.sample,
+        };
+        sample_id = new_sample.id.clone();
+        samples.borrow_mut().push(new_sample);
+    });
+
     VOICE_NODES.with(|nodes| {
         let id = nodes.borrow().len().into();
         let new_node = VoiceNodeLocal {
             id,
             x: node.x,
             y: node.y,
-            sample: node.sample,
+            sample_id,
         };
 
         nodes.borrow_mut().push(new_node);
@@ -113,4 +132,35 @@ fn voice_nodes() -> VoiceNodeEgressStore {
 #[query]
 fn get_simulation_parameters() -> SimulationParameters {
     SIMULATION_PARAMETERS.with(|params| params.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn voice_nodes_get_added_correctly() {
+        let voice_node = VoiceNodeIngress {
+            x: 10.,
+            y: 10.,
+            sample: "wargle".to_string(),
+        };
+
+        let another_voice_node = VoiceNodeIngress {
+            x: 10.,
+            y: 10.,
+            sample: "wargle".to_string(),
+        };
+
+        add_voice_node(voice_node);
+        add_voice_node(another_voice_node);
+
+        SAMPLES.with(|samples| {
+            let id = samples.borrow()[0].id;
+            let another_id = samples.borrow()[1].id;
+
+            assert_eq!(id, 0);
+            assert_eq!(another_id, 1);
+        });
+    }
 }
