@@ -1,14 +1,18 @@
 mod physics;
 
 use candid::{CandidType, Principal};
-use ic_cdk::{query, update};
+use ic_cdk::{api::time, init, query, update};
+use physics::*;
 use serde::{Deserialize, Serialize};
-use std::{cell::RefCell, collections::BTreeMap, time::Instant};
+use std::{
+    cell::{OnceCell, RefCell},
+    collections::BTreeMap,
+};
 
 #[derive(Debug)]
 struct User {
     voice_node: VoiceNodeLocal,
-    signup_timestamp: Instant,
+    signup_timestamp: u64,
 }
 
 type UserStore = BTreeMap<Principal, User>;
@@ -61,7 +65,7 @@ struct NFTMap; // TODO: this is one of the last things to implement to make the 
 
 #[derive(Debug)]
 struct HistoryFrame {
-    timestamp: Instant,
+    timestamp: u64,
     nodes_states: Vec<VoiceNodeLocal>,
 }
 
@@ -74,6 +78,7 @@ struct SimulationParameters {
     linear_damping: f64,
     logical_width: f64,
     logical_height: f64,
+    n_collider_vertices: u64,
 }
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
@@ -88,8 +93,25 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
         force_strength: 3000.,
         linear_damping: 10.,
         logical_height: 100.,
-        logical_width: 100.
-    }
+        logical_width: 100.,
+        n_collider_vertices: 360,
+    };
+    static COLLIDER_VERTICES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
+}
+
+#[init]
+fn init() {
+    SIMULATION_PARAMETERS.with(|simulation_parameters| {
+        COLLIDER_VERTICES.with(|collider_vertices| {
+            let fresh_vertices = create_circular_collider_coordinates(
+                simulation_parameters.n_collider_vertices,
+                simulation_parameters.logical_width,
+                simulation_parameters.logical_height,
+            );
+
+            collider_vertices.borrow_mut().extend(fresh_vertices);
+        });
+    });
 }
 
 #[update]
@@ -161,6 +183,19 @@ mod tests {
 
             assert_eq!(id, 0);
             assert_eq!(another_id, 1);
+        });
+    }
+
+    #[test]
+    fn init_creates_coordinates() {
+        init();
+        SIMULATION_PARAMETERS.with(|simulation_parameters| {
+            COLLIDER_VERTICES.with(|collider_vertices| {
+                let n = simulation_parameters.n_collider_vertices;
+                let len = collider_vertices.borrow().len();
+
+                assert_eq!(n, len as u64);
+            });
         });
     }
 }

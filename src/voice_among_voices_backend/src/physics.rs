@@ -1,9 +1,10 @@
+use candid::CandidType;
 use rapier2d::prelude::*;
 
 use crate::{SimulationParameters, VoiceNodeLocalStore};
 
 /// simulates the new field until all bodies are at rest
-fn simulate_until_stopped(
+pub fn simulate_until_stopped(
     bodies: VoiceNodeLocalStore,
     parameters: SimulationParameters,
 ) -> VoiceNodeLocalStore {
@@ -15,14 +16,14 @@ fn simulate_until_stopped(
     todo!()
 }
 
-#[derive(Debug)]
-struct ColliderCoordinate {
+#[derive(Debug, Copy, Clone, CandidType)]
+pub struct ColliderCoordinate {
     x: f64,
     y: f64,
 }
 
 /// generates circular coordinates at full width for the circular collider
-fn create_circular_collider_coordinates(
+pub fn create_circular_collider_coordinates(
     n_vertex: u64,
     logical_width: f64,
     logical_height: f64,
