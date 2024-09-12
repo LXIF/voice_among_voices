@@ -1,13 +1,12 @@
 mod physics;
+mod utils;
 
 use candid::{CandidType, Principal};
 use ic_cdk::{api::time, init, post_upgrade, query, update};
 use physics::*;
-use serde::{Deserialize, Serialize};
-use std::{
-    cell::{OnceCell, RefCell},
-    collections::BTreeMap,
-};
+use serde::Deserialize;
+use std::{cell::RefCell, collections::BTreeMap};
+use utils::node_within_circle;
 
 #[derive(Debug)]
 struct User {
@@ -126,6 +125,14 @@ fn post_upgrade() {
 
 #[update]
 fn add_voice_node(node: VoiceNodeIngress) {
+    // check if we can accept le circle
+    let within_circle =
+        SIMULATION_PARAMETERS.with(|sim_params| node_within_circle(&node, sim_params));
+
+    if !within_circle {
+        return;
+    };
+
     let mut sample_id = 0;
     SAMPLES.with(|samples| {
         let new_sample = AudioSample {
@@ -178,14 +185,14 @@ mod tests {
     #[test]
     fn voice_nodes_get_added_correctly() {
         let voice_node = VoiceNodeIngress {
-            x: 10.,
-            y: 10.,
+            x: 50.,
+            y: 90.,
             sample: "wargle".to_string(),
         };
 
         let another_voice_node = VoiceNodeIngress {
-            x: 10.,
-            y: 10.,
+            x: 5.,
+            y: 50.,
             sample: "wargle".to_string(),
         };
 
@@ -198,6 +205,29 @@ mod tests {
 
             assert_eq!(id, 0);
             assert_eq!(another_id, 1);
+        });
+    }
+
+    #[test]
+    fn voice_nodes_get_rejected_correctly() {
+        let voice_node = VoiceNodeIngress {
+            x: 0.,
+            y: 0.,
+            sample: "wargle".to_string(),
+        };
+
+        let another_voice_node = VoiceNodeIngress {
+            x: 99.,
+            y: 50.,
+            sample: "wargle".to_string(),
+        };
+
+        add_voice_node(voice_node);
+        add_voice_node(another_voice_node);
+
+        SAMPLES.with(|samples| {
+            println!("{}", samples.borrow().len());
+            assert!(samples.borrow().len() == 0);
         });
     }
 
