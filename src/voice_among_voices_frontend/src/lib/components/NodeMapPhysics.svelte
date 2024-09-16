@@ -187,13 +187,21 @@
                     });
 
                     // reset the forces
-                    body.rigidBody.resetForces(true);
+                    body.rigidBody.resetForces(true); // TODO: check what happens if you reset after the below check
                     // check if resultant is above threshold
-                    const resultant = magneticForces.reduce((acc, current) => {
-                        return acc + Math.sqrt(current.x ** 2 + current.y ** 2);
-                    }, 0);
+                    const resultantAbs = magneticForces.reduce(
+                        (acc, current) => {
+                            return (
+                                acc + Math.sqrt(current.x ** 2 + current.y ** 2)
+                            );
+                        },
+                        0
+                    );
 
-                    if (resultant < force_cutoff) return;
+                    if (resultantAbs < force_cutoff) {
+                        body.rigidBody.sleep();
+                        return;
+                    }
 
                     magneticForces.forEach((force) =>
                         body.rigidBody.addForce(force, true)

@@ -1,4 +1,5 @@
 use candid::CandidType;
+use nalgebra::{distance, Const, Isometry, Isometry2, OPoint, Point2, Vector2};
 use rapier2d::{parry::shape::Ball, prelude::*};
 
 use crate::{SimulationParameters, VoiceNodeLocal, VoiceNodeLocalStore};
@@ -9,6 +10,12 @@ pub struct ColliderCoordinate {
     y: f64,
 }
 
+impl Into<OPoint<f32, Const<2>>> for ColliderCoordinate {
+    fn into(self) -> OPoint<f32, Const<2>> {
+        Point::new(self.x as f32, self.y as f32)
+    }
+}
+
 struct PhysicsBody {
     collider_handle: ColliderHandle,
     rigid_body_handle: RigidBodyHandle,
@@ -17,18 +24,32 @@ struct PhysicsBody {
 
 /// simulates the new field until all bodies are at rest
 pub fn simulate_until_stopped(
-    nodes: &VoiceNodeLocalStore,
+    //mutates the store!
+    nodes: &mut VoiceNodeLocalStore,
     parameters: &SimulationParameters,
     collider_coordinates: &Vec<ColliderCoordinate>,
 ) -> VoiceNodeLocalStore {
     // SETUP///////////////////////////////////////////////////
 
+    let gravity = vector![0., 0.];
+    let integration_parameters = IntegrationParameters::default();
+    let mut island_manager = IslandManager::new();
+    let mut broad_phase = DefaultBroadPhase::new();
+    let mut narrow_phase = NarrowPhase::new();
+    let mut impulse_joint_set = ImpulseJointSet::new();
+    let mut multibody_joint_set = MultibodyJointSet::new();
+    let mut ccd_solver = CCDSolver::new();
+    let physics_hooks = ();
+    let event_handler = ();
+
     let mut rigid_body_set = RigidBodySet::new();
     let mut collider_set = ColliderSet::new();
+    let mut query_pipeline = QueryPipeline::new();
+    let mut physics_pipeline = PhysicsPipeline::new();
 
     let mut bodies: Vec<PhysicsBody>;
 
-    // create collider
+    // create world collider
     let formatted_collider_coordinates: Vec<Point<Real>> = collider_coordinates
         .iter()
         .map(|coord| Point::new(coord.x as Real, coord.y as Real))
@@ -69,28 +90,183 @@ pub fn simulate_until_stopped(
         .collect();
 
     // SIMULATE
-    fn apply_magnetism_forces(
-        bodies: Vec<PhysicsBody>,
-        parameters: &SimulationParameters,
-        rigid_body_set: RigidBodySet,
-        collider_set: ColliderSet,
-    ) {
-        bodies.iter().for_each(|body| {
-            let rigid_body = rigid_body_set.get(body.rigid_body_handle).unwrap();
-            let collider = collider_set.get(body.collider_handle).unwrap();
 
-            let cutoff_position = rigid_body.translation();
-            let cutoff_rotation = rigid_body.rotation();
-            let cutoff_shape = Ball::new(parameters.max_distance as f32);
+    // apply force
+    // step until no more forces
 
-            let bodies_within_reach: Vec<Collider>;
-            let magnetic_forces: Vec<Vector<Real>>;
+    let max_steps = 10_000_000;
+    let mut steps = 0;
 
-            // INTERSECTION TEST FROM QUERY PIPELINE
-        });
+    let mut new_nodes: VoiceNodeLocalStore = vec![]; //TODO: remove this when no longer needed
+
+    loop {
+        steps += 1;
+        apply_magnetism_forces(
+            &mut bodies,
+            parameters,
+            &mut rigid_body_set,
+            &collider_set,
+            &query_pipeline,
+        );
+        physics_pipeline.step(
+            &gravity,
+            &integration_parameters,
+            &mut island_manager,
+            &mut broad_phase,
+            &mut narrow_phase,
+            &mut rigid_body_set,
+            &mut collider_set,
+            &mut impulse_joint_set,
+            &mut multibody_joint_set,
+            &mut ccd_solver,
+            Some(&mut query_pipeline),
+            &physics_hooks,
+            &event_handler,
+        );
+
+        let still_moving = check_if_still_moving(&bodies, &rigid_body_set);
+
+        // if !still_moving || steps >= max_steps {
+        //     for physics_body in bodies.iter() {
+        //         let position = rigid_body_set
+        //             .get(physics_body.rigid_body_handle)
+        //             .unwrap()
+        //             .translation();
+        //         let node_to_be_updated = nodes
+        //             .iter_mut()
+        //             .find(|node| node.id == physics_body.voice_node_id)
+        //             .unwrap();
+
+        //         node_to_be_updated.x = position[0].into();
+        //         node_to_be_updated.y = position[1].into();
+        //     }
+        //     break;
+        // }
+
+        // FOR TESTING, LETS JUST RETURN THIS SO WE CAN READ IT OUT
+        // for prod, might it make sense to mutate in-place?
+        if !still_moving || steps >= max_steps {
+            for physics_body in bodies.iter() {
+                let position = rigid_body_set
+                    .get(physics_body.rigid_body_handle)
+                    .unwrap()
+                    .translation();
+                let node_to_be_referenced = nodes
+                    .iter()
+                    .find(|node| node.id == physics_body.voice_node_id)
+                    .unwrap();
+
+                let new_node = VoiceNodeLocal {
+                    id: node_to_be_referenced.id,
+                    sample_id: node_to_be_referenced.sample_id,
+                    x: position[0].into(),
+                    y: position[1].into(),
+                };
+                new_nodes.push(new_node);
+
+                // node_to_be_updated.x = position[0].into();
+                // node_to_be_updated.y = position[1].into();
+            }
+            break;
+        }
     }
 
-    todo!()
+    new_nodes
+}
+
+fn apply_magnetism_forces(
+    bodies: &mut Vec<PhysicsBody>,
+    parameters: &SimulationParameters,
+    rigid_body_set: &mut RigidBodySet,
+    collider_set: &ColliderSet,
+    query_pipeline: &QueryPipeline,
+) {
+    for body in bodies.iter() {
+        let rigid_body = rigid_body_set.get(body.rigid_body_handle).unwrap();
+        let collider = collider_set.get(body.collider_handle).unwrap();
+        let cutoff_position =
+            Isometry2::new(*rigid_body.translation(), rigid_body.rotation().angle());
+        let cutoff_shape = Ball::new(parameters.max_distance as f32);
+        let filter = QueryFilter::default();
+
+        let mut bodies_within_reach: Vec<ColliderHandle> = vec![];
+        let mut magnetic_forces: Vec<Vector<Real>> = vec![];
+
+        // INTERSECTION TEST FROM QUERY PIPELINE
+        query_pipeline.intersections_with_shape(
+            rigid_body_set,
+            collider_set,
+            &cutoff_position,
+            &cutoff_shape,
+            filter,
+            |body_within_reach| {
+                bodies_within_reach.push(body_within_reach);
+                true
+            },
+        );
+
+        // create force vectors and add them to magnetic_forces
+        for body_within_reach_collider_handle in bodies_within_reach.iter() {
+            let body_position = rigid_body.position();
+
+            let rigid_body_within_reach_handle = collider_set
+                .get(*body_within_reach_collider_handle)
+                .unwrap()
+                .parent()
+                .unwrap();
+            let body_within_reach = rigid_body_set.get(rigid_body_within_reach_handle).unwrap();
+            let body_within_reach_pos = body_within_reach.position();
+
+            let distance_between_bodies = distance(
+                &Point2::new(body_position.translation.x, body_position.translation.y),
+                &Point2::new(
+                    body_within_reach_pos.translation.x,
+                    body_within_reach_pos.translation.y,
+                ),
+            );
+            let magnetic_force_scalar =
+                (1. / distance_between_bodies.powi(2)) * parameters.force_strength as f32;
+            let vector_between_bodies =
+                Vector2::new(
+                    body_within_reach_pos.translation.x,
+                    body_within_reach_pos.translation.y,
+                ) - Vector2::new(body_position.translation.x, body_position.translation.y);
+
+            magnetic_forces.push(Vector2::new(
+                vector_between_bodies.x * magnetic_force_scalar,
+                vector_between_bodies.y * magnetic_force_scalar,
+            ));
+        }
+
+        // reset forces
+        let rigid_body = rigid_body_set.get_mut(body.rigid_body_handle).unwrap();
+        rigid_body.reset_forces(true);
+
+        let resultant_abs = magnetic_forces.iter().fold(0., |acc, force| {
+            acc + distance(&Point::new(0., 0.), &Point::new(force.x, force.y))
+        });
+
+        if resultant_abs < parameters.force_cutoff as f32 {
+            rigid_body.sleep();
+            return;
+        };
+
+        for force in magnetic_forces.iter() {
+            rigid_body.add_force(*force, true);
+        }
+    }
+}
+
+fn check_if_still_moving(bodies: &Vec<PhysicsBody>, rigid_body_set: &RigidBodySet) -> bool {
+    let mut moving = false;
+    for body in bodies.iter() {
+        let rigid_body = rigid_body_set.get(body.rigid_body_handle).unwrap();
+        if rigid_body.is_moving() {
+            moving = true;
+            break;
+        }
+    }
+    moving
 }
 
 /// generates circular coordinates at full width for the circular collider

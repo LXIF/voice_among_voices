@@ -81,6 +81,9 @@ struct SimulationParameters {
     friction: f64,
 }
 
+#[derive(CandidType)]
+struct NotWithinCircleError;
+
 thread_local! { // TODO: replace with stable structures and make auto-scaling
     static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
@@ -126,13 +129,13 @@ fn post_upgrade() {
 }
 
 #[update]
-fn add_voice_node(node: VoiceNodeIngress) {
+fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, NotWithinCircleError> {
     // check if we can accept le circle
     let within_circle =
         SIMULATION_PARAMETERS.with(|sim_params| node_within_circle(&node, sim_params));
 
     if !within_circle {
-        return;
+        return Err(NotWithinCircleError);
     };
 
     let mut sample_id = 0;
@@ -145,17 +148,34 @@ fn add_voice_node(node: VoiceNodeIngress) {
         samples.borrow_mut().push(new_sample);
     });
 
-    VOICE_NODES.with(|nodes| {
-        let id = nodes.borrow().len().into();
-        let new_node = VoiceNodeLocal {
-            id,
-            x: node.x,
-            y: node.y,
-            sample_id,
-        };
+    let mut returnable_nodes: VoiceNodeEgressStore = vec![];
 
-        nodes.borrow_mut().push(new_node);
+    SIMULATION_PARAMETERS.with(|parameters| {
+        COLLIDER_COORDINATES.with(|collider_coordinates| {
+            VOICE_NODES.with(|nodes| {
+                let id = nodes.borrow().len().into();
+                let new_node = VoiceNodeLocal {
+                    id,
+                    x: node.x,
+                    y: node.y,
+                    sample_id,
+                };
+
+                nodes.borrow_mut().push(new_node);
+
+                returnable_nodes = simulate_until_stopped(
+                    &mut nodes.borrow_mut(),
+                    parameters,
+                    &collider_coordinates.borrow(),
+                )
+                .into_iter()
+                .map(|node| node.into())
+                .collect()
+            });
+        });
     });
+
+    Ok(returnable_nodes)
 }
 
 #[query]
