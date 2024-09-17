@@ -1,8 +1,8 @@
+use crate::{SimulationParameters, VoiceNodeLocal, VoiceNodeLocalStore};
 use candid::CandidType;
+use futures::executor::block_on;
 use nalgebra::{distance, Const, Isometry, Isometry2, OPoint, Point2, Vector2};
 use rapier2d::{parry::shape::Ball, prelude::*};
-
-use crate::{SimulationParameters, VoiceNodeLocal, VoiceNodeLocalStore};
 
 #[derive(Debug, Copy, Clone, CandidType)]
 pub struct ColliderCoordinate {
@@ -16,6 +16,7 @@ impl Into<OPoint<f32, Const<2>>> for ColliderCoordinate {
     }
 }
 
+#[derive(Debug)]
 struct PhysicsBody {
     collider_handle: ColliderHandle,
     rigid_body_handle: RigidBodyHandle,
@@ -55,7 +56,7 @@ pub fn simulate_until_stopped(
         .map(|coord| Point::new(coord.x as Real, coord.y as Real))
         .collect();
 
-    let collider = ColliderBuilder::polyline(formatted_collider_coordinates, None);
+    let collider = ColliderBuilder::polyline(formatted_collider_coordinates, None).build();
 
     collider_set.insert(collider);
 
@@ -68,11 +69,13 @@ pub fn simulate_until_stopped(
                 .translation(vector![node.x as f32, node.y as f32])
                 .lock_rotations()
                 .linear_damping(parameters.linear_damping as f32)
-                .user_data(node.id as u128);
+                .user_data(node.id as u128)
+                .build();
 
             let new_collider = ColliderBuilder::ball(2.)
                 .density(2.)
-                .friction(parameters.friction as f32); // TODO: replace with length and density from sample
+                .friction(parameters.friction as f32)
+                .build(); // TODO: replace with length and density from sample
 
             let rigid_body_handle = rigid_body_set.insert(new_rigid_body);
             let collider_handle = collider_set.insert_with_parent(
@@ -89,12 +92,20 @@ pub fn simulate_until_stopped(
         })
         .collect();
 
+    // DEBUG
+    // for body in bodies.iter() {
+    //     let collider_handle = body.collider_handle;
+
+    //     let parent_body = collider_set.get(collider_handle).unwrap().parent().unwrap();
+    //     println!("parent_body in setup: {:#?}", parent_body);
+    // }
+
     // SIMULATE
 
     // apply force
     // step until no more forces
 
-    let max_steps = 10_000_000;
+    let max_steps = 10_000;
     let mut steps = 0;
 
     let mut new_nodes: VoiceNodeLocalStore = vec![]; //TODO: remove this when no longer needed
@@ -124,6 +135,13 @@ pub fn simulate_until_stopped(
             &event_handler,
         );
 
+        for physics_body in bodies.iter() {
+            let position = rigid_body_set
+                .get(physics_body.rigid_body_handle)
+                .unwrap()
+                .translation();
+        }
+
         let still_moving = check_if_still_moving(&bodies, &rigid_body_set);
 
         // if !still_moving || steps >= max_steps {
@@ -145,7 +163,8 @@ pub fn simulate_until_stopped(
 
         // FOR TESTING, LETS JUST RETURN THIS SO WE CAN READ IT OUT
         // for prod, might it make sense to mutate in-place?
-        if !still_moving || steps >= max_steps {
+        if (!still_moving && steps > 50) || steps >= max_steps {
+            // if steps >= max_steps {
             for physics_body in bodies.iter() {
                 let position = rigid_body_set
                     .get(physics_body.rigid_body_handle)
@@ -181,11 +200,10 @@ fn apply_magnetism_forces(
     collider_set: &ColliderSet,
     query_pipeline: &QueryPipeline,
 ) {
-    for body in bodies.iter() {
+    for body in bodies.iter().rev() {
         let rigid_body = rigid_body_set.get(body.rigid_body_handle).unwrap();
         let collider = collider_set.get(body.collider_handle).unwrap();
-        let cutoff_position =
-            Isometry2::new(*rigid_body.translation(), rigid_body.rotation().angle());
+        let cutoff_position = *rigid_body.position();
         let cutoff_shape = Ball::new(parameters.max_distance as f32);
         let filter = QueryFilter::default();
 
@@ -205,37 +223,51 @@ fn apply_magnetism_forces(
             },
         );
 
+        let body_position = rigid_body.position();
+
         // create force vectors and add them to magnetic_forces
         for body_within_reach_collider_handle in bodies_within_reach.iter() {
-            let body_position = rigid_body.position();
+            if body.collider_handle == *body_within_reach_collider_handle {
+                continue;
+            }
 
-            let rigid_body_within_reach_handle = collider_set
+            if let Some(rigid_body_within_reach_handle) = collider_set
                 .get(*body_within_reach_collider_handle)
-                .unwrap()
-                .parent()
-                .unwrap();
-            let body_within_reach = rigid_body_set.get(rigid_body_within_reach_handle).unwrap();
-            let body_within_reach_pos = body_within_reach.position();
+                .and_then(|collider| collider.parent())
+            {
+                let body_within_reach = rigid_body_set.get(rigid_body_within_reach_handle).unwrap();
+                let body_within_reach_pos = body_within_reach.position();
 
-            let distance_between_bodies = distance(
-                &Point2::new(body_position.translation.x, body_position.translation.y),
-                &Point2::new(
-                    body_within_reach_pos.translation.x,
-                    body_within_reach_pos.translation.y,
-                ),
-            );
-            let magnetic_force_scalar =
-                (1. / distance_between_bodies.powi(2)) * parameters.force_strength as f32;
-            let vector_between_bodies =
-                Vector2::new(
-                    body_within_reach_pos.translation.x,
-                    body_within_reach_pos.translation.y,
-                ) - Vector2::new(body_position.translation.x, body_position.translation.y);
+                let distance_between_bodies = distance(
+                    &Point2::new(body_position.translation.x, body_position.translation.y),
+                    &Point2::new(
+                        body_within_reach_pos.translation.x,
+                        body_within_reach_pos.translation.y,
+                    ),
+                );
 
-            magnetic_forces.push(Vector2::new(
-                vector_between_bodies.x * magnetic_force_scalar,
-                vector_between_bodies.y * magnetic_force_scalar,
-            ));
+                if distance_between_bodies > 0.0 {
+                    let magnetic_force_scalar =
+                        (1. / distance_between_bodies.powi(2)) * parameters.force_strength as f32;
+                    let vector_between_bodies =
+                        Vector2::new(body_position.translation.x, body_position.translation.y)
+                            - Vector2::new(
+                                body_within_reach_pos.translation.x,
+                                body_within_reach_pos.translation.y,
+                            );
+
+                    // println!("Magnetic force scalar: {}", magnetic_force_scalar);
+                    // println!("Vector between bodies: {:?}", vector_between_bodies);
+
+                    magnetic_forces.push(Vector2::new(
+                        vector_between_bodies.x * magnetic_force_scalar,
+                        vector_between_bodies.y * magnetic_force_scalar,
+                    ));
+                }
+            } else {
+                // Handle World collider which doesn't have a parent
+                continue;
+            }
         }
 
         // reset forces
@@ -290,6 +322,9 @@ pub fn create_circular_collider_coordinates(
 
 #[cfg(test)]
 mod tests {
+
+    use crate::SIMULATION_PARAMETERS;
+
     use super::*;
 
     // needed because floats and trigo aren't perfect lol
@@ -324,5 +359,63 @@ mod tests {
         // top
         assert!(approximately_equal(result[3].x, 50., epsilon));
         assert!(approximately_equal(result[3].y, 0., epsilon));
+    }
+
+    #[test]
+    fn physics_sim_sanity_test() {
+        let mut nodes: VoiceNodeLocalStore = vec![];
+        let collider_coordinates = create_circular_collider_coordinates(360, 100., 100.);
+        let mut result: VoiceNodeLocalStore = vec![];
+
+        for i in 0..4 {
+            let node = VoiceNodeLocal {
+                id: i,
+                x: 5. + 5. * i as f64,
+                y: 50.,
+                sample_id: i,
+            };
+
+            nodes.push(node);
+        }
+
+        SIMULATION_PARAMETERS.with(|parameters| {
+            result = simulate_until_stopped(&mut nodes, parameters, &collider_coordinates);
+        });
+
+        println!("{:#?}", result);
+        assert!(result[0].x > 0.);
+        assert!(result[0].x < 100.);
+    }
+
+    #[test]
+    fn physics_moves_bodies() {
+        let mut nodes: VoiceNodeLocalStore = vec![];
+        let collider_coordinates = create_circular_collider_coordinates(360, 100., 100.);
+        let mut result: VoiceNodeLocalStore = vec![];
+
+        let node_a = VoiceNodeLocal {
+            id: 0,
+            x: 48.,
+            y: 50.,
+            sample_id: 0,
+        };
+
+        let node_b = VoiceNodeLocal {
+            id: 1,
+            x: 52.,
+            y: 50.,
+            sample_id: 1,
+        };
+
+        nodes.push(node_a);
+        nodes.push(node_b);
+
+        SIMULATION_PARAMETERS.with(|parameters| {
+            result = simulate_until_stopped(&mut nodes, parameters, &collider_coordinates);
+        });
+
+        println!("{:#?}", result);
+        assert!(result[0].x < 48.);
+        assert!(result[1].x > 52.);
     }
 }

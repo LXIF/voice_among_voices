@@ -2,6 +2,7 @@ mod physics;
 mod utils;
 
 use candid::{CandidType, Principal};
+use futures::executor::block_on;
 use ic_cdk::{api::time, init, post_upgrade, query, update};
 use physics::*;
 use serde::Deserialize;
@@ -81,7 +82,7 @@ struct SimulationParameters {
     friction: f64,
 }
 
-#[derive(CandidType)]
+#[derive(CandidType, Debug)]
 struct NotWithinCircleError;
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
@@ -206,6 +207,8 @@ mod tests {
 
     #[test]
     fn voice_nodes_get_added_correctly() {
+        collider_init();
+
         let voice_node = VoiceNodeIngress {
             x: 50.,
             y: 90.,
@@ -218,8 +221,9 @@ mod tests {
             sample: "wargle".to_string(),
         };
 
-        add_voice_node(voice_node);
-        add_voice_node(another_voice_node);
+        let result_a = add_voice_node(voice_node);
+        println!("{:#?}", result_a.unwrap());
+        let _ = add_voice_node(another_voice_node);
 
         SAMPLES.with(|samples| {
             let id = samples.borrow()[0].id;
@@ -244,8 +248,8 @@ mod tests {
             sample: "wargle".to_string(),
         };
 
-        add_voice_node(voice_node);
-        add_voice_node(another_voice_node);
+        let _ = add_voice_node(voice_node);
+        let _ = add_voice_node(another_voice_node);
 
         SAMPLES.with(|samples| {
             println!("{}", samples.borrow().len());

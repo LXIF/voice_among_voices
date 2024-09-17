@@ -20,6 +20,7 @@
     } from '$lib/utils/convUtils';
 
     export let nodes: VoiceNodeEgress[] = [];
+    export let backendNodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
@@ -241,7 +242,8 @@
                 physicsBodies,
                 colliderCoordinates,
                 world,
-                applyMagnetismForces
+                applyMagnetismForces,
+                backendNodes
             );
         });
     };
@@ -270,7 +272,8 @@
         bodies: PhysicsBody[],
         colliderCoords: ColliderCoordinate[],
         world: any,
-        magnetismFunction: Function
+        magnetismFunction: Function,
+        backendBodies: VoiceNodeEgress[]
     ) {
         // const nodesToDraw = bodies.map((body) => {
         //     return body.voiceNode;
@@ -317,6 +320,17 @@
                 // context!.stroke();
                 context!.closePath();
             });
+
+            backendBodies?.forEach((body) => {
+                context!.beginPath();
+                context!.ellipse(body.x, body.y, 2, 2, 0, 0, Math.PI * 2);
+                // context!.fillStyle = `hsl(0 100% 50% )`;
+                // context!.fill();
+                context!.strokeStyle = `hsl(0 100% 50% )`;
+                context!.lineWidth = 0.5;
+                context!.stroke();
+                context!.closePath();
+            });
         }
 
         function checkIfStillMoving(bodies: PhysicsBody[]) {
@@ -341,7 +355,13 @@
 
         setTimeout(() => {
             if (rendering) {
-                render(bodies, colliderCoordinates, world, magnetismFunction);
+                render(
+                    bodies,
+                    colliderCoordinates,
+                    world,
+                    magnetismFunction,
+                    backendNodes
+                );
             }
         }, 16);
     }

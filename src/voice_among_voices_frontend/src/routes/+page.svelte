@@ -6,6 +6,7 @@
     import type {VoiceNodeEgress} from '../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
     let voiceNodes: VoiceNodeEgress[] = [];
+    let backendSimulationResult: VoiceNodeEgress[] = [];
     let x = '';
     let y = '';
     let sample = '';
@@ -29,7 +30,12 @@
     });
 
     const handleDropNewNode = async (event: CustomEvent) => {
-        await backend.add_voice_node(event.detail);
+        let backend_simulation_result = await backend.add_voice_node(
+            event.detail
+        );
+        if (backend_simulation_result.Ok) {
+            backendSimulationResult = backend_simulation_result.Ok;
+        }
         voiceNodes = await backend.voice_nodes();
     };
 </script>
@@ -70,6 +76,7 @@
     <NodeMap nodes={voiceNodes} /> -->
     <NodeMapPhysics
         nodes={voiceNodes}
+        backendNodes={backendSimulationResult}
         on:dropNewNode={handleDropNewNode}
     />
 </main>

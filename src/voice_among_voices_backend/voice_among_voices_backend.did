@@ -29,8 +29,13 @@ type ColliderCoordinate = record {
 
 type VoiceNodeStoreEgress = vec VoiceNodeEgress;
 
+type AddVoiceNodeResult = variant {
+    Ok : VoiceNodeStoreEgress;
+    Err : opt variant { NotWithinCircleError };
+};
+
 service : {
-    "add_voice_node" : (VoiceNodeIngress) -> ();
+    "add_voice_node" : (VoiceNodeIngress) -> (AddVoiceNodeResult);
     "voice_nodes" : () -> (VoiceNodeStoreEgress) query;
     "get_simulation_parameters" : () -> (SimulationParameters) query;
     "get_collider_coordinates" : () -> (vec ColliderCoordinate) query;

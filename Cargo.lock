@@ -947,6 +947,7 @@ name = "voice_among_voices_backend"
 version = "0.1.0"
 dependencies = [
  "candid",
+ "futures",
  "ic-cdk",
  "ic-cdk-timers",
  "rapier2d",
