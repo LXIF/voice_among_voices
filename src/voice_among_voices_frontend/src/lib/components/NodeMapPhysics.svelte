@@ -21,6 +21,7 @@
 
     export let nodes: VoiceNodeEgress[] = [];
     export let backendNodes: VoiceNodeEgress[] = [];
+    let localNodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
@@ -103,7 +104,7 @@
     $: if (
         browser &&
         context &&
-        nodes.length >= 1 &&
+        localNodes.length >= 1 &&
         !rendering &&
         !resetting &&
         simulationParameters
@@ -112,8 +113,12 @@
         setupAndRender();
     }
 
-    $: if (browser && !!nodes && simulationParameters) {
+    $: if (browser && !!localNodes && simulationParameters) {
         resetPhysics();
+    }
+
+    $: if (localNodes.length === 0 && nodes.length > 0) {
+        localNodes = [...nodes];
     }
 
     ///////////PHYSICS//////////
@@ -218,7 +223,7 @@
             world.createCollider(roundInnerColliderDesc);
 
             // create rigid bodies
-            physicsBodies = nodes.map((node) => {
+            physicsBodies = localNodes.map((node) => {
                 let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
                     .lockRotations()
                     .setLinearDamping(linear_damping)
@@ -438,7 +443,7 @@
         const maxDistance = logical_width / 2 - nodeRadius;
 
         if (distanceFromCenter > maxDistance) {
-            console.log('oiut');
+            console.log('out');
             return;
         }
 
@@ -447,8 +452,10 @@
             y: logicalY,
             sample: 'todo',
         };
-
         dispatch('dropNewNode', voiceNode as VoiceNodeIngress);
+        localNodes.push({...voiceNode, id: BigInt(nodes.length)});
+        resetPhysics();
+        togglePhysics();
         rendering = false;
     }
 </script>
@@ -463,17 +470,17 @@
         on:drop={handleDrop}
         class={`w-[${canvasWidth}px] h-[${canvasHeight}px]`}
     ></canvas>
-    <button
+    <!-- <button
         class="bg-slate-500 rounded-full"
         on:click={togglePhysics}>toggle physics</button
     >
     <button
         class="bg-slate-500 rounded-full"
         on:click={resetPhysics}>reset physics</button
-    >
-    <div>
+    > -->
+    <!-- <div>
         moving: {moving}
-    </div>
+    </div> -->
     <!-- TODO: update nodeWidth with sample length -->
     <DroppableNode nodeWidth={4} />
 </main>
