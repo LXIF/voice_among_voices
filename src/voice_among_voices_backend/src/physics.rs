@@ -200,7 +200,7 @@ fn apply_magnetism_forces(
     collider_set: &ColliderSet,
     query_pipeline: &QueryPipeline,
 ) {
-    for body in bodies.iter().rev() {
+    for body in bodies.iter() {
         let rigid_body = rigid_body_set.get(body.rigid_body_handle).unwrap();
         let collider = collider_set.get(body.collider_handle).unwrap();
         let cutoff_position = *rigid_body.position();
@@ -274,14 +274,14 @@ fn apply_magnetism_forces(
         let rigid_body = rigid_body_set.get_mut(body.rigid_body_handle).unwrap();
         rigid_body.reset_forces(true);
 
-        let resultant_abs = magnetic_forces.iter().fold(0., |acc, force| {
-            acc + distance(&Point::new(0., 0.), &Point::new(force.x, force.y))
-        });
+        // let resultant_abs = magnetic_forces.iter().fold(0., |acc, force| {
+        //     acc + distance(&Point::new(0., 0.), &Point::new(force.x, force.y))
+        // });
 
-        if resultant_abs < parameters.force_cutoff as f32 {
-            rigid_body.sleep();
-            return;
-        };
+        // if resultant_abs < parameters.force_cutoff as f32 {
+        //     rigid_body.sleep();
+        //     return;
+        // };
 
         for force in magnetic_forces.iter() {
             rigid_body.add_force(*force, true);
@@ -417,5 +417,47 @@ mod tests {
         println!("{:#?}", result);
         assert!(result[0].x < 48.);
         assert!(result[1].x > 52.);
+    }
+
+    #[test]
+    fn physics_moves_bodies_approximately_equally() {
+        let mut nodes: VoiceNodeLocalStore = vec![];
+        let collider_coordinates = create_circular_collider_coordinates(360, 100., 100.);
+        let mut result: VoiceNodeLocalStore = vec![];
+
+        let epsilon = 1e3;
+
+        let node_a = VoiceNodeLocal {
+            id: 0,
+            x: 48.,
+            y: 50.,
+            sample_id: 0,
+        };
+
+        let node_b = VoiceNodeLocal {
+            id: 1,
+            x: 52.,
+            y: 50.,
+            sample_id: 1,
+        };
+
+        nodes.push(node_a);
+        nodes.push(node_b);
+
+        SIMULATION_PARAMETERS.with(|parameters| {
+            result = simulate_until_stopped(&mut nodes, parameters, &collider_coordinates);
+        });
+
+        println!("{:#?}", result);
+        assert!(approximately_equal(
+            result[0].x.abs(),
+            100. - result[1].x.abs(),
+            epsilon
+        ));
+        assert!(approximately_equal(
+            result[0].y.abs(),
+            result[1].y.abs(),
+            epsilon
+        ));
     }
 }
