@@ -55,6 +55,9 @@
     const canvasHeight = 600;
     const usableCanvasWidth = 500;
     const usableCanvasHeight = 500;
+    const worldStepRate = 60;
+    const worldStepInterval = 1000 / worldStepRate;
+
     let canvasRatio: number | undefined = undefined;
 
     onMount(() => {
@@ -277,6 +280,30 @@
     // }
 
     // Draw the nodes on the canvas
+
+    let then: number | undefined;
+    let now: number | undefined;
+
+    function checkIfStillMoving(bodies: PhysicsBody[]) {
+        moving = false;
+        bodies.forEach((body) => {
+            if (body.rigidBody.isMoving()) {
+                moving = true;
+            }
+        });
+    }
+
+    function stopSlowNodes(bodies: PhysicsBody[], velocityCutoff: number) {
+        bodies.forEach((body) => {
+            const linVel = body.rigidBody.linvel();
+            const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
+
+            if (absVel < velocityCutoff) {
+                body.rigidBody.setLinvel({x: 0, y: 0}, true);
+            }
+        });
+    }
+
     function render(
         bodies: PhysicsBody[],
         colliderCoords: ColliderCoordinate[],
@@ -287,82 +314,96 @@
         // const nodesToDraw = bodies.map((body) => {
         //     return body.voiceNode;
         // });
-        if (world && physicsActive) {
-            magnetismFunction();
-            world.step();
-            checkIfStillMoving(bodies);
-        }
 
-        if (context) {
-            // Clear the canvas
-            context.clearRect(0, 0, canvasWidth, canvasHeight);
-
-            // Draw the collider
-            if (colliderCoords?.length > 0) {
-                context.beginPath();
-                context.moveTo(colliderCoords[0].x, colliderCoords[0].y);
-                colliderCoords.forEach((coordinate) => {
-                    context?.lineTo(coordinate.x, coordinate.y);
-                });
-                // context.strokeStyle = 'black';
-                // context.lineWidth = 0.5;
-                // context.stroke();
-                context!.fillStyle = `hsl(200 50% 50%)`;
-                context!.fill();
-                context.closePath();
+        requestAnimationFrame((timestamp) => {
+            if (then === undefined) {
+                then = timestamp;
             }
 
-            // Draw each VoiceNode as a circle using the mapped coordinates
-            bodies.forEach((body) => {
-                const bodyPos = body.rigidBody.translation();
-                const linVel = body.rigidBody.linvel();
-                const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
-                const colorVel = clamp(mapRange(absVel, 0, 2, 0, 100), 0, 100);
-                const canvasX = bodyPos.x;
-                const canvasY = bodyPos.y;
+            now = timestamp;
+            const elapsed = now - then;
 
-                context!.beginPath();
-                context!.ellipse(canvasX, canvasY, 2, 2, 0, 0, Math.PI * 2);
-                context!.fillStyle = `hsl(${30 + colorVel / 10} 80% ${colorVel}% )`;
-                context!.fill();
-                // context!.lineWidth = 0.5;
-                // context!.stroke();
-                context!.closePath();
-            });
+            if (elapsed > worldStepInterval) {
+                then = now - (elapsed % worldStepInterval);
 
-            backendBodies?.forEach((body) => {
-                context!.beginPath();
-                context!.ellipse(body.x, body.y, 2, 2, 0, 0, Math.PI * 2);
-                // context!.fillStyle = `hsl(0 100% 50% )`;
-                // context!.fill();
-                context!.strokeStyle = `hsl(0 100% 50% )`;
-                context!.lineWidth = 0.5;
-                context!.stroke();
-                context!.closePath();
-            });
-        }
-
-        function checkIfStillMoving(bodies: PhysicsBody[]) {
-            moving = false;
-            bodies.forEach((body) => {
-                if (body.rigidBody.isMoving()) {
-                    moving = true;
+                if (world && physicsActive) {
+                    magnetismFunction();
+                    world.step();
+                    checkIfStillMoving(bodies);
                 }
-            });
-        }
 
-        function stopSlowNodes(bodies: PhysicsBody[], velocityCutoff: number) {
-            bodies.forEach((body) => {
-                const linVel = body.rigidBody.linvel();
-                const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
+                if (context) {
+                    // Clear the canvas
+                    context.clearRect(0, 0, canvasWidth, canvasHeight);
 
-                if (absVel < velocityCutoff) {
-                    body.rigidBody.setLinvel({x: 0, y: 0}, true);
+                    // Draw the collider
+                    if (colliderCoords?.length > 0) {
+                        context.beginPath();
+                        context.moveTo(
+                            colliderCoords[0].x,
+                            colliderCoords[0].y
+                        );
+                        colliderCoords.forEach((coordinate) => {
+                            context?.lineTo(coordinate.x, coordinate.y);
+                        });
+                        // context.strokeStyle = 'black';
+                        // context.lineWidth = 0.5;
+                        // context.stroke();
+                        context!.fillStyle = `hsl(200 50% 50%)`;
+                        context!.fill();
+                        context.closePath();
+                    }
+
+                    // Draw each VoiceNode as a circle using the mapped coordinates
+                    bodies.forEach((body) => {
+                        const bodyPos = body.rigidBody.translation();
+                        const linVel = body.rigidBody.linvel();
+                        const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
+                        const colorVel = clamp(
+                            mapRange(absVel, 0, 2, 0, 100),
+                            0,
+                            100
+                        );
+                        const canvasX = bodyPos.x;
+                        const canvasY = bodyPos.y;
+
+                        context!.beginPath();
+                        context!.ellipse(
+                            canvasX,
+                            canvasY,
+                            2,
+                            2,
+                            0,
+                            0,
+                            Math.PI * 2
+                        );
+                        context!.fillStyle = `hsl(${30 + colorVel / 10} 80% ${colorVel}% )`;
+                        context!.fill();
+                        // context!.lineWidth = 0.5;
+                        // context!.stroke();
+                        context!.closePath();
+                    });
+
+                    backendBodies?.forEach((body) => {
+                        context!.beginPath();
+                        context!.ellipse(
+                            body.x,
+                            body.y,
+                            2,
+                            2,
+                            0,
+                            0,
+                            Math.PI * 2
+                        );
+                        // context!.fillStyle = `hsl(0 100% 50% )`;
+                        // context!.fill();
+                        context!.strokeStyle = `hsl(0 100% 50% )`;
+                        context!.lineWidth = 0.5;
+                        context!.stroke();
+                        context!.closePath();
+                    });
                 }
-            });
-        }
-
-        setTimeout(() => {
+            }
             if (rendering) {
                 render(
                     bodies,
@@ -372,7 +413,7 @@
                     backendNodes
                 );
             }
-        }, 16);
+        });
     }
 
     // Handle the click event and map it back to logical coordinates
