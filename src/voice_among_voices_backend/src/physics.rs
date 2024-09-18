@@ -26,7 +26,7 @@ struct PhysicsBody {
 /// simulates the new field until all bodies are at rest
 pub fn simulate_until_stopped(
     //mutates the store!
-    nodes: &mut VoiceNodeLocalStore,
+    nodes: &VoiceNodeLocalStore,
     parameters: &SimulationParameters,
     collider_coordinates: &Vec<ColliderCoordinate>,
 ) -> VoiceNodeLocalStore {

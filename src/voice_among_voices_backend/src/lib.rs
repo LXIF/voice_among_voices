@@ -164,14 +164,26 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, NotWit
 
                 nodes.borrow_mut().push(new_node);
 
-                returnable_nodes = simulate_until_stopped(
-                    &mut nodes.borrow_mut(),
+                let simulated_nodes = simulate_until_stopped(
+                    &nodes.borrow(),
                     parameters,
                     &collider_coordinates.borrow(),
-                )
-                .into_iter()
-                .map(|node| node.into())
-                .collect()
+                );
+
+                for node in nodes.borrow_mut().iter_mut() {
+                    if let Some(new_node) = simulated_nodes
+                        .iter()
+                        .find(|simulated_node| simulated_node.id == node.id)
+                    {
+                        node.x = new_node.x;
+                        node.y = new_node.y;
+                    }
+                }
+
+                returnable_nodes = simulated_nodes
+                    .into_iter()
+                    .map(|node| node.into())
+                    .collect();
             });
         });
     });

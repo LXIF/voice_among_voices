@@ -118,6 +118,10 @@
     }
 
     $: if (localNodes.length === 0 && nodes.length > 0) {
+        resetNodes();
+    }
+
+    function resetNodes() {
         localNodes = [...nodes];
     }
 
@@ -455,8 +459,12 @@
         dispatch('dropNewNode', voiceNode as VoiceNodeIngress);
         localNodes.push({...voiceNode, id: BigInt(nodes.length)});
         resetPhysics();
-        togglePhysics();
+        physicsActive = true;
         rendering = false;
+    }
+
+    function handleNodeDragStart() {
+        resetNodes();
     }
 </script>
 
@@ -482,5 +490,8 @@
         moving: {moving}
     </div> -->
     <!-- TODO: update nodeWidth with sample length -->
-    <DroppableNode nodeWidth={4} />
+    <DroppableNode
+        nodeWidth={4}
+        on:dragstart={handleNodeDragStart}
+    />
 </main>

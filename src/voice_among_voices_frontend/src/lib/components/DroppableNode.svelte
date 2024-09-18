@@ -1,9 +1,12 @@
 <script lang="ts">
+    import {createEventDispatcher} from 'svelte';
     export let nodeWidth = 5; // TODO: get from sample length, adjust for logical/canvas
 
+    const dispatch = createEventDispatcher();
     let dragging = false;
 
     function handleDragStart(e: DragEvent) {
+        dispatch('dragstart');
         // clone and move offscreen
         let dragImageElement = (e.target as HTMLDivElement).cloneNode(
             true
