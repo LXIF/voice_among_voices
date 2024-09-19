@@ -1,30 +1,75 @@
 <script lang="ts">
     import {backend} from '$lib/canisters'; // complains but works
     import {onMount} from 'svelte';
-    import NodeMap from '$lib/components/NodeMap.svelte';
+    import DroppableNode from '$lib/components/DroppableNode.svelte';
     import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
     import VoiceRecorder from '$lib/components/VoiceRecorder.svelte';
-    import type {VoiceNodeEgress} from '../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    import type {
+        VoiceNodeEgress,
+        SimulationParameters,
+        AudioParameters,
+    } from '../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    import {usableCanvasWidth} from '$lib/config/nodeMap';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
+    let simulationParameters: SimulationParameters;
+    let audioParameters: AudioParameters;
+    let sampleLength = 0;
+    let nodeWidthPx = 0;
+    let nodeWidthLogical = 0;
+    let currentVoiceBlob: Blob;
+
+    let dragging = false;
 
     onMount(async () => {
-        voiceNodes = await backend.voice_nodes();
+        voiceNodes = await backend.get_voice_nodes();
+        simulationParameters = await backend.get_simulation_parameters();
+        audioParameters = await backend.get_audio_parameters();
     });
 
     const handleDropNewNode = async (event: CustomEvent) => {
-        let backend_simulation_result = await backend.add_voice_node(
-            event.detail
-        );
+        let backend_simulation_result = await backend.add_voice_node({
+            ...event.detail,
+            sample: currentVoiceBlob,
+        });
         if (backend_simulation_result.Ok) {
             backendSimulationResult = backend_simulation_result.Ok;
         }
-        voiceNodes = await backend.voice_nodes();
+        voiceNodes = await backend.get_voice_nodes();
     };
 
-    const handleRecording = (e: CustomEvent) => {
-        console.log(e.detail);
+    const handleRecordingLength = (e: CustomEvent) => {
+        sampleLength = e.detail;
+
+        const nodeWidths = calculateNodeWidth(
+            sampleLength,
+            usableCanvasWidth,
+            audioParameters.total_length_ms,
+            simulationParameters.logical_width
+        );
+
+        nodeWidthPx = nodeWidths.nodeWidthPx;
+        nodeWidthLogical = nodeWidths.nodeWidthLogical;
+    };
+
+    const handleVoiceRecorded = (e: CustomEvent) => {
+        currentVoiceBlob = e.detail;
+    };
+
+    const calculateNodeWidth = (
+        sampleLength: number,
+        canvasWidth: number,
+        totalLength: number,
+        logicalWidth: number
+    ) => {
+        const pixelPerMs = canvasWidth / totalLength;
+        const logicalPerMs = logicalWidth / totalLength;
+
+        return {
+            nodeWidthPx: sampleLength * pixelPerMs,
+            nodeWidthLogical: sampleLength * logicalPerMs,
+        };
     };
 </script>
 
@@ -33,6 +78,16 @@
         nodes={voiceNodes}
         backendNodes={backendSimulationResult}
         on:dropNewNode={handleDropNewNode}
+        {dragging}
     />
-    <VoiceRecorder on:recordingLength={handleRecording} />
+    <DroppableNode
+        {nodeWidthPx}
+        {nodeWidthLogical}
+        on:dragstart={() => (dragging = true)}
+        on:dragend={() => (dragging = false)}
+    />
+    <VoiceRecorder
+        on:recordingLength={handleRecordingLength}
+        on:voiceRecorded={handleVoiceRecorded}
+    />
 </main>

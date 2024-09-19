@@ -34,6 +34,7 @@ mod tests {
         logical_width: 100.,
         n_collider_vertices: 360,
         friction: 0.5,
+        density: 2.,
     };
 
     #[test]

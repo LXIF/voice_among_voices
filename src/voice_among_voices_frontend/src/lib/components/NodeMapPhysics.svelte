@@ -18,9 +18,17 @@
         mapToCanvasY,
         canvasToLogical,
     } from '$lib/utils/convUtils';
+    import {
+        canvasWidth,
+        canvasHeight,
+        usableCanvasWidth,
+        usableCanvasHeight,
+        worldStepInterval,
+    } from '$lib/config/nodeMap';
 
     export let nodes: VoiceNodeEgress[] = [];
     export let backendNodes: VoiceNodeEgress[] = [];
+    export let dragging: boolean;
     let localNodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
@@ -49,14 +57,6 @@
         rigidBody: RAPIER.RigidBody;
         voiceNode: VoiceNodeEgress;
     };
-
-    // Canvas dimensions
-    const canvasWidth = 600;
-    const canvasHeight = 600;
-    const usableCanvasWidth = 500;
-    const usableCanvasHeight = 500;
-    const worldStepRate = 60;
-    const worldStepInterval = 1000 / worldStepRate;
 
     let canvasRatio: number | undefined = undefined;
 
@@ -121,6 +121,10 @@
     }
 
     $: if (localNodes.length === 0 && nodes.length > 0) {
+        resetNodes();
+    }
+
+    $: if (dragging) {
         resetNodes();
     }
 
@@ -260,24 +264,7 @@
         });
     };
 
-    ////////////////////////////
-
     /////////RENDERING///////////
-
-    // function mapToCanvasX(logicalX: number) {
-    //     return (logicalX / logical_width) * canvasWidth;
-    // }
-
-    // function mapToCanvasY(logicalY: number) {
-    //     return (logicalY / logical_height) * canvasHeight;
-    // }
-
-    // // Converts canvas pixel coordinates to logical coordinates
-    // function canvasToLogical(x: number, y: number) {
-    //     const logicalX = (x / canvasWidth) * logical_width;
-    //     const logicalY = (y / canvasHeight) * logical_height;
-    //     return {logicalX, logicalY};
-    // }
 
     // Draw the nodes on the canvas
 
@@ -436,10 +423,6 @@
         console.log('Clicked coordinates (logical):', {logicalX, logicalY});
     }
 
-    function togglePhysics() {
-        physicsActive = !physicsActive;
-    }
-
     function resetPhysics() {
         resetting = true;
         rendering = false;
@@ -503,10 +486,6 @@
         physicsActive = true;
         rendering = false;
     }
-
-    function handleNodeDragStart() {
-        resetNodes();
-    }
 </script>
 
 <main>
@@ -530,9 +509,4 @@
     <!-- <div>
         moving: {moving}
     </div> -->
-    <!-- TODO: update nodeWidth with sample length -->
-    <DroppableNode
-        nodeWidth={4}
-        on:dragstart={handleNodeDragStart}
-    />
 </main>

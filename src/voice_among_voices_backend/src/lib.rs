@@ -80,6 +80,12 @@ struct SimulationParameters {
     logical_height: f64,
     n_collider_vertices: u64,
     friction: f64,
+    density: f64,
+}
+
+#[derive(Debug, Clone, Copy, CandidType)]
+struct AudioParameters {
+    total_length_ms: u32,
 }
 
 #[derive(CandidType, Debug)]
@@ -99,9 +105,13 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
         logical_height: 100.,
         logical_width: 100.,
         n_collider_vertices: 360,
-        friction: 0.5
+        friction: 0.5,
+        density: 2.
     };
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
+    static AUDIO_PARAMETERS: AudioParameters = AudioParameters {
+        total_length_ms: 60 * 1000
+    };
 }
 
 // abstracting this because during dev things change and i don't want to restart dfx all the time
@@ -192,7 +202,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, NotWit
 }
 
 #[query]
-fn voice_nodes() -> VoiceNodeEgressStore {
+fn get_voice_nodes() -> VoiceNodeEgressStore {
     VOICE_NODES.with(|nodes| {
         nodes
             .borrow()
@@ -211,6 +221,11 @@ fn get_simulation_parameters() -> SimulationParameters {
 #[query]
 fn get_collider_coordinates() -> Vec<ColliderCoordinate> {
     COLLIDER_COORDINATES.with(|coords| coords.borrow().clone())
+}
+
+#[query]
+fn get_audio_parameters() -> AudioParameters {
+    AUDIO_PARAMETERS.with(|params| params.clone())
 }
 
 #[cfg(test)]

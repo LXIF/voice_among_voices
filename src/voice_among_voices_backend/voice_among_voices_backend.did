@@ -22,6 +22,10 @@ type SimulationParameters = record {
     friction : float64;
 };
 
+type AudioParameters = record {
+    total_length_ms : nat32;
+};
+
 type ColliderCoordinate = record {
     x : float64;
     y : float64;
@@ -36,7 +40,8 @@ type AddVoiceNodeResult = variant {
 
 service : {
     "add_voice_node" : (VoiceNodeIngress) -> (AddVoiceNodeResult);
-    "voice_nodes" : () -> (VoiceNodeStoreEgress) query;
+    "get_voice_nodes" : () -> (VoiceNodeStoreEgress) query;
     "get_simulation_parameters" : () -> (SimulationParameters) query;
+    "get_audio_parameters" : () -> (AudioParameters) query;
     "get_collider_coordinates" : () -> (vec ColliderCoordinate) query;
 };

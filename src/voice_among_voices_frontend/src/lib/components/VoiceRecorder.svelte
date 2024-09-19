@@ -4,13 +4,18 @@
 
     const dispatch = createEventDispatcher();
 
-    let localStream;
-    let audioElement;
-    let mediaRecorder;
+    let localStream: MediaStream;
+    let audioElement: HTMLAudioElement;
+    let mediaRecorder: MediaRecorder;
     let recording = false;
-    let chunks = [];
+    let chunks: Blob[] = [];
+    let audioBlob: Blob;
 
     onMount(handleActivateMicrophone);
+
+    let audioDuration: number = 0;
+
+    $: dispatch('recordingLength', audioDuration);
 
     function handleActivateMicrophone() {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -30,23 +35,59 @@
         mediaRecorder = new MediaRecorder(localStream);
         mediaRecorder.ondataavailable = (e) => {
             chunks.push(e.data);
-            dispatch('recordingLength', chunks.length);
         };
         mediaRecorder.onstop = (e) => {
-            const blob = new Blob(chunks, {type: 'audio/wav'});
+            audioBlob = new Blob(chunks, {type: 'audio/wav'});
             chunks = [];
-            const audioURL = window.URL.createObjectURL(blob);
+            const audioURL = window.URL.createObjectURL(audioBlob);
             audioElement.src = audioURL;
+            checkAudioLength(audioBlob);
+            dispatch('voiceRecorded', audioBlob);
         };
     }
+
+    function checkAudioLength(blob: Blob) {
+        const fileReader = new FileReader();
+        fileReader.readAsArrayBuffer(blob);
+
+        fileReader.onloadend = () => {
+            const audioData = fileReader.result;
+            if (!audioData || typeof audioData === 'string') return;
+
+            const audioContext = new window.OfflineAudioContext({
+                length: 44100 * 60,
+                sampleRate: 44100,
+                numberOfChannels: 1,
+            });
+            audioContext.decodeAudioData(
+                audioData,
+                (buffer) => {
+                    audioDuration = buffer.duration * 1000;
+                },
+                (e) => {
+                    console.error(e);
+                }
+            );
+        };
+    }
+
+    let recordingStart: number;
+    let recordingInterval: ReturnType<typeof setInterval>;
 
     function handleRecordDown() {
         recording = true;
         window.addEventListener('pointerup', handleRecordUp);
         mediaRecorder?.start();
+
+        recordingStart = Date.now();
+        recordingInterval = setInterval(() => {
+            const elapsed = Date.now() - recordingStart;
+            dispatch('recordingLength', elapsed);
+        }, 16);
     }
 
     function handleRecordUp() {
+        clearInterval(recordingInterval);
         recording = false;
         window.removeEventListener('pointerup', handleRecordUp);
         mediaRecorder?.stop();

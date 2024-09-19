@@ -1,6 +1,8 @@
 <script lang="ts">
     import {createEventDispatcher} from 'svelte';
-    export let nodeWidth = 5; // TODO: get from sample length, adjust for logical/canvas
+
+    export let nodeWidthPx = 0;
+    export let nodeWidthLogical = 0;
 
     const dispatch = createEventDispatcher();
     let dragging = false;
@@ -24,21 +26,23 @@
             rect.width / 2,
             rect.height / 2
         );
-        e.dataTransfer?.setData('nodeRadius', String(nodeWidth / 2));
+        e.dataTransfer?.setData('nodeRadius', String(nodeWidthLogical / 2));
     }
 
     function handleDragEnd() {
         dragging = false;
+        dispatch('dragend');
     }
 </script>
 
-<div
-    draggable="true"
-    aria-roledescription="drag this onto the map to place your node"
-    on:dragstart={handleDragStart}
-    on:dragend={handleDragEnd}
-    class="flex justify-center items-center rounded-full cursor-pointer bg-red-600 w-5 h-5"
-    class:opacity-0={dragging}
->
-    drag
+<div class="flex justify-center items-center h-20 w-full">
+    <div
+        draggable="true"
+        aria-roledescription="drag this onto the map to place your node"
+        on:dragstart={handleDragStart}
+        on:dragend={handleDragEnd}
+        class="flex justify-center items-center rounded-full cursor-pointer bg-red-600"
+        class:opacity-0={dragging}
+        style={`height: ${nodeWidthPx}px; width: ${nodeWidthPx}px;`}
+    ></div>
 </div>

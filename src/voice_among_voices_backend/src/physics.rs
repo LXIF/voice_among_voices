@@ -73,7 +73,7 @@ pub fn simulate_until_stopped(
                 .build();
 
             let new_collider = ColliderBuilder::ball(2.)
-                .density(2.)
+                .density(parameters.density as f32)
                 .friction(parameters.friction as f32)
                 .build(); // TODO: replace with length and density from sample
 
