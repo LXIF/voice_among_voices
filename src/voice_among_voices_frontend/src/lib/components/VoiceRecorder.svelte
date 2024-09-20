@@ -63,6 +63,7 @@
                 audioData,
                 (buffer) => {
                     audioDuration = buffer.duration * 1000;
+                    console.log(buffer);
                 },
                 (e) => {
                     console.error(e);

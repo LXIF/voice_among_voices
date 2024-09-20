@@ -42,7 +42,7 @@ mod tests {
         let test_node: VoiceNodeIngress = VoiceNodeIngress {
             x: 98.,
             y: 50.,
-            sample: String::new(), // will need to be updated
+            sample: vec![],
         };
 
         assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS));
@@ -53,7 +53,7 @@ mod tests {
         let test_node: VoiceNodeIngress = VoiceNodeIngress {
             x: 99.,
             y: 50.,
-            sample: String::new(), // will need to be updated
+            sample: vec![],
         };
 
         assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS));
@@ -64,7 +64,7 @@ mod tests {
         let test_node: VoiceNodeIngress = VoiceNodeIngress {
             x: 0.,
             y: 0.,
-            sample: String::new(), // will need to be updated
+            sample: vec![],
         };
 
         assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS));

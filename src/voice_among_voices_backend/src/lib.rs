@@ -1,8 +1,10 @@
+mod audio;
 mod physics;
 mod utils;
 
+use audio::*;
 use candid::{CandidType, Principal};
-use futures::executor::block_on;
+use hound;
 use ic_cdk::{api::time, init, post_upgrade, query, update};
 use physics::*;
 use serde::Deserialize;
@@ -11,7 +13,7 @@ use utils::node_within_circle;
 
 #[derive(Debug)]
 struct User {
-    voice_node: VoiceNodeLocal,
+    voice_node_id: usize,
     signup_timestamp: u64,
 }
 
@@ -21,7 +23,7 @@ type UserStore = BTreeMap<Principal, User>;
 struct VoiceNodeIngress {
     x: f64,
     y: f64,
-    sample: String, // TODO: update with audio type when we get to it. probably use hound crate. Might make sense to keep audio files separately or only return positions to FE + compiled audio
+    sample: Vec<u8>, // here it's still a blob
 }
 
 #[derive(Clone, Debug, Deserialize, CandidType)]
@@ -29,6 +31,7 @@ struct VoiceNodeEgress {
     id: usize,
     x: f64,
     y: f64,
+    radius: f64,
 }
 
 impl From<VoiceNodeLocal> for VoiceNodeEgress {
@@ -37,6 +40,7 @@ impl From<VoiceNodeLocal> for VoiceNodeEgress {
             id: local.id,
             x: local.x,
             y: local.y,
+            radius: local.radius,
         }
     }
 }
@@ -47,6 +51,7 @@ struct VoiceNodeLocal {
     x: f64,
     y: f64,
     sample_id: usize,
+    radius: f64,
 }
 
 type VoiceNodeLocalStore = Vec<VoiceNodeLocal>;
@@ -55,7 +60,7 @@ type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 #[derive(Debug, CandidType)]
 struct AudioSample {
     id: usize,
-    sample: String, // TODO: replace this with audio type
+    sample: Vec<u8>, // TODO: replace this with audio type
 }
 
 type AudioSampleStore = Vec<AudioSample>;
@@ -141,6 +146,16 @@ fn post_upgrade() {
 
 #[update]
 fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, NotWithinCircleError> {
+    // first check radius
+    let sample_length = get_sample_length(&node.sample).unwrap();
+    let node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
+        AUDIO_PARAMETERS.with(|audio_params| {
+            let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
+
+            sample_length * logical_per_ms / 2.
+        })
+    });
+
     // check if we can accept le circle
     let within_circle =
         SIMULATION_PARAMETERS.with(|sim_params| node_within_circle(&node, sim_params));
@@ -170,6 +185,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, NotWit
                     x: node.x,
                     y: node.y,
                     sample_id,
+                    radius: node_radius,
                 };
 
                 nodes.borrow_mut().push(new_node);
@@ -239,13 +255,13 @@ mod tests {
         let voice_node = VoiceNodeIngress {
             x: 50.,
             y: 90.,
-            sample: "wargle".to_string(),
+            sample: generate_test_wav(1000, 44100),
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: 5.,
             y: 50.,
-            sample: "wargle".to_string(),
+            sample: generate_test_wav(1000, 44100),
         };
 
         let result_a = add_voice_node(voice_node);
@@ -266,13 +282,13 @@ mod tests {
         let voice_node = VoiceNodeIngress {
             x: 0.,
             y: 0.,
-            sample: "wargle".to_string(),
+            sample: generate_test_wav(1000, 44100),
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: 99.,
             y: 50.,
-            sample: "wargle".to_string(),
+            sample: generate_test_wav(1000, 44100),
         };
 
         let _ = add_voice_node(voice_node);

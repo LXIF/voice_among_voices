@@ -15,6 +15,7 @@ ic-cdk = "0.16.0"
 ic-cdk-timers = "0.10.0"                                               # Feel free to remove this dependency if you don't need timers
 serde = "^1.0"
 futures = "0.3"
+hound = "3.5.1"
 
 [profile.dev.package.rapier3d]
 opt-level = 3

@@ -29,10 +29,13 @@
     });
 
     const handleDropNewNode = async (event: CustomEvent) => {
-        let backend_simulation_result = await backend.add_voice_node({
-            ...event.detail,
-            sample: currentVoiceBlob,
-        });
+        let backend_simulation_result = await backend.add_voice_node(
+            event.detail
+        ); // TODO: setup backend for receiving blob, then do this
+        // let backend_simulation_result = await backend.add_voice_node({
+        //     ...event.detail,
+        //     sample: currentVoiceBlob,
+        // });
         if (backend_simulation_result.Ok) {
             backendSimulationResult = backend_simulation_result.Ok;
         }

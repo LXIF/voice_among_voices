@@ -1,6 +1,5 @@
 use crate::{SimulationParameters, VoiceNodeLocal, VoiceNodeLocalStore};
 use candid::CandidType;
-use futures::executor::block_on;
 use nalgebra::{distance, Const, Isometry, Isometry2, OPoint, Point2, Vector2};
 use rapier2d::{parry::shape::Ball, prelude::*};
 
@@ -72,7 +71,7 @@ pub fn simulate_until_stopped(
                 .user_data(node.id as u128)
                 .build();
 
-            let new_collider = ColliderBuilder::ball(2.)
+            let new_collider = ColliderBuilder::ball(node.radius as f32)
                 .density(parameters.density as f32)
                 .friction(parameters.friction as f32)
                 .build(); // TODO: replace with length and density from sample
@@ -180,6 +179,7 @@ pub fn simulate_until_stopped(
                     sample_id: node_to_be_referenced.sample_id,
                     x: position[0].into(),
                     y: position[1].into(),
+                    radius: node_to_be_referenced.radius,
                 };
                 new_nodes.push(new_node);
 
@@ -373,6 +373,7 @@ mod tests {
                 x: 5. + 5. * i as f64,
                 y: 50.,
                 sample_id: i,
+                radius: 1.,
             };
 
             nodes.push(node);
@@ -398,6 +399,7 @@ mod tests {
             x: 48.,
             y: 50.,
             sample_id: 0,
+            radius: 1.,
         };
 
         let node_b = VoiceNodeLocal {
@@ -405,6 +407,7 @@ mod tests {
             x: 52.,
             y: 50.,
             sample_id: 1,
+            radius: 1.,
         };
 
         nodes.push(node_a);
@@ -432,6 +435,7 @@ mod tests {
             x: 48.,
             y: 50.,
             sample_id: 0,
+            radius: 1.,
         };
 
         let node_b = VoiceNodeLocal {
@@ -439,6 +443,7 @@ mod tests {
             x: 52.,
             y: 50.,
             sample_id: 1,
+            radius: 1.,
         };
 
         nodes.push(node_a);
