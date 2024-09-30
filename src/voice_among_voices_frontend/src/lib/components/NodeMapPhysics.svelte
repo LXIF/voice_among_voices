@@ -240,8 +240,8 @@
                     .setLinearDamping(linear_damping)
                     .setTranslation(Number(node.x), Number(node.y))
                     .setUserData(node);
-                let colliderDesc = RAPIER.ColliderDesc.ball(2)
-                    .setDensity(2.0) // TODO: get this from node size / sample length.
+                let colliderDesc = RAPIER.ColliderDesc.ball(node.radius) //ts glitching here lol
+                    .setDensity(2.0)
                     .setFriction(friction);
 
                 const rigidBody = world.createRigidBody(rigidBodyDesc);
@@ -358,8 +358,8 @@
                         context!.ellipse(
                             canvasX,
                             canvasY,
-                            2,
-                            2,
+                            body.voiceNode.radius,
+                            body.voiceNode.radius,
                             0,
                             0,
                             Math.PI * 2
@@ -376,8 +376,8 @@
                         context!.ellipse(
                             body.x,
                             body.y,
-                            2,
-                            2,
+                            body.radius,
+                            body.radius,
                             0,
                             0,
                             Math.PI * 2
@@ -478,10 +478,15 @@
         const voiceNode = {
             x: logicalX,
             y: logicalY,
-            sample: 'todo',
+            sample: [],
         };
         dispatch('dropNewNode', voiceNode as VoiceNodeIngress);
-        localNodes.push({...voiceNode, id: BigInt(nodes.length)});
+        localNodes.push({
+            x: logicalX,
+            y: logicalY,
+            id: BigInt(nodes.length),
+            radius: nodeRadius,
+        } as VoiceNodeEgress);
         resetPhysics();
         physicsActive = true;
         rendering = false;

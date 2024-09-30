@@ -10,7 +10,10 @@
         AudioParameters,
     } from '../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
     import {usableCanvasWidth} from '$lib/config/nodeMap';
-    import {blobToUint8Array} from '$lib/utils/convUtils';
+    import {
+        blobToUint8Array,
+        handleBackendAudioData,
+    } from '$lib/utils/convUtils';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
@@ -20,6 +23,9 @@
     let nodeWidthPx = 0;
     let nodeWidthLogical = 0;
     let currentVoiceBlob: Blob;
+    let myVoice;
+
+    let myCurrentSampleAudioElement: HTMLAudioElement;
 
     let dragging = false;
 
@@ -27,16 +33,21 @@
         voiceNodes = await backend.get_voice_nodes();
         simulationParameters = await backend.get_simulation_parameters();
         audioParameters = await backend.get_audio_parameters();
+        myVoice = await backend.get_my_voice();
+
+        const audioURL = await handleBackendAudioData(myVoice[0].sample);
+        myCurrentSampleAudioElement.src = audioURL;
     });
 
     const handleDropNewNode = async (event: CustomEvent) => {
+        console.log(currentVoiceBlob);
         const sample = await blobToUint8Array(currentVoiceBlob);
         const {x, y} = event.detail;
         let backend_simulation_result = await backend.add_voice_node({
             x,
             y,
             sample,
-        }); // TODO: setup backend for receiving blob, then do this
+        });
         // let backend_simulation_result = await backend.add_voice_node({
         //     ...event.detail,
         //     sample: currentVoiceBlob,
@@ -100,5 +111,12 @@
     <VoiceRecorder
         on:recordingLength={handleRecordingLength}
         on:voiceRecorded={handleVoiceRecorded}
+        {audioParameters}
     />
+    <h1>Current first voice:</h1>
+    <p>TODO: replace with own voice</p>
+    <audio
+        controls
+        bind:this={myCurrentSampleAudioElement}
+    ></audio>
 </main>

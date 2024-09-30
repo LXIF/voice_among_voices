@@ -1,6 +1,13 @@
-use crate::{SimulationParameters, VoiceNodeIngress};
+use crate::{
+    AudioParameters, SimulationParameters, VoiceNodeIngress, AUDIO_PARAMETERS,
+    SIMULATION_PARAMETERS,
+};
 
-pub fn node_within_circle(node: &VoiceNodeIngress, sim_params: &SimulationParameters) -> bool {
+pub fn node_within_circle(
+    node: &VoiceNodeIngress,
+    sim_params: &SimulationParameters,
+    node_radius: f64,
+) -> bool {
     let VoiceNodeIngress { x, y, .. } = node;
     let SimulationParameters {
         logical_width,
@@ -8,7 +15,6 @@ pub fn node_within_circle(node: &VoiceNodeIngress, sim_params: &SimulationParame
         ..
     } = sim_params;
 
-    let node_radius = 2.; // TODO: get this from acual sample length
     let distance_from_center =
         ((x - logical_width / 2.).powi(2) + (y - logical_height / 2.).powi(2)).sqrt();
     let max_distance = logical_width / 2. - node_radius;
@@ -18,6 +24,15 @@ pub fn node_within_circle(node: &VoiceNodeIngress, sim_params: &SimulationParame
     } else {
         true
     }
+}
+
+pub fn sample_length_to_radius(
+    sample_length: f64,
+    sim_params: &SimulationParameters,
+    audio_params: &AudioParameters,
+) -> f64 {
+    let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
+    sample_length * logical_per_ms / 2.
 }
 
 #[cfg(test)]
@@ -45,7 +60,7 @@ mod tests {
             sample: vec![],
         };
 
-        assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS));
+        assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
     }
 
     #[test]
@@ -56,7 +71,7 @@ mod tests {
             sample: vec![],
         };
 
-        assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS));
+        assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
     }
 
     #[test]
@@ -67,6 +82,6 @@ mod tests {
             sample: vec![],
         };
 
-        assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS));
+        assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
     }
 }

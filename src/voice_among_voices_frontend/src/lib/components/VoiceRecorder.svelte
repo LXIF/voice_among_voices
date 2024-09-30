@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import {onDestroy, onMount} from 'svelte';
     import {createEventDispatcher} from 'svelte';
     // import {
     //     MediaRecorder,
@@ -8,6 +8,7 @@
     // } from 'extendable-media-recorder';
     // import {connect} from 'extendable-media-recorder-wav-encoder';
     import {browser} from '$app/environment';
+    import {encodeWav} from '$lib/utils/convUtils';
 
     const dispatch = createEventDispatcher();
 
@@ -19,6 +20,9 @@
     let audioBlob: Blob;
     let register: any;
     let connect: any;
+    let recordingTimeout: ReturnType<typeof setTimeout>;
+
+    export let audioParameters;
 
     onMount(async () => {
         if (browser) {
@@ -83,16 +87,70 @@
                 mediaRecorder.onstop = (e: any) => {
                     audioBlob = new Blob(chunks, {type: 'audio/wav'});
                     chunks = [];
-                    const audioURL = window.URL.createObjectURL(audioBlob);
-                    audioElement.src = audioURL;
-                    checkAudioLength(audioBlob);
-                    dispatch('voiceRecorded', audioBlob);
+                    processAudioBlob(
+                        audioBlob,
+                        audioParameters.max_sample_length_ms
+                    );
+
+                    // checkAudioLength(audioBlob);
+                    // dispatch('voiceRecorded', audioBlob);
                 };
             }
 
             handleActivateMicrophone();
         }
     });
+
+    onDestroy(cleanup);
+
+    function cleanup() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        if (localStream) {
+            localStream.getTracks().forEach((track) => track.stop());
+        }
+        recording = false;
+    }
+
+    function processAudioBlob(blob: Blob, trimLengthMs: number) {
+        const fileReader = new FileReader();
+        let trimmedBlob: Blob;
+        fileReader.readAsArrayBuffer(blob);
+
+        fileReader.onloadend = () => {
+            const audioData = fileReader.result;
+
+            if (!audioData || typeof audioData === 'string') return;
+
+            const audioContext = new AudioContext();
+
+            audioContext.decodeAudioData(audioData).then((buffer) => {
+                const targetDuration =
+                    (trimLengthMs / 1000) * audioContext.sampleRate;
+                const trimmedBuffer = audioContext.createBuffer(
+                    1,
+                    buffer.duration * audioContext.sampleRate > targetDuration
+                        ? targetDuration
+                        : buffer.duration * audioContext.sampleRate,
+                    audioContext.sampleRate
+                );
+
+                trimmedBuffer.copyToChannel(
+                    buffer.getChannelData(0).slice(0, trimmedBuffer.length),
+                    0
+                );
+
+                trimmedBlob = encodeWav(trimmedBuffer);
+                // checkAudioLength(trimmedBlob);
+
+                const audioURL = window.URL.createObjectURL(trimmedBlob);
+                audioElement.src = audioURL;
+
+                dispatch('voiceRecorded', trimmedBlob);
+            });
+        };
+    }
 
     let audioDuration: number = 0;
 
@@ -137,6 +195,12 @@
             const elapsed = Date.now() - recordingStart;
             dispatch('recordingLength', elapsed);
         }, 16);
+
+        clearTimeout(recordingTimeout);
+        recordingTimeout = setTimeout(
+            handleRecordUp,
+            audioParameters.max_sample_length_ms
+        );
     }
 
     function handleRecordUp() {

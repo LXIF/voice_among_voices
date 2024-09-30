@@ -8,8 +8,8 @@ use hound;
 use ic_cdk::{api::time, init, post_upgrade, query, update};
 use physics::*;
 use serde::Deserialize;
-use std::{cell::RefCell, collections::BTreeMap};
-use utils::node_within_circle;
+use std::{borrow::Borrow, cell::RefCell, collections::BTreeMap};
+use utils::{node_within_circle, sample_length_to_radius};
 
 #[derive(Debug)]
 struct User {
@@ -57,7 +57,7 @@ struct VoiceNodeLocal {
 type VoiceNodeLocalStore = Vec<VoiceNodeLocal>;
 type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 
-#[derive(Debug, CandidType)]
+#[derive(Debug, CandidType, Clone)]
 struct AudioSample {
     id: usize,
     sample: Vec<u8>, // TODO: replace this with audio type
@@ -91,6 +91,7 @@ struct SimulationParameters {
 #[derive(Debug, Clone, Copy, CandidType)]
 struct AudioParameters {
     total_length_ms: u32,
+    max_sample_length_ms: u32,
 }
 
 #[derive(CandidType, Debug)]
@@ -118,7 +119,8 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
     };
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     static AUDIO_PARAMETERS: AudioParameters = AudioParameters {
-        total_length_ms: 60 * 1000
+        total_length_ms: 60 * 1000,
+        max_sample_length_ms: 10000,
     };
 }
 
@@ -151,6 +153,15 @@ fn post_upgrade() {
 fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     // first check radius
     let sample_length = get_sample_length(&node.sample)?;
+    let max_sample_length =
+        AUDIO_PARAMETERS.with(|audio_params| audio_params.borrow().max_sample_length_ms);
+
+    if sample_length > max_sample_length as f64 {
+        return Err(AddVoiceNodeError::NotValidAudioFileError(
+            "Audio file too long".to_string(),
+        ));
+    }
+
     let node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
         AUDIO_PARAMETERS.with(|audio_params| {
             let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
@@ -161,7 +172,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
     // check if we can accept le circle
     let within_circle =
-        SIMULATION_PARAMETERS.with(|sim_params| node_within_circle(&node, sim_params));
+        SIMULATION_PARAMETERS.with(|sim_params| node_within_circle(&node, sim_params, node_radius));
 
     if !within_circle {
         return Err(AddVoiceNodeError::NotWithinCircleError);
@@ -233,6 +244,18 @@ fn get_voice_nodes() -> VoiceNodeEgressStore {
 }
 
 #[query]
+fn get_my_voice() -> Option<AudioSample> {
+    //TODO: guard and return 'owned' sample
+    SAMPLES.with(|samples| {
+        if samples.borrow().len() >= 1 {
+            Some(samples.borrow()[0].clone())
+        } else {
+            None
+        }
+    })
+}
+
+#[query]
 fn get_simulation_parameters() -> SimulationParameters {
     SIMULATION_PARAMETERS.with(|params| params.clone())
 }
@@ -280,8 +303,60 @@ mod tests {
         });
     }
 
+    // #[test]
+    // fn voice_nodes_have_correct_radius() {
+    //     collider_init();
+
+    //     let voice_node = VoiceNodeIngress {
+    //         x: 50.,
+    //         y: 50.,
+    //         sample: generate_test_wav(1000, 44100),
+    //     };
+    //     let sample_length = get_sample_length(&voice_node.sample).unwrap();
+    //     let node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
+    //         AUDIO_PARAMETERS.with(|audio_params| {
+    //             sample_length_to_radius(sample_length, sim_params, audio_params)
+    //         })
+    //     });
+
+    //     let another_voice_node = VoiceNodeIngress {
+    //         x: 60.,
+    //         y: 60.,
+    //         sample: generate_test_wav(2500, 44100),
+    //     };
+
+    //     let another_sample_length = get_sample_length(&another_voice_node.sample).unwrap();
+    //     let another_node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
+    //         AUDIO_PARAMETERS.with(|audio_params| {
+    //             sample_length_to_radius(another_sample_length, sim_params, audio_params)
+    //         })
+    //     });
+
+    //     let result_a = add_voice_node(voice_node);
+    //     println!("{:#?}", result_a.unwrap());
+    //     let _ = add_voice_node(another_voice_node);
+
+    //     VOICE_NODES.with(|voice_nodes| {
+    //         SAMPLES.with(|samples| {
+    //             let radius = voice_nodes.borrow()[0].radius;
+    //             let sample_radius = get_sample_length(&samples.borrow()[0].sample).unwrap();
+
+    //             let another_radius = voice_nodes.borrow()[1].radius;
+    //             let another_sample = samples.borrow()[1];
+    //         });
+    //     });
+    // }
     #[test]
-    fn voice_nodes_get_rejected_correctly() {
+    fn get_correct_audio_params() {
+        let audio_params = get_audio_parameters();
+
+        assert!(audio_params.max_sample_length_ms > 0);
+    }
+
+    #[test]
+    fn out_of_bounds_voice_nodes_get_rejected_correctly() {
+        collider_init();
+
         let voice_node = VoiceNodeIngress {
             x: 0.,
             y: 0.,
@@ -291,7 +366,34 @@ mod tests {
         let another_voice_node = VoiceNodeIngress {
             x: 99.,
             y: 50.,
-            sample: generate_test_wav(1000, 44100),
+            sample: generate_test_wav(10000, 44100),
+        };
+
+        let _ = add_voice_node(voice_node);
+        let _ = add_voice_node(another_voice_node);
+
+        SAMPLES.with(|samples| {
+            println!("{}", samples.borrow().len());
+            assert!(samples.borrow().len() == 0);
+        });
+    }
+
+    #[test]
+    fn too_long_voice_nodes_get_rejected_correctly() {
+        collider_init();
+
+        let max_length = AUDIO_PARAMETERS.with(|params| params.max_sample_length_ms);
+
+        let voice_node = VoiceNodeIngress {
+            x: 50.,
+            y: 50.,
+            sample: generate_test_wav(max_length + 10, 44100),
+        };
+
+        let another_voice_node = VoiceNodeIngress {
+            x: 60.,
+            y: 60.,
+            sample: generate_test_wav(max_length + 20, 44100),
         };
 
         let _ = add_voice_node(voice_node);

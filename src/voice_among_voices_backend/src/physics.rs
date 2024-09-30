@@ -74,7 +74,7 @@ pub fn simulate_until_stopped(
             let new_collider = ColliderBuilder::ball(node.radius as f32)
                 .density(parameters.density as f32)
                 .friction(parameters.friction as f32)
-                .build(); // TODO: replace with length and density from sample
+                .build();
 
             let rigid_body_handle = rigid_body_set.insert(new_rigid_body);
             let collider_handle = collider_set.insert_with_parent(
@@ -134,12 +134,12 @@ pub fn simulate_until_stopped(
             &event_handler,
         );
 
-        for physics_body in bodies.iter() {
-            let position = rigid_body_set
-                .get(physics_body.rigid_body_handle)
-                .unwrap()
-                .translation();
-        }
+        // for physics_body in bodies.iter() {
+        //     let position = rigid_body_set
+        //         .get(physics_body.rigid_body_handle)
+        //         .unwrap()
+        //         .translation();
+        // }
 
         let still_moving = check_if_still_moving(&bodies, &rigid_body_set);
 
