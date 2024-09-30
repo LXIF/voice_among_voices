@@ -94,7 +94,10 @@ struct AudioParameters {
 }
 
 #[derive(CandidType, Debug)]
-struct NotWithinCircleError;
+enum AddVoiceNodeError {
+    NotWithinCircleError,
+    NotValidAudioFileError(String),
+}
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
     static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
@@ -145,9 +148,9 @@ fn post_upgrade() {
 }
 
 #[update]
-fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, NotWithinCircleError> {
+fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     // first check radius
-    let sample_length = get_sample_length(&node.sample).unwrap();
+    let sample_length = get_sample_length(&node.sample)?;
     let node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
         AUDIO_PARAMETERS.with(|audio_params| {
             let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
@@ -161,7 +164,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, NotWit
         SIMULATION_PARAMETERS.with(|sim_params| node_within_circle(&node, sim_params));
 
     if !within_circle {
-        return Err(NotWithinCircleError);
+        return Err(AddVoiceNodeError::NotWithinCircleError);
     };
 
     let mut sample_id = 0;

@@ -19,3 +19,17 @@ export function canvasToLogical(x: number, y: number, canvasWidth: number, canva
     const logicalY = (y / canvasHeight) * logical_height;
     return {logicalX, logicalY};
 }
+
+export function blobToUint8Array(blob: Blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = function () {
+            const arrayBuffer = reader.result;
+            const uint8Array = new Uint8Array(arrayBuffer as ArrayBufferLike);
+            console.log(uint8Array);
+            resolve(uint8Array);
+        }
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(blob);
+    });
+}

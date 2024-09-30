@@ -10,6 +10,7 @@
         AudioParameters,
     } from '../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
     import {usableCanvasWidth} from '$lib/config/nodeMap';
+    import {blobToUint8Array} from '$lib/utils/convUtils';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
@@ -29,15 +30,22 @@
     });
 
     const handleDropNewNode = async (event: CustomEvent) => {
-        let backend_simulation_result = await backend.add_voice_node(
-            event.detail
-        ); // TODO: setup backend for receiving blob, then do this
+        const sample = await blobToUint8Array(currentVoiceBlob);
+        const {x, y} = event.detail;
+        let backend_simulation_result = await backend.add_voice_node({
+            x,
+            y,
+            sample,
+        }); // TODO: setup backend for receiving blob, then do this
         // let backend_simulation_result = await backend.add_voice_node({
         //     ...event.detail,
         //     sample: currentVoiceBlob,
         // });
         if (backend_simulation_result.Ok) {
             backendSimulationResult = backend_simulation_result.Ok;
+        } else {
+            // TODO: potentially provide user feedback
+            console.log(backend_simulation_result.Err.NotValidAudioFileError);
         }
         voiceNodes = await backend.get_voice_nodes();
     };

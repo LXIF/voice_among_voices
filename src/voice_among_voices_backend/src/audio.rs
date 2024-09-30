@@ -1,9 +1,12 @@
 use hound::{WavReader, WavSpec, WavWriter};
 use std::io::Cursor;
 
-pub fn get_sample_length(audio_data: &Vec<u8>) -> hound::Result<f64> {
+use crate::AddVoiceNodeError;
+
+pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<f64, AddVoiceNodeError> {
     let cursor = Cursor::new(audio_data);
-    let reader = WavReader::new(cursor)?;
+    let reader = WavReader::new(cursor)
+        .map_err(|e| AddVoiceNodeError::NotValidAudioFileError(e.to_string()))?;
     let sample_spec = reader.spec();
     let sample_length_ms = reader.duration() as f64 * 1000. / sample_spec.sample_rate as f64;
 

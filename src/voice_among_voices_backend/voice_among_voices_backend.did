@@ -36,7 +36,10 @@ type VoiceNodeStoreEgress = vec VoiceNodeEgress;
 
 type AddVoiceNodeResult = variant {
     Ok : VoiceNodeStoreEgress;
-    Err : opt variant { NotWithinCircleError };
+    Err : variant {
+        NotWithinCircleError;
+        NotValidAudioFileError : text;
+    };
 };
 
 service : {
