@@ -1,4 +1,5 @@
 use hound::{WavReader, WavSpec, WavWriter};
+use ic_cdk::api::time;
 use std::io::Cursor;
 
 use crate::{
@@ -20,6 +21,7 @@ pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<f64, AddVoiceNodeError>
 struct SamplePosition<'a> {
     sample: &'a AudioSample,
     position: f64,
+    pan_position: f64,
 }
 
 /// Generates the audio file per-angle
@@ -37,11 +39,17 @@ pub fn generate_angle_file(
     let radius = sim_params.logical_width / 2.;
     // loop through nodes
     for node in nodes.iter() {
-        // store sample reference with position between 0. and 1.
+        // store sample reference with normalized position between 0. and 1. and normalized pan position between -1. and 1.
         let position =
             distance_from_tangent(angle, radius, node.x, node.y) / sim_params.logical_width;
+        let pan_position = signed_distance_from_center_line(angle, radius, node.x, node.y) / radius;
+
         if let Some(sample) = samples.iter().find(|sample| sample.id == node.sample_id) {
-            sample_positions.push(SamplePosition { position, sample });
+            sample_positions.push(SamplePosition {
+                position,
+                sample,
+                pan_position,
+            });
         }
     }
     // sort samples by position
@@ -141,6 +149,36 @@ fn signed_distance_from_center_line(angle: f64, radius: f64, x: f64, y: f64) -> 
     }
 }
 
+fn write_stereo_wav_to_vec(
+    sample_rate: u32,
+    left_samples: &[i16],
+    right_samples: &[i16],
+) -> Result<Vec<u8>, hound::Error> {
+    assert_eq!(left_samples.len(), right_samples.len());
+
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let mut buffer = Cursor::new(Vec::new());
+
+    let mut writer = WavWriter::new(&mut buffer, spec)?;
+
+    for (&left_sample, &right_sample) in left_samples.iter().zip(right_samples.iter()) {
+        writer.write_sample(left_sample)?;
+        writer.write_sample(right_sample)?;
+    }
+
+    writer.finalize()?;
+
+    let wav_data = buffer.into_inner();
+
+    Ok(wav_data)
+}
+
 pub fn generate_test_wav(duration_ms: u32, sample_rate: u32) -> Vec<u8> {
     let spec = WavSpec {
         channels: 1,
@@ -225,6 +263,15 @@ mod tests {
             let d = distance_from_tangent(angle, radius, x, y);
 
             assert_eq!(d, 25.);
+        }
+        {
+            let angle = 180.;
+            let radius = 50.;
+            let (x, y) = (0., 25.);
+
+            let d = distance_from_tangent(angle, radius, x, y);
+
+            assert_eq!(d, 75.);
         }
         {
             let angle = 45.;
