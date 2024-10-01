@@ -60,7 +60,8 @@ type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 #[derive(Debug, CandidType, Clone)]
 struct AudioSample {
     id: usize,
-    sample: Vec<u8>, // TODO: replace this with audio type
+    sample: Vec<u8>,
+    sample_length_ms: f64,
 }
 
 type AudioSampleStore = Vec<AudioSample>;
@@ -152,11 +153,11 @@ fn post_upgrade() {
 #[update]
 fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     // first check radius
-    let sample_length = get_sample_length(&node.sample)?;
+    let sample_length_ms = get_sample_length(&node.sample)?;
     let max_sample_length =
         AUDIO_PARAMETERS.with(|audio_params| audio_params.borrow().max_sample_length_ms);
 
-    if sample_length > max_sample_length as f64 {
+    if sample_length_ms > max_sample_length as f64 {
         return Err(AddVoiceNodeError::NotValidAudioFileError(
             "Audio file too long".to_string(),
         ));
@@ -166,7 +167,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
         AUDIO_PARAMETERS.with(|audio_params| {
             let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
 
-            sample_length * logical_per_ms / 2.
+            sample_length_ms * logical_per_ms / 2.
         })
     });
 
@@ -183,6 +184,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
         let new_sample = AudioSample {
             id: samples.borrow().len(),
             sample: node.sample,
+            sample_length_ms,
         };
         sample_id = new_sample.id.clone();
         samples.borrow_mut().push(new_sample);
