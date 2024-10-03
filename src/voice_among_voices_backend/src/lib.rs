@@ -62,6 +62,7 @@ struct AudioSample {
     id: usize,
     sample: Vec<u8>,
     sample_length_ms: f64,
+    sample_length_samples: u32,
 }
 
 type AudioSampleStore = Vec<AudioSample>;
@@ -93,6 +94,7 @@ struct SimulationParameters {
 struct AudioParameters {
     total_length_ms: u32,
     max_sample_length_ms: u32,
+    sample_rate: u32,
 }
 
 #[derive(CandidType, Debug)]
@@ -122,6 +124,7 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
     static AUDIO_PARAMETERS: AudioParameters = AudioParameters {
         total_length_ms: 60 * 1000,
         max_sample_length_ms: 10000,
+        sample_rate: 44100
     };
 }
 
@@ -153,7 +156,7 @@ fn post_upgrade() {
 #[update]
 fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     // first check radius
-    let sample_length_ms = get_sample_length(&node.sample)?;
+    let (sample_length_samples, sample_length_ms) = get_sample_length(&node.sample)?;
     let max_sample_length =
         AUDIO_PARAMETERS.with(|audio_params| audio_params.borrow().max_sample_length_ms);
 
@@ -184,6 +187,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
         let new_sample = AudioSample {
             id: samples.borrow().len(),
             sample: node.sample,
+            sample_length_samples,
             sample_length_ms,
         };
         sample_id = new_sample.id.clone();
@@ -255,6 +259,32 @@ fn get_my_voice() -> Option<AudioSample> {
             None
         }
     })
+}
+
+#[query]
+fn get_angle_file(angle: f64) -> Vec<u8> {
+    // TODO: guard to user, restrict angle
+    // TODO: maybe store the file, maybe another for historical files
+    let mut result: Vec<u8> = vec![];
+
+    VOICE_NODES.with(|nodes| {
+        SAMPLES.with(|samples| {
+            AUDIO_PARAMETERS.with(|audio_params| {
+                SIMULATION_PARAMETERS.with(|sim_params| {
+                    result = generate_angle_file(
+                        angle,
+                        &*nodes.borrow(),
+                        &*samples.borrow(),
+                        audio_params,
+                        sim_params,
+                    )
+                    .unwrap(); // TODO: error handling
+                });
+            });
+        });
+    });
+
+    result
 }
 
 #[query]

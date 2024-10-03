@@ -7,21 +7,23 @@ use crate::{
     VoiceNodeLocalStore,
 };
 
+struct SamplePosition<'a> {
+    sample: &'a AudioSample,
+    position: f64, // normalized position of center of audio node versus tangent of angle, the position it will have in the file
+    begins_at: f64, // normalized position of beginning of audio node versus tangent of angle => position - radius
+    pan_position: f64, // signed normalized position as offset from center line at angle, will be the pan position
+}
+
 /// Gets the sample length in ms
-pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<f64, AddVoiceNodeError> {
+pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<(u32, f64), AddVoiceNodeError> {
     let cursor = Cursor::new(audio_data);
     let reader = WavReader::new(cursor)
         .map_err(|e| AddVoiceNodeError::NotValidAudioFileError(e.to_string()))?;
     let sample_spec = reader.spec();
-    let sample_length_ms = reader.duration() as f64 * 1000. / sample_spec.sample_rate as f64;
+    let sample_length_samples = reader.duration();
+    let sample_length_ms = sample_length_samples as f64 * 1000. / sample_spec.sample_rate as f64;
 
-    Ok(sample_length_ms)
-}
-
-struct SamplePosition<'a> {
-    sample: &'a AudioSample,
-    position: f64,
-    pan_position: f64,
+    Ok((sample_length_samples, sample_length_ms))
 }
 
 /// Generates the audio file per-angle
@@ -33,7 +35,7 @@ pub fn generate_angle_file(
     samples: &AudioSampleStore,
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
-) -> Vec<u8> {
+) -> Result<Vec<u8>, hound::Error> {
     let mut sample_positions: Vec<SamplePosition> = vec![];
 
     let radius = sim_params.logical_width / 2.;
@@ -42,21 +44,142 @@ pub fn generate_angle_file(
         // store sample reference with normalized position between 0. and 1. and normalized pan position between -1. and 1.
         let position =
             distance_from_tangent(angle, radius, node.x, node.y) / sim_params.logical_width;
+        let begins_at = position - (node.radius / sim_params.logical_width);
         let pan_position = signed_distance_from_center_line(angle, radius, node.x, node.y) / radius;
 
         if let Some(sample) = samples.iter().find(|sample| sample.id == node.sample_id) {
             sample_positions.push(SamplePosition {
                 position,
+                begins_at,
                 sample,
                 pan_position,
             });
         }
     }
-    // sort samples by position
-    sample_positions.sort_by(|a, b| a.position.partial_cmp(&b.position).unwrap());
-    // then create the file with hound
+
+    // generate stereo sample vectors
+    let (left_samples, right_samples) = generate_audio_vectors(&sample_positions, audio_params);
+
+    // generate resulting file
+
+    let angle_file = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples);
+
+    angle_file
+}
+
+fn generate_audio_vectors(
+    sample_positions: &Vec<SamplePosition>,
+    audio_params: &AudioParameters,
+) -> (Vec<i16>, Vec<i16>) {
+    // create vectors with length, fill them with neutral => half of i16::MAX
+    let total_length_samples = audio_params.total_length_ms * audio_params.sample_rate / 1000;
+    let mut left_channel = vec![0i16; total_length_samples as usize];
+    let mut right_channel = vec![0i16; total_length_samples as usize];
+
+    // for every sample, go to the 'begins with' in each vector
+    for sample_pos in sample_positions.iter() {
+        // find the exact sample where it begins
+        let start_sample = (sample_pos.begins_at * total_length_samples as f64)
+            .round()
+            .max(0.) as usize;
+        let end_sample = (start_sample + sample_pos.sample.sample_length_samples as usize - 1)
+            .min(total_length_samples as usize - 1);
+        // use reader to read sample
+        let input_samples = read_wav(&sample_pos.sample.sample);
+        // loop over samples zipped with the slice of our left and right channels we want
+        for (sample, (left, right)) in input_samples //TODO: this could in principle be parallelized, would require keeping the vecs in an arc/mutex
+            .iter()
+            .zip(
+                left_channel[start_sample..=end_sample] //TODO: perhaps add some check to make sure we're never out of bounds?
+                    .iter_mut()
+                    .zip(right_channel[start_sample..=end_sample].iter_mut()),
+            )
+        {
+            // figure out the panning multipliers
+            let pan = sample_pos.pan_position;
+            let left_gain = (0.5 * (1.0 + pan) * std::f64::consts::PI).cos();
+            let right_gain = (0.5 * (1.0 - pan) * std::f64::consts::PI).cos();
+            // add the scaled sample to both sides
+            let left_sample = (*sample as f64 * left_gain) as i16;
+            let right_sample = (*sample as f64 * right_gain) as i16;
+
+            *left = left.wrapping_add(left_sample).clamp(i16::MIN, i16::MAX);
+            *right = right.wrapping_add(right_sample).clamp(i16::MIN, i16::MAX);
+        }
+    }
+
+    // loop through the positions where samples are to be inserted
+    // add the sample to the existing sample at that point
 
     todo!()
+}
+
+fn read_wav(audio_data: &Vec<u8>) -> Vec<i16> {
+    let cursor = Cursor::new(audio_data);
+    let mut reader = WavReader::new(cursor).unwrap();
+
+    let result = reader
+        .samples::<i16>()
+        .map(|sample| sample.unwrap()) // TODO: perhaps improve error handling
+        .collect();
+
+    result
+}
+
+fn write_stereo_wav_to_vec(
+    audio_params: &AudioParameters,
+    left_samples: &Vec<i16>,
+    right_samples: &Vec<i16>,
+) -> Result<Vec<u8>, hound::Error> {
+    assert_eq!(left_samples.len(), right_samples.len());
+
+    let sample_rate = audio_params.sample_rate;
+
+    let spec = hound::WavSpec {
+        channels: 2,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let mut buffer = Cursor::new(Vec::new());
+
+    let mut writer = WavWriter::new(&mut buffer, spec)?;
+
+    for (&left_sample, &right_sample) in left_samples.iter().zip(right_samples.iter()) {
+        writer.write_sample(left_sample)?;
+        writer.write_sample(right_sample)?;
+    }
+
+    writer.finalize()?;
+
+    let wav_data = buffer.into_inner();
+
+    Ok(wav_data)
+}
+
+pub fn generate_test_wav(duration_ms: u32, sample_rate: u32) -> Vec<u8> {
+    let spec = WavSpec {
+        channels: 1,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let mut buffer = Vec::new();
+    let mut writer = WavWriter::new(Cursor::new(&mut buffer), spec).unwrap();
+
+    let num_samples = (sample_rate * duration_ms / 1000) as usize;
+    let amplitude = i16::MAX as f32;
+
+    for t in 0..num_samples {
+        let sample = ((t as f32 / sample_rate as f32) * 440. * 2. * std::f32::consts::PI).sin();
+        writer.write_sample((sample * amplitude) as i16).unwrap();
+    }
+
+    writer.finalize().unwrap();
+
+    buffer
 }
 
 fn distance_from_tangent(angle: f64, radius: f64, x: f64, y: f64) -> f64 {
@@ -149,60 +272,6 @@ fn signed_distance_from_center_line(angle: f64, radius: f64, x: f64, y: f64) -> 
     }
 }
 
-fn write_stereo_wav_to_vec(
-    sample_rate: u32,
-    left_samples: &[i16],
-    right_samples: &[i16],
-) -> Result<Vec<u8>, hound::Error> {
-    assert_eq!(left_samples.len(), right_samples.len());
-
-    let spec = hound::WavSpec {
-        channels: 2,
-        sample_rate,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-
-    let mut buffer = Cursor::new(Vec::new());
-
-    let mut writer = WavWriter::new(&mut buffer, spec)?;
-
-    for (&left_sample, &right_sample) in left_samples.iter().zip(right_samples.iter()) {
-        writer.write_sample(left_sample)?;
-        writer.write_sample(right_sample)?;
-    }
-
-    writer.finalize()?;
-
-    let wav_data = buffer.into_inner();
-
-    Ok(wav_data)
-}
-
-pub fn generate_test_wav(duration_ms: u32, sample_rate: u32) -> Vec<u8> {
-    let spec = WavSpec {
-        channels: 1,
-        sample_rate,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-
-    let mut buffer = Vec::new();
-    let mut writer = WavWriter::new(Cursor::new(&mut buffer), spec).unwrap();
-
-    let num_samples = (sample_rate * duration_ms / 1000) as usize;
-    let amplitude = i16::MAX as f32;
-
-    for t in 0..num_samples {
-        let sample = ((t as f32 / sample_rate as f32) * 440. * 2. * std::f32::consts::PI).sin();
-        writer.write_sample((sample * amplitude) as i16).unwrap();
-    }
-
-    writer.finalize().unwrap();
-
-    buffer
-}
-
 #[cfg(test)]
 mod tests {
     use core::f64;
@@ -218,12 +287,15 @@ mod tests {
     fn test_sample_length() {
         let expected_duration_ms = 4200;
         let sample_rate = 44100;
+        let expected_duration_samples = expected_duration_ms * sample_rate / 1000;
 
         let test_wav_data = generate_test_wav(expected_duration_ms, sample_rate);
 
-        let actual_duration_ms = get_sample_length(&test_wav_data).unwrap();
+        let (actual_duration_samples, actual_duration_ms) =
+            get_sample_length(&test_wav_data).unwrap();
 
         assert_eq!(actual_duration_ms, expected_duration_ms as f64);
+        assert_eq!(actual_duration_samples, expected_duration_samples);
     }
 
     #[test]

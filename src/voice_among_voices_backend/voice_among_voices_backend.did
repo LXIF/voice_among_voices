@@ -14,6 +14,8 @@ type VoiceNodeEgress = record {
 type AudioSample = record {
     id : nat64;
     sample : vec nat8;
+    sample_length_ms : float64;
+    sample_length_samples : nat32;
 };
 
 type SimulationParameters = record {
@@ -31,6 +33,7 @@ type SimulationParameters = record {
 type AudioParameters = record {
     total_length_ms : nat32;
     max_sample_length_ms : nat32;
+    sample_rate : nat32;
 };
 
 type ColliderCoordinate = record {
