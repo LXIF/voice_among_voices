@@ -14,6 +14,7 @@
         blobToUint8Array,
         handleBackendAudioData,
     } from '$lib/utils/convUtils';
+    import AngleFileBox from '$lib/components/AngleFileBox.svelte';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
@@ -119,4 +120,5 @@
         controls
         bind:this={myCurrentSampleAudioElement}
     ></audio>
+    <AngleFileBox />
 </main>

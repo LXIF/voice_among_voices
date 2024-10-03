@@ -111,7 +111,7 @@ fn generate_audio_vectors(
     // loop through the positions where samples are to be inserted
     // add the sample to the existing sample at that point
 
-    todo!()
+    (left_channel, right_channel)
 }
 
 fn read_wav(audio_data: &Vec<u8>) -> Vec<i16> {
