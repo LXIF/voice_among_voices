@@ -1,7 +1,4 @@
-use crate::{
-    AudioParameters, SimulationParameters, VoiceNodeIngress, AUDIO_PARAMETERS,
-    SIMULATION_PARAMETERS,
-};
+use crate::{AudioParameters, SimulationParameters, VoiceNodeIngress};
 
 pub fn node_within_circle(
     node: &VoiceNodeIngress,
@@ -33,6 +30,12 @@ pub fn sample_length_to_radius(
 ) -> f64 {
     let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
     sample_length * logical_per_ms / 2.
+}
+
+pub fn split_into_chunks(data: Vec<u8>, audio_params: &AudioParameters) -> Vec<Vec<u8>> {
+    data.chunks(audio_params.chunk_size)
+        .map(|chunk| chunk.to_vec())
+        .collect()
 }
 
 #[cfg(test)]

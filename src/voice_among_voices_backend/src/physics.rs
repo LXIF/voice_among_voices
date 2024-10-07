@@ -379,9 +379,7 @@ mod tests {
             nodes.push(node);
         }
 
-        SIMULATION_PARAMETERS.with(|parameters| {
-            result = simulate_until_stopped(&mut nodes, parameters, &collider_coordinates);
-        });
+        result = simulate_until_stopped(&mut nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
         println!("{:#?}", result);
         assert!(result[0].x > 0.);
@@ -413,9 +411,7 @@ mod tests {
         nodes.push(node_a);
         nodes.push(node_b);
 
-        SIMULATION_PARAMETERS.with(|parameters| {
-            result = simulate_until_stopped(&mut nodes, parameters, &collider_coordinates);
-        });
+        result = simulate_until_stopped(&mut nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
         println!("{:#?}", result);
         assert!(result[0].x < 48.);
@@ -449,9 +445,7 @@ mod tests {
         nodes.push(node_a);
         nodes.push(node_b);
 
-        SIMULATION_PARAMETERS.with(|parameters| {
-            result = simulate_until_stopped(&mut nodes, parameters, &collider_coordinates);
-        });
+        result = simulate_until_stopped(&mut nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
         println!("{:#?}", result);
         assert!(approximately_equal(

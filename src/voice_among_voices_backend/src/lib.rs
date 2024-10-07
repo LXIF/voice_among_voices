@@ -95,6 +95,7 @@ struct AudioParameters {
     total_length_ms: u32,
     max_sample_length_ms: u32,
     sample_rate: u32,
+    chunk_size: usize,
 }
 
 #[derive(CandidType, Debug)]
@@ -108,38 +109,38 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
     static SAMPLES: RefCell<AudioSampleStore> = RefCell::new(vec![]);
     static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
-    static SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
-        velocity_cutoff: 0.2,
-        force_cutoff: 100.,
-        max_distance: 20.,
-        force_strength: 3000.,
-        linear_damping: 10.,
-        logical_height: 100.,
-        logical_width: 100.,
-        n_collider_vertices: 360,
-        friction: 0.5,
-        density: 2.
-    };
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
-    static AUDIO_PARAMETERS: AudioParameters = AudioParameters {
-        total_length_ms: 60 * 1000,
-        max_sample_length_ms: 10000,
-        sample_rate: 44100
-    };
 }
+
+const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
+    total_length_ms: 60 * 1000,
+    max_sample_length_ms: 10000,
+    sample_rate: 44100,
+    chunk_size: 1024 * 1024,
+};
+const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
+    velocity_cutoff: 0.2,
+    force_cutoff: 100.,
+    max_distance: 20.,
+    force_strength: 3000.,
+    linear_damping: 10.,
+    logical_height: 100.,
+    logical_width: 100.,
+    n_collider_vertices: 360,
+    friction: 0.5,
+    density: 2.,
+};
 
 // abstracting this because during dev things change and i don't want to restart dfx all the time
 fn collider_init() {
-    SIMULATION_PARAMETERS.with(|simulation_parameters| {
-        COLLIDER_COORDINATES.with(|collider_coordinates| {
-            let fresh_vertices = create_circular_collider_coordinates(
-                simulation_parameters.n_collider_vertices,
-                simulation_parameters.logical_width,
-                simulation_parameters.logical_height,
-            );
+    COLLIDER_COORDINATES.with(|collider_coordinates| {
+        let fresh_vertices = create_circular_collider_coordinates(
+            SIMULATION_PARAMETERS.n_collider_vertices,
+            SIMULATION_PARAMETERS.logical_width,
+            SIMULATION_PARAMETERS.logical_height,
+        );
 
-            collider_coordinates.borrow_mut().extend(fresh_vertices);
-        });
+        collider_coordinates.borrow_mut().extend(fresh_vertices);
     });
 }
 
@@ -157,8 +158,7 @@ fn post_upgrade() {
 fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     // first check radius
     let (sample_length_samples, sample_length_ms) = get_sample_length(&node.sample)?;
-    let max_sample_length =
-        AUDIO_PARAMETERS.with(|audio_params| audio_params.borrow().max_sample_length_ms);
+    let max_sample_length = AUDIO_PARAMETERS.max_sample_length_ms;
 
     if sample_length_ms > max_sample_length as f64 {
         return Err(AddVoiceNodeError::NotValidAudioFileError(
@@ -166,17 +166,15 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
         ));
     }
 
-    let node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
-        AUDIO_PARAMETERS.with(|audio_params| {
-            let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
+    let node_radius = {
+        let logical_per_ms =
+            SIMULATION_PARAMETERS.logical_width / AUDIO_PARAMETERS.total_length_ms as f64;
 
-            sample_length_ms * logical_per_ms / 2.
-        })
-    });
+        sample_length_ms * logical_per_ms / 2.
+    };
 
     // check if we can accept le circle
-    let within_circle =
-        SIMULATION_PARAMETERS.with(|sim_params| node_within_circle(&node, sim_params, node_radius));
+    let within_circle = node_within_circle(&node, &SIMULATION_PARAMETERS, node_radius);
 
     if !within_circle {
         return Err(AddVoiceNodeError::NotWithinCircleError);
@@ -196,41 +194,39 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
     let mut returnable_nodes: VoiceNodeEgressStore = vec![];
 
-    SIMULATION_PARAMETERS.with(|parameters| {
-        COLLIDER_COORDINATES.with(|collider_coordinates| {
-            VOICE_NODES.with(|nodes| {
-                let id = nodes.borrow().len().into();
-                let new_node = VoiceNodeLocal {
-                    id,
-                    x: node.x,
-                    y: node.y,
-                    sample_id,
-                    radius: node_radius,
-                };
+    COLLIDER_COORDINATES.with(|collider_coordinates| {
+        VOICE_NODES.with(|nodes| {
+            let id = nodes.borrow().len().into();
+            let new_node = VoiceNodeLocal {
+                id,
+                x: node.x,
+                y: node.y,
+                sample_id,
+                radius: node_radius,
+            };
 
-                nodes.borrow_mut().push(new_node);
+            nodes.borrow_mut().push(new_node);
 
-                let simulated_nodes = simulate_until_stopped(
-                    &nodes.borrow(),
-                    parameters,
-                    &collider_coordinates.borrow(),
-                );
+            let simulated_nodes = simulate_until_stopped(
+                &nodes.borrow(),
+                &SIMULATION_PARAMETERS,
+                &collider_coordinates.borrow(),
+            );
 
-                for node in nodes.borrow_mut().iter_mut() {
-                    if let Some(new_node) = simulated_nodes
-                        .iter()
-                        .find(|simulated_node| simulated_node.id == node.id)
-                    {
-                        node.x = new_node.x;
-                        node.y = new_node.y;
-                    }
+            for node in nodes.borrow_mut().iter_mut() {
+                if let Some(new_node) = simulated_nodes
+                    .iter()
+                    .find(|simulated_node| simulated_node.id == node.id)
+                {
+                    node.x = new_node.x;
+                    node.y = new_node.y;
                 }
+            }
 
-                returnable_nodes = simulated_nodes
-                    .into_iter()
-                    .map(|node| node.into())
-                    .collect();
-            });
+            returnable_nodes = simulated_nodes
+                .into_iter()
+                .map(|node| node.into())
+                .collect();
         });
     });
 
@@ -269,18 +265,14 @@ fn get_angle_file(angle: f64) -> Vec<u8> {
 
     VOICE_NODES.with(|nodes| {
         SAMPLES.with(|samples| {
-            AUDIO_PARAMETERS.with(|audio_params| {
-                SIMULATION_PARAMETERS.with(|sim_params| {
-                    result = generate_angle_file(
-                        angle,
-                        &*nodes.borrow(),
-                        &*samples.borrow(),
-                        audio_params,
-                        sim_params,
-                    )
-                    .unwrap(); // TODO: error handling
-                });
-            });
+            result = generate_angle_file(
+                angle,
+                &*nodes.borrow(),
+                &*samples.borrow(),
+                &AUDIO_PARAMETERS,
+                &SIMULATION_PARAMETERS,
+            )
+            .unwrap(); // TODO: error handling
         });
     });
 
@@ -289,7 +281,7 @@ fn get_angle_file(angle: f64) -> Vec<u8> {
 
 #[query]
 fn get_simulation_parameters() -> SimulationParameters {
-    SIMULATION_PARAMETERS.with(|params| params.clone())
+    SIMULATION_PARAMETERS.clone()
 }
 
 #[query]
@@ -299,7 +291,7 @@ fn get_collider_coordinates() -> Vec<ColliderCoordinate> {
 
 #[query]
 fn get_audio_parameters() -> AudioParameters {
-    AUDIO_PARAMETERS.with(|params| params.clone())
+    AUDIO_PARAMETERS.clone()
 }
 
 #[cfg(test)]
@@ -414,7 +406,7 @@ mod tests {
     fn too_long_voice_nodes_get_rejected_correctly() {
         collider_init();
 
-        let max_length = AUDIO_PARAMETERS.with(|params| params.max_sample_length_ms);
+        let max_length = AUDIO_PARAMETERS.max_sample_length_ms;
 
         let voice_node = VoiceNodeIngress {
             x: 50.,
@@ -440,13 +432,11 @@ mod tests {
     #[test]
     fn init_creates_coordinates() {
         init();
-        SIMULATION_PARAMETERS.with(|simulation_parameters| {
-            COLLIDER_COORDINATES.with(|collider_coordinates| {
-                let n = simulation_parameters.n_collider_vertices;
-                let len = collider_coordinates.borrow().len();
+        COLLIDER_COORDINATES.with(|collider_coordinates| {
+            let n = SIMULATION_PARAMETERS.n_collider_vertices;
+            let len = collider_coordinates.borrow().len();
 
-                assert_eq!(n, len as u64);
-            });
+            assert_eq!(n, len as u64);
         });
     }
 }

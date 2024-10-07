@@ -34,6 +34,7 @@ type AudioParameters = record {
     total_length_ms : nat32;
     max_sample_length_ms : nat32;
     sample_rate : nat32;
+    chunk_size : nat64;
 };
 
 type ColliderCoordinate = record {
