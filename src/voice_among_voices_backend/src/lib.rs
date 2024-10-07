@@ -99,6 +99,7 @@ struct AudioParameters {
     max_sample_length_ms: u32,
     sample_rate: u32,
     chunk_size: usize,
+    fade_ms: u32,
 }
 
 #[derive(CandidType, Debug)]
@@ -171,6 +172,7 @@ const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     max_sample_length_ms: 10000,
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
+    fade_ms: 20,
 };
 const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
@@ -353,40 +355,35 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
 #[query(hidden = true)]
 fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
     // TODO: perhaps make function naming more concise as this is only for getting angle files
+
+    // TODO: perhaps cache the file
+    let mut result: Vec<u8> = vec![];
+
     VOICE_NODES.with(|nodes| {
         SAMPLES.with(|samples| {
-            // TODO: perhaps cache the file
-            let mut result: Vec<u8> = vec![];
-
-            VOICE_NODES.with(|nodes| {
-                SAMPLES.with(|samples| {
-                    result = generate_angle_file(
-                        token.id as f64,
-                        &*nodes.borrow(),
-                        &*samples.borrow(),
-                        &AUDIO_PARAMETERS,
-                        &SIMULATION_PARAMETERS,
-                    )
-                    .unwrap(); // TODO: error handling
-                });
-            });
-
-            let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
-
-            if let Some(chunk) = chunks.get(token.chunk_index as usize) {
-                let next_token = token.next();
-
-                StreamingCallbackHttpResponse {
-                    body: ByteBuf::from(chunk.clone()),
-                    token: next_token,
-                }
-            } else {
-                ic_cdk::trap("Chunk not found");
-            }
+            result = generate_angle_file(
+                token.id as f64,
+                &*nodes.borrow(),
+                &*samples.borrow(),
+                &AUDIO_PARAMETERS,
+                &SIMULATION_PARAMETERS,
+            )
+            .unwrap(); // TODO: error handling
         });
     });
 
-    todo!()
+    let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
+
+    if let Some(chunk) = chunks.get(token.chunk_index as usize) {
+        let next_token = token.next();
+
+        StreamingCallbackHttpResponse {
+            body: ByteBuf::from(chunk.clone()),
+            token: next_token,
+        }
+    } else {
+        ic_cdk::trap("Chunk not found");
+    }
 }
 
 fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {

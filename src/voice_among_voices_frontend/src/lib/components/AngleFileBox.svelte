@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import {onMount, tick} from 'svelte';
     import {Principal} from '@dfinity/principal';
     import {backend} from '$lib/canisters'; // Import your backend canister
     import {handleBackendAudioData} from '$lib/utils/convUtils';
@@ -31,7 +31,9 @@
 
             // Handle first chunk of data
             const chunks = [response.body];
-            let streamingToken = response.streaming_strategy.token;
+            let streamingToken = response.streaming_strategy[0].Callback.token;
+
+            console.log(streamingToken);
 
             // Loop through the streaming response until we receive all chunks
             while (streamingToken) {
@@ -40,7 +42,11 @@
                         streamingToken
                     );
                 chunks.push(body);
-                streamingToken = token;
+                if (token[0]) {
+                    streamingToken = token[0];
+                    continue;
+                }
+                streamingToken = undefined;
             }
 
             // combine all chunks into uint8array
@@ -56,9 +62,10 @@
             // Handle and convert the audio data to a playable URL
             audioURL = await handleBackendAudioData(audioData);
 
+            await tick();
             // Update download link
             downloadLink.href = audioURL;
-            downloadLink.download = `audio_angle_${angle}.wav`;
+            downloadLink.download = `audio_angle_${angle}.wav`; //TODO: add history frame / generation to filename
         } catch (e) {
             error = 'Error fetching the audio file.';
             console.error(e);

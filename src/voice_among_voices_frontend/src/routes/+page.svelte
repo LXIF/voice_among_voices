@@ -36,8 +36,10 @@
         audioParameters = await backend.get_audio_parameters();
         myVoice = await backend.get_my_voice();
 
-        const audioURL = await handleBackendAudioData(myVoice[0].sample);
-        myCurrentSampleAudioElement.src = audioURL;
+        if (myVoice.length > 0) {
+            const audioURL = await handleBackendAudioData(myVoice[0].sample);
+            myCurrentSampleAudioElement.src = audioURL;
+        }
     });
 
     const handleDropNewNode = async (event: CustomEvent) => {
