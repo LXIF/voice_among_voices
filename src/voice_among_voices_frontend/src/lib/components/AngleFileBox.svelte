@@ -23,7 +23,35 @@
             audioURL = '';
 
             // Fetch the audio data from the backend
-            const audioData: Uint8Array = await backend.get_angle_file(angle);
+            const response = await backend.get_angle_file(Math.round(angle));
+
+            if (!response.streaming_strategy) {
+                throw new Error('No streaming strategy provided.');
+            }
+
+            // Handle first chunk of data
+            const chunks = [response.body];
+            let streamingToken = response.streaming_strategy.token;
+
+            // Loop through the streaming response until we receive all chunks
+            while (streamingToken) {
+                const {body, token} =
+                    await backend.http_request_streaming_callback(
+                        streamingToken
+                    );
+                chunks.push(body);
+                streamingToken = token;
+            }
+
+            // combine all chunks into uint8array
+            const audioData = new Uint8Array(
+                chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+            );
+            let offset = 0;
+            for (const chunk of chunks) {
+                audioData.set(chunk, offset);
+                offset += chunk.length;
+            }
 
             // Handle and convert the audio data to a playable URL
             audioURL = await handleBackendAudioData(audioData);

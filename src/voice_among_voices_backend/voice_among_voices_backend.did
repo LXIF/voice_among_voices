@@ -52,6 +52,33 @@ type AddVoiceNodeResult = variant {
     };
 };
 
+type StreamingCallbackToken = record {
+    id : nat32;
+    chunk_index : nat32;
+    chunks : nat32;
+    token : opt vec nat8;
+};
+
+type StreamingCallbackHttpResponse = record {
+    body : vec nat8;
+    token : opt StreamingCallbackToken;
+};
+
+type StreamingStrategy = variant {
+    Callback : record {
+        token : StreamingCallbackToken;
+        callback : func(StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query;
+    };
+};
+
+type HttpStreamingResponse = record {
+    status_code : nat16;
+    headers : vec record { text; text };
+    body : vec nat8;
+    upgrade : opt bool;
+    streaming_strategy : opt StreamingStrategy;
+};
+
 service : {
     "add_voice_node" : (VoiceNodeIngress) -> (AddVoiceNodeResult);
     "get_voice_nodes" : () -> (VoiceNodeStoreEgress) query;
@@ -59,5 +86,6 @@ service : {
     "get_audio_parameters" : () -> (AudioParameters) query;
     "get_collider_coordinates" : () -> (vec ColliderCoordinate) query;
     "get_my_voice" : () -> (opt AudioSample) query;
-    "get_angle_file" : (float64) -> (vec nat8) query;
+    "get_angle_file" : (float64) -> (HttpStreamingResponse) query;
+    "http_request_streaming_callback" : (StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query;
 };

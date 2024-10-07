@@ -5,8 +5,9 @@ mod utils;
 use audio::*;
 use candid::{define_function, CandidType, Principal};
 use hound;
-use ic_cdk::{api::time, init, post_upgrade, query, update};
+use ic_cdk::{api::time, export_candid, init, post_upgrade, query, update};
 use ic_http_certification::HeaderField;
+use once_cell::sync::Lazy;
 use physics::*;
 use serde::Deserialize;
 use serde_bytes::ByteBuf;
@@ -161,6 +162,9 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
     static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
+
+static STREAMING_CALLBACK: Lazy<CallbackFunc> =
+    Lazy::new(|| CallbackFunc::new(ic_cdk::id(), "http_request_streaming_callback".to_string()));
 
 const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     total_length_ms: 60 * 1000,
@@ -383,6 +387,12 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
     });
 
     todo!()
+}
+
+fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {
+    let callback = STREAMING_CALLBACK.clone();
+
+    Some(StreamingStrategy::Callback { token, callback })
 }
 
 #[query]
