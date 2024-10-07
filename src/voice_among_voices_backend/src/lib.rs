@@ -3,13 +3,16 @@ mod physics;
 mod utils;
 
 use audio::*;
-use candid::{CandidType, Principal};
+use candid::{define_function, CandidType, Principal};
 use hound;
-use ic_cdk::{api::time, init, post_upgrade, query, update};
+use ic_cdk::{api::time, export_candid, init, post_upgrade, query, update};
+use ic_http_certification::HeaderField;
+use once_cell::sync::Lazy;
 use physics::*;
 use serde::Deserialize;
+use serde_bytes::ByteBuf;
 use std::{borrow::Borrow, cell::RefCell, collections::BTreeMap};
-use utils::{node_within_circle, sample_length_to_radius};
+use utils::{node_within_circle, sample_length_to_radius, split_into_chunks};
 
 #[derive(Debug)]
 struct User {
@@ -96,12 +99,61 @@ struct AudioParameters {
     max_sample_length_ms: u32,
     sample_rate: u32,
     chunk_size: usize,
+    fade_ms: u32,
 }
 
 #[derive(CandidType, Debug)]
 enum AddVoiceNodeError {
     NotWithinCircleError,
     NotValidAudioFileError(String),
+}
+
+#[derive(CandidType, Deserialize, Clone, Default)]
+pub struct HttpStreamingResponse {
+    pub status_code: u16,
+    pub headers: Vec<HeaderField>,
+    pub body: ByteBuf,
+    pub upgrade: Option<bool>,
+    pub streaming_strategy: Option<StreamingStrategy>,
+}
+
+#[derive(CandidType, Deserialize, Clone)]
+pub struct StreamingCallbackToken {
+    pub id: u32,
+    pub chunk_index: u32,
+    pub chunks: u32,
+    pub token: Option<ByteBuf>,
+}
+
+impl StreamingCallbackToken {
+    pub fn next(self) -> Option<StreamingCallbackToken> {
+        if self.chunk_index + 1 >= self.chunks {
+            None
+        } else {
+            Some(StreamingCallbackToken {
+                id: self.id,
+                chunk_index: self.chunk_index + 1,
+                chunks: self.chunks,
+                token: self.token,
+            })
+        }
+    }
+}
+
+define_function!(pub CallbackFunc : (StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query);
+
+#[derive(CandidType, Deserialize, Clone)]
+pub enum StreamingStrategy {
+    Callback {
+        token: StreamingCallbackToken,
+        callback: CallbackFunc,
+    },
+}
+
+#[derive(CandidType, Deserialize, Clone)]
+pub struct StreamingCallbackHttpResponse {
+    pub body: ByteBuf,
+    pub token: Option<StreamingCallbackToken>,
 }
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
@@ -112,11 +164,15 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
 
+static STREAMING_CALLBACK: Lazy<CallbackFunc> =
+    Lazy::new(|| CallbackFunc::new(ic_cdk::id(), "http_request_streaming_callback".to_string()));
+
 const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     total_length_ms: 60 * 1000,
     max_sample_length_ms: 10000,
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
+    fade_ms: 20,
 };
 const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
@@ -258,7 +314,7 @@ fn get_my_voice() -> Option<AudioSample> {
 }
 
 #[query]
-fn get_angle_file(angle: f64) -> Vec<u8> {
+fn get_angle_file(angle: f64) -> HttpStreamingResponse {
     // TODO: guard to user, restrict angle
     // TODO: maybe store the file, maybe another for historical files
     let mut result: Vec<u8> = vec![];
@@ -276,7 +332,64 @@ fn get_angle_file(angle: f64) -> Vec<u8> {
         });
     });
 
-    result
+    let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
+    let total_chunks = chunks.len() as u32;
+
+    let first_chunk = chunks.get(0).cloned().unwrap_or_default();
+    let token = StreamingCallbackToken {
+        id: angle as u32, // TODO: look at this again, esp type casting - should work because nfts are for full degrees
+        chunk_index: 0,
+        chunks: total_chunks,
+        token: None, // TODO: maybe implement this for security purposes
+    };
+
+    HttpStreamingResponse {
+        status_code: 200,
+        headers: vec![("content-type".to_string(), "audio/wav".to_string())],
+        body: ByteBuf::from(first_chunk),
+        upgrade: None,
+        streaming_strategy: create_strategy(token),
+    }
+}
+
+#[query(hidden = true)]
+fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
+    // TODO: perhaps make function naming more concise as this is only for getting angle files
+
+    // TODO: perhaps cache the file
+    let mut result: Vec<u8> = vec![];
+
+    VOICE_NODES.with(|nodes| {
+        SAMPLES.with(|samples| {
+            result = generate_angle_file(
+                token.id as f64,
+                &*nodes.borrow(),
+                &*samples.borrow(),
+                &AUDIO_PARAMETERS,
+                &SIMULATION_PARAMETERS,
+            )
+            .unwrap(); // TODO: error handling
+        });
+    });
+
+    let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
+
+    if let Some(chunk) = chunks.get(token.chunk_index as usize) {
+        let next_token = token.next();
+
+        StreamingCallbackHttpResponse {
+            body: ByteBuf::from(chunk.clone()),
+            token: next_token,
+        }
+    } else {
+        ic_cdk::trap("Chunk not found");
+    }
+}
+
+fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {
+    let callback = STREAMING_CALLBACK.clone();
+
+    Some(StreamingStrategy::Callback { token, callback })
 }
 
 #[query]

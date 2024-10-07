@@ -16,6 +16,9 @@ ic-cdk-timers = "0.10.0"                                               # Feel fr
 serde = "^1.0"
 futures = "0.3"
 hound = "3.5.1"
+serde_bytes = "0.11.15"
+ic-http-certification = "2.6.0"
+once_cell = "1.20.2"
 
 [profile.dev.package.rapier3d]
 opt-level = 3

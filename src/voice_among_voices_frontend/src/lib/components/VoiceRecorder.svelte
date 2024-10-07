@@ -9,6 +9,7 @@
     // import {connect} from 'extendable-media-recorder-wav-encoder';
     import {browser} from '$app/environment';
     import {encodeWav} from '$lib/utils/convUtils';
+    import type {AudioParameters} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
     const dispatch = createEventDispatcher();
 
@@ -22,7 +23,7 @@
     let connect: any;
     let recordingTimeout: ReturnType<typeof setTimeout>;
 
-    export let audioParameters;
+    export let audioParameters: AudioParameters;
 
     onMount(async () => {
         if (browser) {

@@ -26,7 +26,6 @@ export function blobToUint8Array(blob: Blob) {
         reader.onloadend = function () {
             const arrayBuffer = reader.result;
             const uint8Array = new Uint8Array(arrayBuffer as ArrayBufferLike);
-            console.log(uint8Array);
             resolve(uint8Array);
         }
         reader.onerror = reject;

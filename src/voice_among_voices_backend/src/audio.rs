@@ -71,6 +71,9 @@ fn generate_audio_vectors(
     sample_positions: &Vec<SamplePosition>,
     audio_params: &AudioParameters,
 ) -> (Vec<i16>, Vec<i16>) {
+    // Convert fade duration from milliseconds to samples
+    let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
+
     // create vectors with length, fill them with neutral => half of i16::MAX
     let total_length_samples = audio_params.total_length_ms * audio_params.sample_rate / 1000;
     let mut left_channel = vec![0i16; total_length_samples as usize];
@@ -87,21 +90,32 @@ fn generate_audio_vectors(
         // use reader to read sample
         let input_samples = read_wav(&sample_pos.sample.sample);
         // loop over samples zipped with the slice of our left and right channels we want
-        for (sample, (left, right)) in input_samples //TODO: this could in principle be parallelized, would require keeping the vecs in an arc/mutex
+        for (index, (sample, (left, right))) in input_samples //TODO: this could in principle be parallelized, would require keeping the vecs in an arc/mutex
             .iter()
             .zip(
                 left_channel[start_sample..=end_sample] //TODO: perhaps add some check to make sure we're never out of bounds?
                     .iter_mut()
                     .zip(right_channel[start_sample..=end_sample].iter_mut()),
             )
+            .enumerate()
         {
             // figure out the panning multipliers
             let pan = sample_pos.pan_position;
             let left_gain = (0.5 * (1.0 + pan) * std::f64::consts::PI).cos();
             let right_gain = (0.5 * (1.0 - pan) * std::f64::consts::PI).cos();
+
+            // Determin fading
+            let fade_factor = if index < fade_samples {
+                index as f64 / fade_samples as f64
+            } else if index >= input_samples.len() - fade_samples {
+                (input_samples.len() - 1 - index) as f64 / fade_samples as f64
+            } else {
+                1.
+            };
+
             // add the scaled sample to both sides
-            let left_sample = (*sample as f64 * left_gain) as i16;
-            let right_sample = (*sample as f64 * right_gain) as i16;
+            let left_sample = (*sample as f64 * left_gain * fade_factor) as i16;
+            let right_sample = (*sample as f64 * right_gain * fade_factor) as i16;
 
             *left = left.wrapping_add(left_sample).clamp(i16::MIN, i16::MAX);
             *right = right.wrapping_add(right_sample).clamp(i16::MIN, i16::MAX);

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import {onMount, tick} from 'svelte';
     import {Principal} from '@dfinity/principal';
     import {backend} from '$lib/canisters'; // Import your backend canister
     import {handleBackendAudioData} from '$lib/utils/convUtils';
@@ -23,14 +23,49 @@
             audioURL = '';
 
             // Fetch the audio data from the backend
-            const audioData: Uint8Array = await backend.get_angle_file(angle);
+            const response = await backend.get_angle_file(Math.round(angle));
+
+            if (!response.streaming_strategy) {
+                throw new Error('No streaming strategy provided.');
+            }
+
+            // Handle first chunk of data
+            const chunks = [response.body];
+            let streamingToken = response.streaming_strategy[0].Callback.token;
+
+            console.log(streamingToken);
+
+            // Loop through the streaming response until we receive all chunks
+            while (streamingToken) {
+                const {body, token} =
+                    await backend.http_request_streaming_callback(
+                        streamingToken
+                    );
+                chunks.push(body);
+                if (token[0]) {
+                    streamingToken = token[0];
+                    continue;
+                }
+                streamingToken = undefined;
+            }
+
+            // combine all chunks into uint8array
+            const audioData = new Uint8Array(
+                chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+            );
+            let offset = 0;
+            for (const chunk of chunks) {
+                audioData.set(chunk, offset);
+                offset += chunk.length;
+            }
 
             // Handle and convert the audio data to a playable URL
             audioURL = await handleBackendAudioData(audioData);
 
+            await tick();
             // Update download link
             downloadLink.href = audioURL;
-            downloadLink.download = `audio_angle_${angle}.wav`;
+            downloadLink.download = `audio_angle_${angle}.wav`; //TODO: add history frame / generation to filename
         } catch (e) {
             error = 'Error fetching the audio file.';
             console.error(e);
