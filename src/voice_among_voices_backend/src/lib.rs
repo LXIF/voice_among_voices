@@ -172,7 +172,7 @@ const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     max_sample_length_ms: 10000,
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
-    fade_ms: 20,
+    fade_ms: 30,
 };
 const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,

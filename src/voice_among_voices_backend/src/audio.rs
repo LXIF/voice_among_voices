@@ -4,9 +4,10 @@ use std::io::Cursor;
 
 use crate::{
     AddVoiceNodeError, AudioParameters, AudioSample, AudioSampleStore, SimulationParameters,
-    VoiceNodeLocalStore,
+    VoiceNodeLocal, VoiceNodeLocalStore,
 };
 
+#[derive(Debug)]
 struct SamplePosition<'a> {
     sample: &'a AudioSample,
     position: f64, // normalized position of center of audio node versus tangent of angle, the position it will have in the file
@@ -36,6 +37,24 @@ pub fn generate_angle_file(
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
 ) -> Result<Vec<u8>, hound::Error> {
+    // generate sample positions
+    let sample_positions = generate_normalized_sample_positions(nodes, samples, sim_params, angle);
+    // generate stereo sample vectors
+    let (left_samples, right_samples) = generate_audio_vectors(&sample_positions, audio_params);
+
+    // generate resulting file
+
+    let angle_file = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples);
+
+    angle_file
+}
+
+fn generate_normalized_sample_positions<'a>(
+    nodes: &VoiceNodeLocalStore,
+    samples: &'a AudioSampleStore,
+    sim_params: &SimulationParameters,
+    angle: f64,
+) -> Vec<SamplePosition<'a>> {
     let mut sample_positions: Vec<SamplePosition> = vec![];
 
     let radius = sim_params.logical_width / 2.;
@@ -43,9 +62,11 @@ pub fn generate_angle_file(
     for node in nodes.iter() {
         // store sample reference with normalized position between 0. and 1. and normalized pan position between -1. and 1.
         let position =
-            distance_from_tangent(angle, radius, node.x, node.y) / sim_params.logical_width;
-        let begins_at = position - (node.radius / sim_params.logical_width);
-        let pan_position = signed_distance_from_center_line(angle, radius, node.x, node.y) / radius;
+            distance_from_tangent(angle, radius, node.x, node.y) / sim_params.logical_width; // position within file, between 0. and 1.
+        let begins_at = (position - (node.radius / sim_params.logical_width))
+            .max(0.)
+            .min(1.); // starting position within file, position minus half the node's normalized width, between 0. and 1.
+        let pan_position = signed_distance_from_center_line(angle, radius, node.x, node.y) / radius; // panning coefficient, between -1. and 1.
 
         if let Some(sample) = samples.iter().find(|sample| sample.id == node.sample_id) {
             sample_positions.push(SamplePosition {
@@ -57,14 +78,7 @@ pub fn generate_angle_file(
         }
     }
 
-    // generate stereo sample vectors
-    let (left_samples, right_samples) = generate_audio_vectors(&sample_positions, audio_params);
-
-    // generate resulting file
-
-    let angle_file = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples);
-
-    angle_file
+    sample_positions
 }
 
 fn generate_audio_vectors(
@@ -74,8 +88,13 @@ fn generate_audio_vectors(
     // Convert fade duration from milliseconds to samples
     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
 
+    println!("fade_samples: {fade_samples}");
+
     // create vectors with length, fill them with neutral => half of i16::MAX
     let total_length_samples = audio_params.total_length_ms * audio_params.sample_rate / 1000;
+
+    println!("total_length_samples: {total_length_samples}");
+
     let mut left_channel = vec![0i16; total_length_samples as usize];
     let mut right_channel = vec![0i16; total_length_samples as usize];
 
@@ -85,6 +104,10 @@ fn generate_audio_vectors(
         let start_sample = (sample_pos.begins_at * total_length_samples as f64)
             .round()
             .max(0.) as usize;
+
+        println!("sample_pos: {:#?}", sample_pos);
+        println!("start_sample: {start_sample}");
+
         let end_sample = (start_sample + sample_pos.sample.sample_length_samples as usize - 1)
             .min(total_length_samples as usize - 1);
         // use reader to read sample
@@ -95,16 +118,19 @@ fn generate_audio_vectors(
             .zip(
                 left_channel[start_sample..=end_sample] //TODO: perhaps add some check to make sure we're never out of bounds?
                     .iter_mut()
-                    .zip(right_channel[start_sample..=end_sample].iter_mut()),
+                    .zip(right_channel[start_sample..=end_sample].iter_mut()), //TODO: can't have negative slices. will need to handle separately.
             )
             .enumerate()
         {
             // figure out the panning multipliers
             let pan = sample_pos.pan_position;
-            let left_gain = (0.5 * (1.0 + pan) * std::f64::consts::PI).cos();
-            let right_gain = (0.5 * (1.0 - pan) * std::f64::consts::PI).cos();
+            let left_gain = ((1.0 + pan) * std::f64::consts::PI / 4.0).cos();
+            let right_gain = ((1.0 - pan) * std::f64::consts::PI / 4.0).cos();
 
-            // Determin fading
+            // println!("left_gain: {left_gain}");
+            // println!("right_gain: {right_gain}");
+
+            // Determine fading
             let fade_factor = if index < fade_samples {
                 index as f64 / fade_samples as f64
             } else if index >= input_samples.len() - fade_samples {
@@ -117,8 +143,17 @@ fn generate_audio_vectors(
             let left_sample = (*sample as f64 * left_gain * fade_factor) as i16;
             let right_sample = (*sample as f64 * right_gain * fade_factor) as i16;
 
-            *left = left.wrapping_add(left_sample).clamp(i16::MIN, i16::MAX);
-            *right = right.wrapping_add(right_sample).clamp(i16::MIN, i16::MAX);
+            if index == 500 {
+                println!("pan: {}", pan);
+                println!("left_gain: {}", left_gain);
+                println!("right_gain: {}", right_gain);
+                println!("fade_factor: {}", fade_factor);
+                println!("left_sample: {}", left_sample);
+                println!("right_sample: {}", right_sample);
+            }
+
+            *left = left.saturating_add(left_sample).clamp(i16::MIN, i16::MAX); //TODO: maybe add compression
+            *right = right.saturating_add(right_sample).clamp(i16::MIN, i16::MAX);
         }
     }
 
@@ -288,13 +323,154 @@ fn signed_distance_from_center_line(angle: f64, radius: f64, x: f64, y: f64) -> 
 
 #[cfg(test)]
 mod tests {
-    use core::f64;
-
     use super::*;
+    use core::f64;
+    use hound::{WavReader, WavSpec};
+    use rapier2d::na::coordinates;
 
     // needed because floats and trigo aren't perfect lol
     fn approximately_equal(a: f64, b: f64, epsilon: f64) -> bool {
         (a - b).abs() < epsilon
+    }
+
+    // Helper function to generate simple sample data
+    fn generate_test_samples() -> (Vec<i16>, Vec<i16>) {
+        let left_samples = vec![i16::MAX, i16::MIN, 0, i16::MAX / 2];
+        let right_samples = vec![i16::MIN, i16::MAX, 0, i16::MAX / 2];
+        (left_samples, right_samples)
+    }
+
+    fn generate_audio_params(sample_rate: u32) -> AudioParameters {
+        AudioParameters {
+            sample_rate,
+            max_sample_length_ms: 100,
+            total_length_ms: 1000, // 1 second
+            fade_ms: 0,            // No fade
+            chunk_size: 1024 * 1024,
+        }
+    }
+
+    fn generate_test_simulation_params() -> SimulationParameters {
+        SimulationParameters {
+            velocity_cutoff: 1.0,
+            force_cutoff: 1.0,
+            max_distance: 100.0,
+            force_strength: 1.0,
+            linear_damping: 1.0,
+            logical_width: 100.0, // Width of the simulated world
+            logical_height: 100.0,
+            n_collider_vertices: 10,
+            friction: 0.1,
+            density: 1.0,
+        }
+    }
+
+    fn generate_test_dummy_audio_samples(n: usize) -> AudioSampleStore {
+        let mut dummy_samples: AudioSampleStore = vec![];
+
+        for i in 0..n {
+            dummy_samples.push(AudioSample {
+                id: i,
+                sample: vec![0, 1, 2, 3], // Dummy sample data
+                sample_length_ms: 1000.0,
+                sample_length_samples: 44100, // 1 second at 44100 Hz
+            });
+        }
+
+        dummy_samples
+    }
+
+    fn generate_test_nodes(coordinates: Vec<(f64, f64)>) -> VoiceNodeLocalStore {
+        let mut test_nodes: VoiceNodeLocalStore = vec![];
+
+        for (id, (x, y)) in coordinates.iter().enumerate() {
+            test_nodes.push(VoiceNodeLocal {
+                id,
+                x: *x,
+                y: *y,
+                sample_id: id,
+                radius: 10.,
+            });
+        }
+
+        test_nodes
+    }
+
+    fn generate_static_test_sample(
+        sample_length_ms: f64,
+        sample_length_samples: u32,
+        id: usize,
+    ) -> AudioSample {
+        // Define the WAV format (mono, 16-bit, 44.1kHz)
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+
+        // Create a buffer to hold the WAV data
+        let mut buffer = Vec::new();
+        let mut writer = hound::WavWriter::new(Cursor::new(&mut buffer), spec).unwrap();
+
+        // Generate a simple sine wave or arbitrary sample data
+
+        let num_samples = (sample_length_ms / 1000.0 * spec.sample_rate as f64) as u32;
+        for _ in 0..num_samples {
+            let sample = i16::MAX / 2;
+            writer.write_sample(sample).unwrap();
+        }
+
+        writer.finalize().unwrap();
+
+        AudioSample {
+            id,
+            sample: buffer, // Use the buffer that contains the valid WAV data
+            sample_length_ms,
+            sample_length_samples,
+        }
+    }
+
+    fn generate_extreme_test_sample(
+        sample_length_ms: f64,
+        sample_length_samples: u32,
+        id: usize,
+    ) -> AudioSample {
+        // Define the WAV format (mono, 16-bit, 44.1kHz)
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 44100,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+
+        // Create a buffer to hold the WAV data
+        let mut buffer = Vec::new();
+        let mut writer = hound::WavWriter::new(Cursor::new(&mut buffer), spec).unwrap();
+
+        let num_samples = (sample_length_ms / 1000.0 * spec.sample_rate as f64) as u32;
+        for _ in 0..num_samples {
+            let sample = i16::MAX;
+            writer.write_sample(sample).unwrap();
+        }
+
+        writer.finalize().unwrap();
+
+        AudioSample {
+            id,
+            sample: buffer, // Use the buffer that contains the valid WAV data
+            sample_length_ms,
+            sample_length_samples,
+        }
+    }
+
+    fn generate_test_sample_positions(sample: &AudioSample) -> Vec<SamplePosition> {
+        vec![SamplePosition {
+            position: 0.0,  // Start at the beginning of the vector
+            begins_at: 0.0, // Also begin at the very start
+            sample: sample,
+            pan_position: 0.0, // Center panning
+        }]
     }
 
     #[test]
@@ -310,6 +486,535 @@ mod tests {
 
         assert_eq!(actual_duration_ms, expected_duration_ms as f64);
         assert_eq!(actual_duration_samples, expected_duration_samples);
+    }
+
+    #[test]
+    fn test_write_stereo_wav_to_vec_basic() {
+        let (left_samples, right_samples) = generate_test_samples();
+        let audio_params = generate_audio_params(44100); // CD-quality sample rate
+
+        let wav_data = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples)
+            .expect("Failed to write WAV");
+
+        // Verify that the generated WAV can be read and matches the original data
+        let cursor = Cursor::new(wav_data);
+        let mut reader = WavReader::new(cursor).expect("Failed to read WAV file");
+        let spec = reader.spec();
+
+        // Check WAV specification
+        assert_eq!(spec.channels, 2);
+        assert_eq!(spec.sample_rate, 44100);
+        assert_eq!(spec.bits_per_sample, 16);
+
+        let mut samples = reader.samples::<i16>();
+
+        // Verify the left and right channel samples were written correctly
+        assert_eq!(samples.next().unwrap().unwrap(), i16::MAX); // Left channel
+        assert_eq!(samples.next().unwrap().unwrap(), i16::MIN); // Right channel
+        assert_eq!(samples.next().unwrap().unwrap(), i16::MIN); // Left channel
+        assert_eq!(samples.next().unwrap().unwrap(), i16::MAX); // Right channel
+        assert_eq!(samples.next().unwrap().unwrap(), 0); // Left channel
+        assert_eq!(samples.next().unwrap().unwrap(), 0); // Right channel
+        assert_eq!(samples.next().unwrap().unwrap(), i16::MAX / 2); // Left channel
+        assert_eq!(samples.next().unwrap().unwrap(), i16::MAX / 2); // Right channel
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_write_stereo_wav_to_vec_mismatched_lengths() {
+        let left_samples = vec![i16::MAX, i16::MIN];
+        let right_samples = vec![i16::MIN]; // Different length
+
+        let audio_params = generate_audio_params(44100);
+
+        // This should panic due to mismatched lengths
+        write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples)
+            .expect("This should fail due to mismatched sample lengths");
+    }
+
+    #[test]
+    fn test_write_stereo_wav_to_vec_empty() {
+        let left_samples: Vec<i16> = vec![];
+        let right_samples: Vec<i16> = vec![];
+        let audio_params = generate_audio_params(44100);
+
+        let wav_data = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples)
+            .expect("Failed to write WAV");
+
+        // WAV should be empty but valid
+        let cursor = Cursor::new(wav_data);
+        let mut reader = WavReader::new(cursor).expect("Failed to read WAV file");
+        let samples: Vec<i16> = reader.samples().collect::<Result<_, _>>().unwrap();
+
+        assert_eq!(samples.len(), 0); // Ensure there are no samples
+    }
+
+    #[test]
+    fn test_write_stereo_wav_to_vec_low_sample_rate() {
+        let (left_samples, right_samples) = generate_test_samples();
+        let audio_params = generate_audio_params(8000); // Low sample rate
+
+        let wav_data = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples)
+            .expect("Failed to write WAV");
+
+        // Verify that the generated WAV can be read and matches the original data
+        let cursor = Cursor::new(wav_data);
+        let reader = WavReader::new(cursor).expect("Failed to read WAV file");
+        let spec = reader.spec();
+
+        // Check WAV specification for low sample rate
+        assert_eq!(spec.channels, 2);
+        assert_eq!(spec.sample_rate, 8000);
+        assert_eq!(spec.bits_per_sample, 16);
+    }
+
+    #[test]
+    fn test_generate_sample_positions_sanity() {
+        let nodes = generate_test_nodes(vec![(25., 50.), (50., 25.)]);
+        let samples = generate_test_dummy_audio_samples(2);
+        let sim_params = generate_test_simulation_params();
+
+        let angle = 0.0;
+        let sample_positions =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle);
+
+        // There should be 2 sample positions generated since there are 2 nodes
+        assert_eq!(sample_positions.len(), 2);
+
+        // Verify the positions
+        let sample_position_1 = &sample_positions[0];
+        assert_eq!(sample_position_1.sample.id, 0); // Sample ID should match
+        assert!(sample_position_1.position >= 0.0 && sample_position_1.position <= 1.0); // Position should be normalized
+        assert!(sample_position_1.pan_position >= -1.0 && sample_position_1.pan_position <= 1.0); // Pan position should be within [-1, 1]
+
+        let sample_position_2 = &sample_positions[1];
+        assert_eq!(sample_position_2.sample.id, 1);
+        assert!(sample_position_2.position >= 0.0 && sample_position_2.position <= 1.0);
+        println!("{}", sample_position_2.pan_position);
+        assert!(sample_position_2.pan_position >= -1.0 && sample_position_2.pan_position <= 1.0);
+    }
+
+    #[test]
+    fn test_generate_sample_positions_basic() {
+        let nodes = generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -25.)]);
+        println!("{:#?}", nodes);
+        let samples = generate_test_dummy_audio_samples(3);
+        let sim_params = generate_test_simulation_params();
+
+        let angle = 0.0;
+        let sample_positions =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle);
+
+        // There should be 3 sample positions generated since there are 3 nodes
+        assert_eq!(sample_positions.len(), 3);
+
+        // Verify the actual positions
+        let sample_position_1 = &sample_positions[0];
+
+        let sample_position_2 = &sample_positions[1];
+
+        let sample_position_3 = &sample_positions[2];
+
+        // first one should be at 0.
+        assert_eq!(sample_position_1.position, 0.);
+        // pan 1 should be at 0.
+        assert_eq!(sample_position_1.pan_position, 0.);
+
+        // second one should be at 0.5
+        assert_eq!(sample_position_2.position, 0.5);
+        // pan 2 should be at -1.
+        assert_eq!(sample_position_2.pan_position, -1.);
+
+        // third one should be at 0.5
+        assert_eq!(sample_position_3.position, 0.75);
+        // pan 3 should be at -1.
+        assert_eq!(sample_position_3.pan_position, 0.);
+    }
+
+    #[test]
+    fn test_generate_sample_positions_center_case() {
+        let nodes = vec![VoiceNodeLocal {
+            id: 1,
+            x: 0.0, //center
+            y: 0.0, //center
+            sample_id: 0,
+            radius: 10.0,
+        }];
+        let samples = generate_test_dummy_audio_samples(1);
+        let sim_params = generate_test_simulation_params();
+
+        let angle = 45.0; // Diagonal angle
+        let sample_positions =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle);
+
+        assert_eq!(sample_positions.len(), 1);
+        let sample_position = &sample_positions[0];
+        assert_eq!(sample_position.sample.id, 0);
+        assert!(approximately_equal(sample_position.position, 0.5, 1e-6));
+        assert_eq!(sample_position.pan_position, 0.);
+    }
+
+    #[test]
+    fn test_generate_sample_positions_no_samples() {
+        let nodes = vec![]; // No nodes
+        let samples = generate_test_dummy_audio_samples(0);
+        let sim_params = generate_test_simulation_params();
+
+        let angle = 0.0;
+        let sample_positions =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle);
+
+        // No sample positions should be generated
+        assert_eq!(sample_positions.len(), 0);
+    }
+
+    #[test]
+    fn test_generate_sample_positions_varying_angles() {
+        let nodes = generate_test_nodes(vec![(25., 50.), (50., 25.)]);
+        let samples = generate_test_dummy_audio_samples(2);
+        let sim_params = generate_test_simulation_params();
+
+        let angle_0 = 0.0;
+        let angle_90 = 90.0;
+        let angle_180 = 180.0;
+        let angle_270 = 270.0;
+
+        let positions_0 =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle_0);
+        let positions_90 =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle_90);
+        let positions_180 =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle_180);
+        let positions_270 =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle_270);
+
+        // There should always be 2 sample positions, but their properties (position, pan) should vary
+        assert_eq!(positions_0.len(), 2);
+        assert_eq!(positions_90.len(), 2);
+        assert_eq!(positions_180.len(), 2);
+        assert_eq!(positions_270.len(), 2);
+
+        // Check that positions change based on the angle
+        assert_ne!(positions_0[0].position, positions_90[0].position);
+        assert_ne!(positions_90[0].position, positions_180[0].position);
+        assert_ne!(positions_180[0].position, positions_270[0].position);
+    }
+
+    #[test]
+    fn test_generate_sample_positions_cross() {
+        let nodes =
+            generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -50.), (-50., 0.), (0., 0.)]);
+        let samples = generate_test_dummy_audio_samples(5);
+        let angle = 0.;
+        let sim_params = SimulationParameters {
+            velocity_cutoff: 0.2,
+            force_cutoff: 100.,
+            max_distance: 20.,
+            force_strength: 3000.,
+            linear_damping: 10.,
+            logical_height: 100.,
+            logical_width: 100.,
+            n_collider_vertices: 360,
+            friction: 0.5,
+            density: 2.,
+        };
+
+        for node in nodes.iter() {
+            println!("{:#?}", node);
+        }
+
+        let positions = generate_normalized_sample_positions(&nodes, &samples, &sim_params, angle);
+
+        for position in positions.iter() {
+            println!("{:#?}", position);
+        }
+
+        assert_eq!(positions[0].begins_at, 0.);
+        assert_eq!(positions[1].begins_at, 0.4);
+        assert_eq!(positions[2].begins_at, 0.9);
+        assert_eq!(positions[3].begins_at, 0.4);
+        assert_eq!(positions[4].begins_at, 0.4);
+    }
+
+    #[test]
+    fn test_generate_audio_vectors_basic() {
+        let audio_params = AudioParameters {
+            fade_ms: 0,            // Fade duration in milliseconds
+            sample_rate: 44100,    // 44.1kHz
+            total_length_ms: 1000, // 1 second total length
+            max_sample_length_ms: 60000,
+            chunk_size: 1024 * 1024,
+        };
+        let sample = generate_static_test_sample(1000.0, 44100, 1);
+        let sample_positions = generate_test_sample_positions(&sample);
+
+        let (left_channel, right_channel) =
+            generate_audio_vectors(&sample_positions, &audio_params);
+
+        // Verify that the output vectors are of the correct length
+        let expected_length = audio_params.total_length_ms * audio_params.sample_rate / 1000;
+        assert_eq!(left_channel.len(), expected_length as usize);
+        assert_eq!(right_channel.len(), expected_length as usize);
+
+        // Since the pan position is 0 (center), both left and right channels should be equal
+        for (left, right) in left_channel.iter().zip(right_channel.iter()) {
+            assert_eq!(left, right);
+        }
+    }
+
+    #[test]
+    fn test_generate_audio_vectors_positions() {
+        let audio_params = AudioParameters {
+            fade_ms: 0,           // Fade duration in milliseconds
+            sample_rate: 44100,   // 44.1kHz
+            total_length_ms: 100, // 0.1 second total length
+            max_sample_length_ms: 10,
+            chunk_size: 1024 * 1024,
+        };
+
+        let sim_params = SimulationParameters {
+            velocity_cutoff: 0.2,
+            force_cutoff: 100.,
+            max_distance: 20.,
+            force_strength: 3000.,
+            linear_damping: 10.,
+            logical_height: 100.,
+            logical_width: 100.,
+            n_collider_vertices: 360,
+            friction: 0.5,
+            density: 2.,
+        };
+
+        let nodes = generate_test_nodes(vec![(0., 50.), (0., 0.), (0., -50.)]);
+        let mut samples = vec![];
+        for i in 0..3 {
+            samples.push(generate_static_test_sample(10., 441, i));
+        }
+
+        let sample_positions =
+            generate_normalized_sample_positions(&nodes, &samples, &sim_params, 0.);
+
+        let (left_channel, right_channel) =
+            generate_audio_vectors(&sample_positions, &audio_params);
+
+        // first and last and midpoint should be 11584
+        // 1/3 and 2/3 should be 0
+        let total_length_samples = audio_params.total_length_ms * audio_params.sample_rate / 1000;
+
+        let first_first_index = 0;
+        let first_last_index = (sample_positions[0].sample.sample_length_samples - 1) as usize;
+
+        let mid_first_index =
+            (sample_positions[1].begins_at * total_length_samples as f64) as usize;
+        let mid_last_index =
+            mid_first_index + sample_positions[1].sample.sample_length_samples as usize - 1;
+
+        let last_first_index =
+            (sample_positions[2].begins_at * total_length_samples as f64) as usize;
+        let last_last_index = (total_length_samples - 1) as usize;
+
+        let first_zero_point = (1. / 3. * total_length_samples as f64) as usize;
+        let second_zero_point = (2. / 3. * total_length_samples as f64) as usize;
+
+        assert_eq!(left_channel[first_first_index], 11584);
+        assert_eq!(right_channel[first_first_index], 11584);
+
+        assert_eq!(left_channel[first_last_index], 11584);
+        assert_eq!(right_channel[first_last_index], 11584);
+
+        assert_eq!(left_channel[first_last_index + 1], 0);
+        assert_eq!(right_channel[first_last_index + 1], 0);
+
+        assert_eq!(left_channel[mid_first_index - 1], 0);
+        assert_eq!(right_channel[mid_first_index - 1], 0);
+
+        assert_eq!(left_channel[mid_first_index], 11584);
+        assert_eq!(right_channel[mid_first_index], 11584);
+
+        assert_eq!(left_channel[mid_last_index], 11584);
+        assert_eq!(right_channel[mid_last_index], 11584);
+
+        assert_eq!(left_channel[mid_last_index + 1], 0);
+        assert_eq!(right_channel[mid_last_index + 1], 0);
+
+        assert_eq!(left_channel[last_first_index - 1], 0);
+        assert_eq!(right_channel[last_first_index - 1], 0);
+
+        assert_eq!(left_channel[last_first_index], 11584);
+        assert_eq!(right_channel[last_first_index], 11584);
+
+        assert_eq!(left_channel[last_last_index], 11584);
+        assert_eq!(right_channel[last_last_index], 11584);
+
+        assert_eq!(left_channel[first_zero_point], 0);
+        assert_eq!(right_channel[first_zero_point], 0);
+
+        assert_eq!(left_channel[second_zero_point], 0);
+        assert_eq!(right_channel[second_zero_point], 0);
+    }
+
+    #[test]
+    fn test_generate_audio_vectors_fading() {
+        let audio_params = AudioParameters {
+            fade_ms: 100,          // Fade duration in milliseconds
+            sample_rate: 44100,    // 44.1kHz
+            total_length_ms: 1000, // 1 second total length
+            max_sample_length_ms: 1000,
+            chunk_size: 1024 * 1024,
+        };
+        let sample = generate_static_test_sample(1000., 44100, 1);
+
+        let sample_positions = vec![SamplePosition {
+            position: 0.5,  // midpoint is in the middle
+            begins_at: 0.0, // Also begin at the very start
+            sample: &sample,
+            pan_position: 0.0, // Center panning
+        }];
+
+        let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
+        let start_fade =
+            (sample_positions[0].begins_at * audio_params.total_length_ms as f64 * 44100. / 1000.)
+                .round() as usize;
+
+        let (left_channel, right_channel) =
+            generate_audio_vectors(&sample_positions, &audio_params);
+
+        // for i in left_channel.iter() {
+        //     print!("{i}");
+        // }
+
+        // Check that fading occurs in the beginning and end
+        // The first fade_samples should ramp up
+        for i in start_fade..start_fade + fade_samples {
+            // println!("{} {}", left_channel[i], right_channel[i + 1]);
+            assert!(left_channel[i] < left_channel[i + 1]);
+            assert!(right_channel[i] < right_channel[i + 1]);
+        }
+
+        // The last fade_samples should ramp down
+        let total_samples = left_channel.len();
+        for i in (total_samples - fade_samples)..(total_samples - 1) {
+            // println!("{} {}", left_channel[i], right_channel[i]);
+            assert!(left_channel[i] > left_channel[i + 1]);
+            assert!(right_channel[i] > right_channel[i + 1]);
+        }
+    }
+
+    #[test]
+    fn test_generate_audio_vectors_no_sample() {
+        let audio_params = AudioParameters {
+            fade_ms: 100,          // Fade duration in milliseconds
+            sample_rate: 44100,    // 44.1kHz
+            total_length_ms: 1000, // 1 second total length
+            max_sample_length_ms: 60000,
+            chunk_size: 1024 * 1024,
+        };
+        let sample_positions: Vec<SamplePosition> = vec![]; // No samples
+
+        let (left_channel, right_channel) =
+            generate_audio_vectors(&sample_positions, &audio_params);
+
+        // Both channels should be silent (all zeros)
+        assert!(left_channel.iter().all(|&sample| sample == 0));
+        assert!(right_channel.iter().all(|&sample| sample == 0));
+    }
+
+    #[test]
+    fn test_generate_audio_vectors_clipping_prevention() {
+        let audio_params = AudioParameters {
+            fade_ms: 100,          // Fade duration in milliseconds
+            sample_rate: 44100,    // 44.1kHz
+            total_length_ms: 1000, // 1 second total length
+            max_sample_length_ms: 60000,
+            chunk_size: 1024 * 1024,
+        };
+        let sample = generate_static_test_sample(1000.0, 44100, 1);
+        let mut sample_positions = generate_test_sample_positions(&sample);
+
+        // Make the sample data extreme to cause potential clipping
+        let extreme_sample = generate_extreme_test_sample(1000., 44100, 2);
+
+        sample_positions[0].sample = &extreme_sample;
+
+        let (left_channel, right_channel) =
+            generate_audio_vectors(&sample_positions, &audio_params);
+
+        // Ensure that no values exceed the i16 range
+        for &sample in left_channel.iter().chain(right_channel.iter()) {
+            assert!(sample <= i16::MAX);
+            assert!(sample >= i16::MIN);
+        }
+    }
+
+    #[test]
+    fn test_generate_audio_vectors_pan_position() {
+        let audio_params = AudioParameters {
+            fade_ms: 0,            // Fade duration in milliseconds
+            sample_rate: 44100,    // 44.1kHz
+            total_length_ms: 1000, // 1 second total length
+            max_sample_length_ms: 60000,
+            chunk_size: 1024 * 1024,
+        };
+        let sample = generate_static_test_sample(1000.0, 44100, 1);
+
+        // Test with left pan (-1.0), center (0.0), and right pan (1.0)
+        let sample_positions = vec![
+            SamplePosition {
+                position: 0.0,
+                begins_at: 0.0,
+                sample: &sample,
+                pan_position: -1.0, // Full left pan
+            },
+            SamplePosition {
+                position: 0.5,
+                begins_at: 0.0,
+                sample: &sample,
+                pan_position: -0.0, // Center pan
+            },
+            SamplePosition {
+                position: 1.0,
+                begins_at: 0.0,
+                sample: &sample,
+                pan_position: -1.0, // Full right pan
+            },
+        ];
+
+        let (left_channel, right_channel) =
+            generate_audio_vectors(&sample_positions, &audio_params);
+
+        // Left pan should result in higher values in the left channel
+        for (left, right) in left_channel.iter().zip(right_channel.iter()) {
+            println!("{left} {right}");
+            assert!(left > right);
+        }
+
+        // Center pan should result in equal values for both channels
+        let (center_left, center_right) = generate_audio_vectors(
+            &vec![SamplePosition {
+                position: 0.0,
+                begins_at: 0.0,
+                sample: &sample,
+                pan_position: 0.0,
+            }],
+            &audio_params,
+        );
+        for (left, right) in center_left.iter().zip(center_right.iter()) {
+            assert_eq!(left, right);
+        }
+
+        // Right pan should result in higher values in the right channel
+        let (right_left, right_right) = generate_audio_vectors(
+            &vec![SamplePosition {
+                position: 0.0,
+                begins_at: 0.0,
+                sample: &sample,
+                pan_position: 1.0,
+            }],
+            &audio_params,
+        );
+        for (left, right) in right_left.iter().zip(right_right.iter()) {
+            assert!(right > left);
+        }
     }
 
     #[test]
@@ -446,6 +1151,24 @@ mod tests {
             let d = signed_distance_from_center_line(angle, radius, x, y);
 
             assert_eq!(d, 0.);
+        }
+        {
+            let angle = 0.;
+            let radius = 50.;
+            let (x, y) = (1., 25.);
+
+            let d = signed_distance_from_center_line(angle, radius, x, y);
+
+            assert_eq!(d, -1.);
+        }
+        {
+            let angle = 0.;
+            let radius = 50.;
+            let (x, y) = (-1., 25.);
+
+            let d = signed_distance_from_center_line(angle, radius, x, y);
+
+            assert_eq!(d, 1.);
         }
     }
 }
