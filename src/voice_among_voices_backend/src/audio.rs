@@ -55,25 +55,28 @@ fn generate_normalized_sample_positions<'a>(
     sim_params: &SimulationParameters,
     angle: f64,
 ) -> Vec<SamplePosition<'a>> {
-    let mut sample_positions: Vec<SamplePosition> = vec![];
+    let mut sample_positions: Vec<SamplePosition> = Vec::with_capacity(nodes.len());
     let radius = sim_params.logical_radius;
 
-    // loop through nodes
-    for node in nodes.iter() {
-        // store sample reference with normalized position between 0. and 1. and normalized pan position between -1. and 1.
-        let position = distance_from_tangent(angle, radius, node.x, node.y) / (2. * radius); // position within file, between 0. and 1.
-        let begins_at = (position - (node.radius / (2. * radius))).max(0.).min(1.); // starting position within file, position minus half the node's normalized width, between 0. and 1.
-        let pan_position = signed_distance_from_center_line(angle, radius, node.x, node.y) / radius; // panning coefficient, between -1. and 1.
+    // calculate tangency points
+    let (x_c, y_c) = tangency_points(radius, angle);
 
-        if let Some(sample) = samples.iter().find(|sample| sample.id == node.sample_id) {
-            sample_positions.push(SamplePosition {
-                position,
-                begins_at,
-                sample,
-                pan_position,
-            });
-        }
-    }
+    sample_positions.extend(nodes.iter().filter_map(|node| {
+        samples
+            .iter()
+            .find(|sample| sample.id == node.sample_id)
+            .map(|sample| {
+                let position =
+                    distance_from_tangent(angle, node.x, node.y, x_c, y_c) / (2. * radius);
+                SamplePosition {
+                    position,
+                    begins_at: (position - (node.radius / (2. * radius))).max(0.).min(1.),
+                    pan_position: signed_distance_from_center_line(angle, node.x, node.y, y_c, x_c)
+                        / radius,
+                    sample,
+                }
+            })
+    }));
 
     sample_positions
 }
@@ -109,9 +112,7 @@ fn generate_audio_vectors(
         let right_gain = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos();
 
         // loop over samples zipped with the slice of our left and right channels we want
-        for (index, sample) in input_samples.iter().enumerate()
-        //TODO: this could in principle be parallelized, would require keeping the vecs in an arc/mutex
-        {
+        for (index, sample) in input_samples.iter().enumerate() {
             let sample_index = start_sample + index;
             if sample_index > end_sample {
                 break;
@@ -174,14 +175,17 @@ fn write_stereo_wav_to_vec(
     };
 
     let mut buffer = Cursor::new(Vec::new());
-
     let mut writer = WavWriter::new(&mut buffer, spec)?;
+    let mut sample_writer = writer.get_i16_writer((left_samples.len() * 2) as u32);
 
     for (&left_sample, &right_sample) in left_samples.iter().zip(right_samples.iter()) {
-        writer.write_sample(left_sample)?;
-        writer.write_sample(right_sample)?;
+        unsafe {
+            sample_writer.write_sample_unchecked(left_sample);
+            sample_writer.write_sample_unchecked(right_sample);
+        }
     }
 
+    sample_writer.flush()?;
     writer.finalize()?;
 
     let wav_data = buffer.into_inner();
@@ -213,17 +217,21 @@ pub fn generate_test_wav(duration_ms: u32, sample_rate: u32) -> Vec<u8> {
     buffer
 }
 
-fn distance_from_tangent(angle: f64, radius: f64, x: f64, y: f64) -> f64 {
+fn tangency_points(radius: f64, angle: f64) -> (f64, f64) {
+    // calculate tangency points
+    (
+        radius * angle.to_radians().sin(),
+        radius * angle.to_radians().cos(),
+    )
+}
+
+fn distance_from_tangent(angle: f64, x: f64, y: f64, x_c: f64, y_c: f64) -> f64 {
     // find point of tangency
     // xc,yc = rc*cos(angle),rc*sin(angle)
     // slope of radius is y/x
     // slope of tangent (mtangent) is then -x/y
     // tangent equation is:
     // y-yc = mtangent*(x-xc)
-
-    // point of tangency
-    let x_c = radius * angle.to_radians().sin();
-    let y_c = radius * angle.to_radians().cos();
 
     // Handle special cases where the tangent line is horizontal or vertical
     if angle % 180.0 == 0.0 {
@@ -249,11 +257,7 @@ fn distance_from_tangent(angle: f64, radius: f64, x: f64, y: f64) -> f64 {
     distance_to_tangent
 }
 
-fn signed_distance_from_center_line(angle: f64, radius: f64, x: f64, y: f64) -> f64 {
-    // Calculate point of tangency
-    let x_c = radius * angle.to_radians().sin();
-    let y_c = radius * angle.to_radians().cos();
-
+fn signed_distance_from_center_line(angle: f64, x: f64, y: f64, x_c: f64, y_c: f64) -> f64 {
     // Handle special cases where the tangent line is horizontal or vertical
     match angle {
         0. => {
@@ -1005,7 +1009,9 @@ mod tests {
             let radius = 50.;
             let (x, y) = (25., 0.);
 
-            let d = distance_from_tangent(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+
+            let d = distance_from_tangent(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 25.);
         }
@@ -1013,8 +1019,9 @@ mod tests {
             let angle = 270.;
             let radius = 50.;
             let (x, y) = (25., 0.);
+            let (x_c, y_c) = tangency_points(radius, angle);
 
-            let d = distance_from_tangent(angle, radius, x, y);
+            let d = distance_from_tangent(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 75.);
         }
@@ -1022,8 +1029,9 @@ mod tests {
             let angle = 90.;
             let radius = 50.;
             let (x, y) = (50., 0.);
+            let (x_c, y_c) = tangency_points(radius, angle);
 
-            let d = distance_from_tangent(angle, radius, x, y);
+            let d = distance_from_tangent(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 0.);
         }
@@ -1031,8 +1039,9 @@ mod tests {
             let angle = 0.;
             let radius = 50.;
             let (x, y) = (0., 25.);
+            let (x_c, y_c) = tangency_points(radius, angle);
 
-            let d = distance_from_tangent(angle, radius, x, y);
+            let d = distance_from_tangent(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 25.);
         }
@@ -1040,8 +1049,9 @@ mod tests {
             let angle = 180.;
             let radius = 50.;
             let (x, y) = (0., 25.);
+            let (x_c, y_c) = tangency_points(radius, angle);
 
-            let d = distance_from_tangent(angle, radius, x, y);
+            let d = distance_from_tangent(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 75.);
         }
@@ -1052,8 +1062,9 @@ mod tests {
                 45_f64.to_radians().sin() * 25.,
                 45_f64.to_radians().cos() * 25.,
             );
+            let (x_c, y_c) = tangency_points(radius, angle);
 
-            let d = distance_from_tangent(angle, radius, x, y);
+            let d = distance_from_tangent(angle, x, y, x_c, y_c);
 
             assert!(approximately_equal(d, 25., 1e-6));
         }
@@ -1064,8 +1075,9 @@ mod tests {
                 45_f64.to_radians().sin() * -25.,
                 45_f64.to_radians().cos() * -25.,
             );
+            let (x_c, y_c) = tangency_points(radius, angle);
 
-            let d = distance_from_tangent(angle, radius, x, y);
+            let d = distance_from_tangent(angle, x, y, x_c, y_c);
 
             assert!(approximately_equal(d, 75., 1e-6));
         }
@@ -1077,7 +1089,8 @@ mod tests {
             let radius = 50.;
             let (x, y) = (0., 25.);
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
             assert_eq!(d, 25.);
         }
@@ -1086,7 +1099,8 @@ mod tests {
             let radius = 50.;
             let (x, y) = (0., -25.);
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
             assert_eq!(d, -25.);
         }
@@ -1095,7 +1109,8 @@ mod tests {
             let radius = 50.;
             let (x, y) = (25., 0.);
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
             assert_eq!(d, -25.);
         }
@@ -1107,7 +1122,8 @@ mod tests {
                 135_f64.to_radians().cos() * 25.,
             );
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
             assert!(approximately_equal(d, -25., 1e-6));
         }
@@ -1119,17 +1135,18 @@ mod tests {
                 135_f64.to_radians().cos() * -25.,
             );
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
-            // assert!(approximately_equal(d, 75., 1e-6));
-            assert_eq!(d, 25.);
+            assert!(approximately_equal(d, 25., 1e-6));
         }
         {
             let angle = 0.;
             let radius = 50.;
             let (x, y) = (0., 25.);
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
             assert_eq!(d, 0.);
         }
@@ -1138,7 +1155,8 @@ mod tests {
             let radius = 50.;
             let (x, y) = (1., 25.);
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
             assert_eq!(d, -1.);
         }
@@ -1147,7 +1165,8 @@ mod tests {
             let radius = 50.;
             let (x, y) = (-1., 25.);
 
-            let d = signed_distance_from_center_line(angle, radius, x, y);
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
 
             assert_eq!(d, 1.);
         }
