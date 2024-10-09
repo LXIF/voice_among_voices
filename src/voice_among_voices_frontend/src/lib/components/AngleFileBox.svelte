@@ -33,13 +33,15 @@
             const response: HttpStreamingResponse =
                 await backend.get_angle_file(Math.round(angle));
 
+            console.log(response.headers);
+
             if (!response.streaming_strategy) {
                 throw new Error('No streaming strategy provided.');
             }
             const chunks = [response.body];
 
             let streamingToken = response.streaming_strategy[0]?.Callback.token;
-            console.log(streamingToken);
+
             while (streamingToken) {
                 const {body, token} =
                     await backend.http_request_streaming_callback(
@@ -47,10 +49,7 @@
                     );
                 chunks.push(body);
                 streamingToken = token[0] || undefined;
-                console.log(streamingToken);
             }
-
-            console.log(chunks);
 
             const audioData = new Uint8Array(
                 chunks.reduce((acc, chunk) => acc + chunk.length, 0)

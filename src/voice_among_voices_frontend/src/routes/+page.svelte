@@ -48,7 +48,6 @@
     });
 
     const handleDropNewNode = async (event: CustomEvent) => {
-        console.log(currentVoiceBlob);
         const sample = await blobToUint8Array(currentVoiceBlob);
         const {x, y} = event.detail;
         let backend_simulation_result = await backend.add_voice_node({

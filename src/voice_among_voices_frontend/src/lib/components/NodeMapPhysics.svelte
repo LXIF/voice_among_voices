@@ -54,6 +54,7 @@
     let resetting = false;
     let moving = false;
     let scaled = false;
+    let fastForward = false;
     const dispatch = createEventDispatcher();
 
     type PhysicsBody = {
@@ -356,9 +357,10 @@
 
             now = timestamp;
             const elapsed = now - then;
+            const interval = fastForward ? 0.1 : worldStepInterval;
 
-            if (elapsed > worldStepInterval) {
-                then = now - (elapsed % worldStepInterval);
+            if (elapsed > interval) {
+                then = now - (elapsed % interval);
 
                 if (world && physicsActive) {
                     magnetismFunction();
@@ -500,6 +502,11 @@
         }
     }
 
+    function handleFastForward() {
+        resetNodes();
+        backendNodes = [];
+    }
+
     function resetPhysics() {
         resetting = true;
         rendering = false;
@@ -533,8 +540,6 @@
             usableCanvasHeight,
             logical_radius
         );
-
-        console.log('dropped at logical coordinates:', {logicalX, logicalY});
 
         const nodeRadius = parseFloat(
             e.dataTransfer?.getData('nodeRadius') || '5'
@@ -576,15 +581,12 @@
         on:drop={handleDrop}
         class={`w-[${canvasWidth}px] h-[${canvasHeight}px]`}
     ></canvas>
-    <!-- <button
-        class="bg-slate-500 rounded-full"
-        on:click={togglePhysics}>toggle physics</button
-    >
-    <button
-        class="bg-slate-500 rounded-full"
-        on:click={resetPhysics}>reset physics</button
-    > -->
-    <!-- <div>
-        moving: {moving}
-    </div> -->
+    {#if physicsActive && backendNodes.length > 0}
+        <button
+            class="hover:shadow-lg rounded-full bg-slate-500 px-5"
+            on:pointerdown={handleFastForward}
+        >
+            >>
+        </button>
+    {/if}
 </main>
