@@ -29,6 +29,11 @@
     export let nodes: VoiceNodeEgress[] = [];
     export let backendNodes: VoiceNodeEgress[] = [];
     export let dragging: boolean;
+
+    export let showPlayHead = true; // TODO: turn false
+    export let playHeadPosition = 0.2; // normalized
+    export let playHeadAngle = 0;
+
     let localNodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
@@ -283,6 +288,56 @@
         });
     }
 
+    function drawPlayHead(context: CanvasRenderingContext2D) {
+        if (!showPlayHead || !context) return;
+
+        // Convert angle to radians
+        const angleRadians = playHeadAngle * (Math.PI / 180);
+
+        // Get start and end points on the circle (logical_radius)
+        const startX = Math.sin(angleRadians) * logical_radius;
+        const startY = Math.cos(angleRadians) * logical_radius;
+        const endX = Math.sin(angleRadians) * -logical_radius;
+        const endY = Math.cos(angleRadians) * -logical_radius;
+
+        // Interpolate between start and end based on playHeadPosition
+        const playHeadX = startX + (endX - startX) * playHeadPosition;
+        const playHeadY = startY + (endY - startY) * playHeadPosition;
+
+        // Calculate the tangent vector (rotate radial vector by 90 degrees counterclockwise)
+        const radialVectorX = playHeadX;
+        const radialVectorY = playHeadY;
+
+        // The tangent vector perpendicular to the radial vector
+        const tangentX = -radialVectorY; // Negate the Y for 90 degree rotation
+        const tangentY = radialVectorX; // X remains the same
+
+        // Normalize the tangent vector to ensure it has a unit length
+        const tangentLength = Math.sqrt(
+            tangentX * tangentX + tangentY * tangentY
+        );
+        const normalizedTangentX = tangentX / tangentLength;
+        const normalizedTangentY = tangentY / tangentLength;
+
+        // Line half-length (so it extends equally on both sides)
+        const lineLength = 2 * logical_radius; // Adjust if needed.
+
+        // Calculate the points for the perpendicular line (centered at playHeadX, playHeadY)
+        const lineStartX = playHeadX + normalizedTangentX * (lineLength / 2);
+        const lineStartY = playHeadY + normalizedTangentY * (lineLength / 2);
+        const lineEndX = playHeadX - normalizedTangentX * (lineLength / 2);
+        const lineEndY = playHeadY - normalizedTangentY * (lineLength / 2);
+
+        // Draw the perpendicular playhead line
+        context.beginPath();
+        context.moveTo(lineStartX, lineStartY);
+        context.lineTo(lineEndX, lineEndY);
+        context.lineWidth = 0.5; // Line width
+        context.strokeStyle = `hsl(0, 0%, 0%)`; // Color of the playhead line
+        context.stroke();
+        context.closePath();
+    }
+
     function render(
         bodies: PhysicsBody[],
         colliderCoords: ColliderCoordinate[],
@@ -313,7 +368,12 @@
 
                 if (context) {
                     // Clear the canvas
-                    context.clearRect(0, 0, canvasWidth, canvasHeight);
+                    context.clearRect(
+                        -canvasWidth / 2,
+                        -canvasHeight / 2,
+                        canvasWidth,
+                        canvasHeight
+                    );
 
                     // Draw the collider
                     if (colliderCoords?.length > 0) {
@@ -381,6 +441,9 @@
                         context!.stroke();
                         context!.closePath();
                     });
+                    if (showPlayHead) {
+                        drawPlayHead(context);
+                    }
                 }
             }
             if (rendering) {
@@ -395,7 +458,6 @@
         });
     }
 
-    // Handle the click event and map it back to logical coordinates
     function handleClick(e: MouseEvent) {
         const rect = canvas.getBoundingClientRect();
         const canvasX =
@@ -411,7 +473,31 @@
             logical_radius
         );
 
-        console.log('Clicked coordinates (logical):', {logicalX, logicalY});
+        if (showPlayHead) {
+            // Calculate the position along the playHead line
+            const angleRadians = playHeadAngle * (Math.PI / 180);
+
+            // Tangent points (start and end of the line)
+            const startX = Math.sin(angleRadians) * logical_radius;
+            const startY = Math.cos(angleRadians) * logical_radius;
+            const endX = Math.sin(angleRadians) * -logical_radius;
+            const endY = Math.cos(angleRadians) * -logical_radius;
+
+            // Project the click position onto the line (start -> end)
+            const lineLength = Math.sqrt(
+                (endX - startX) ** 2 + (endY - startY) ** 2
+            );
+            const dotProduct =
+                ((logicalX - startX) * (endX - startX) +
+                    (logicalY - startY) * (endY - startY)) /
+                lineLength;
+
+            // Normalize the dotProduct to get playHeadPosition between 0 and 1
+            const normalizedPosition = clamp(dotProduct / lineLength, 0, 1);
+
+            // Dispatch the movePlayHead event with the normalized position
+            dispatch('movePlayHead', normalizedPosition);
+        }
     }
 
     function resetPhysics() {

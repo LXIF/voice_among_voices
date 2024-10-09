@@ -30,6 +30,11 @@
 
     let dragging = false;
 
+    let playheadPosition = 0;
+    let externalPlaybackPosition = 0;
+    let angle = 0;
+    let fileLoaded = false;
+
     onMount(async () => {
         voiceNodes = await backend.get_voice_nodes();
         simulationParameters = await backend.get_simulation_parameters();
@@ -104,6 +109,12 @@
         backendNodes={backendSimulationResult}
         on:dropNewNode={handleDropNewNode}
         {dragging}
+        showPlayHead={fileLoaded}
+        playHeadAngle={angle}
+        playHeadPosition={playheadPosition}
+        on:movePlayHead={(e) => {
+            externalPlaybackPosition = e.detail;
+        }}
     />
     <DroppableNode
         {nodeWidthPx}
@@ -122,5 +133,10 @@
         controls
         bind:this={myCurrentSampleAudioElement}
     ></audio>
-    <AngleFileBox />
+    <AngleFileBox
+        {externalPlaybackPosition}
+        on:playbackPosition={(e) => (playheadPosition = e.detail)}
+        on:fileAngle={(e) => (angle = e.detail)}
+        on:fileLoaded={(e) => (fileLoaded = e.detail)}
+    />
 </main>
