@@ -8,7 +8,7 @@ use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
 use ic_http_certification::HeaderField;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
-    DefaultMemoryImpl, StableBTreeMap,
+    DefaultMemoryImpl, Memory, StableBTreeMap,
 };
 use once_cell::sync::Lazy;
 use physics::*;
@@ -160,9 +160,13 @@ pub struct StreamingCallbackHttpResponse {
 }
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
+
     static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
-    static SAMPLES: RefCell<AudioSampleStore> = RefCell::new(vec![]);
+    static SAMPLES_MAP: RefCell<StableBTreeMap<u128, Vec<u8>, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))))
+    );
     static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
