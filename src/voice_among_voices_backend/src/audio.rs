@@ -56,8 +56,8 @@ fn generate_normalized_sample_positions<'a>(
     angle: f64,
 ) -> Vec<SamplePosition<'a>> {
     let mut sample_positions: Vec<SamplePosition> = vec![];
-
     let radius = sim_params.logical_radius;
+
     // loop through nodes
     for node in nodes.iter() {
         // store sample reference with normalized position between 0. and 1. and normalized pan position between -1. and 1.
@@ -85,12 +85,8 @@ fn generate_audio_vectors(
     // Convert fade duration from milliseconds to samples
     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
 
-    println!("fade_samples: {fade_samples}");
-
     // create vectors with length, fill them with neutral => half of i16::MAX
     let total_length_samples = audio_params.total_length_ms * audio_params.sample_rate / 1000;
-
-    println!("total_length_samples: {total_length_samples}");
 
     let mut left_channel = vec![0i16; total_length_samples as usize];
     let mut right_channel = vec![0i16; total_length_samples as usize];
@@ -102,30 +98,24 @@ fn generate_audio_vectors(
             .round()
             .max(0.) as usize;
 
-        println!("sample_pos: {:#?}", sample_pos);
-        println!("start_sample: {start_sample}");
-
         let end_sample = (start_sample + sample_pos.sample.sample_length_samples as usize - 1)
             .min(total_length_samples as usize - 1);
         // use reader to read sample
         let input_samples = read_wav(&sample_pos.sample.sample);
-        // loop over samples zipped with the slice of our left and right channels we want
-        for (index, (sample, (left, right))) in input_samples //TODO: this could in principle be parallelized, would require keeping the vecs in an arc/mutex
-            .iter()
-            .zip(
-                left_channel[start_sample..=end_sample] //TODO: perhaps add some check to make sure we're never out of bounds?
-                    .iter_mut()
-                    .zip(right_channel[start_sample..=end_sample].iter_mut()), //TODO: can't have negative slices. will need to handle separately.
-            )
-            .enumerate()
-        {
-            // figure out the panning multipliers
-            let pan = sample_pos.pan_position;
-            let left_gain = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos();
-            let right_gain = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos();
 
-            // println!("left_gain: {left_gain}");
-            // println!("right_gain: {right_gain}");
+        // figure out the panning multipliers
+        let pan = sample_pos.pan_position;
+        let left_gain = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos();
+        let right_gain = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos();
+
+        // loop over samples zipped with the slice of our left and right channels we want
+        for (index, sample) in input_samples.iter().enumerate()
+        //TODO: this could in principle be parallelized, would require keeping the vecs in an arc/mutex
+        {
+            let sample_index = start_sample + index;
+            if sample_index > end_sample {
+                break;
+            }
 
             // Determine fading
             let fade_factor = if index < fade_samples {
@@ -140,17 +130,12 @@ fn generate_audio_vectors(
             let left_sample = (*sample as f64 * left_gain * fade_factor) as i16;
             let right_sample = (*sample as f64 * right_gain * fade_factor) as i16;
 
-            if index == 500 {
-                println!("pan: {}", pan);
-                println!("left_gain: {}", left_gain);
-                println!("right_gain: {}", right_gain);
-                println!("fade_factor: {}", fade_factor);
-                println!("left_sample: {}", left_sample);
-                println!("right_sample: {}", right_sample);
-            }
-
-            *left = left.saturating_add(left_sample).clamp(i16::MIN, i16::MAX); //TODO: maybe add compression
-            *right = right.saturating_add(right_sample).clamp(i16::MIN, i16::MAX);
+            left_channel[sample_index] = left_channel[sample_index]
+                .saturating_add(left_sample)
+                .clamp(i16::MIN, i16::MAX); //TODO: maybe add compression
+            right_channel[sample_index] = right_channel[sample_index]
+                .saturating_add(right_sample)
+                .clamp(i16::MIN, i16::MAX);
         }
     }
 

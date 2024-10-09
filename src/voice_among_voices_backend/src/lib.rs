@@ -116,12 +116,12 @@ pub struct HttpStreamingResponse {
     pub streaming_strategy: Option<StreamingStrategy>,
 }
 
-#[derive(CandidType, Deserialize, Clone)]
+#[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct StreamingCallbackToken {
-    pub id: u32,
+    pub angle: u32,
     pub chunk_index: u32,
     pub chunks: u32,
-    pub token: Option<ByteBuf>,
+    pub auth_token: Option<ByteBuf>,
 }
 
 impl StreamingCallbackToken {
@@ -130,10 +130,10 @@ impl StreamingCallbackToken {
             None
         } else {
             Some(StreamingCallbackToken {
-                id: self.id,
+                angle: self.angle,
                 chunk_index: self.chunk_index + 1,
                 chunks: self.chunks,
-                token: self.token,
+                auth_token: self.auth_token,
             })
         }
     }
@@ -149,7 +149,7 @@ pub enum StreamingStrategy {
     },
 }
 
-#[derive(CandidType, Deserialize, Clone)]
+#[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct StreamingCallbackHttpResponse {
     pub body: ByteBuf,
     pub token: Option<StreamingCallbackToken>,
@@ -336,10 +336,10 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
 
     let first_chunk = chunks.get(0).cloned().unwrap_or_default();
     let token = StreamingCallbackToken {
-        id: angle as u32, // TODO: look at this again, esp type casting - should work because nfts are for full degrees
+        angle: angle as u32, // TODO: look at this again, esp type casting - should work because nfts are for full degrees
         chunk_index: 0,
         chunks: total_chunks,
-        token: None, // TODO: maybe implement this for security purposes
+        auth_token: None, // TODO: maybe implement this for security purposes
     };
 
     HttpStreamingResponse {
@@ -361,7 +361,7 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
     VOICE_NODES.with(|nodes| {
         SAMPLES.with(|samples| {
             result = generate_angle_file(
-                token.id as f64,
+                token.angle as f64,
                 &*nodes.borrow(),
                 &*samples.borrow(),
                 &AUDIO_PARAMETERS,
@@ -373,15 +373,20 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
 
     let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
 
-    if let Some(chunk) = chunks.get(token.chunk_index as usize) {
-        let next_token = token.next();
-
-        StreamingCallbackHttpResponse {
-            body: ByteBuf::from(chunk.clone()),
-            token: next_token,
+    if let Some(token) = token.next() {
+        if let Some(chunk) = chunks.get((token.chunk_index) as usize) {
+            StreamingCallbackHttpResponse {
+                body: ByteBuf::from(chunk.clone()),
+                token: Some(token),
+            }
+        } else {
+            ic_cdk::trap("Chunk not found");
         }
     } else {
-        ic_cdk::trap("Chunk not found");
+        StreamingCallbackHttpResponse {
+            body: ByteBuf::new(),
+            token: None,
+        }
     }
 }
 
@@ -507,5 +512,22 @@ mod tests {
 
             assert_eq!(n, len as u64);
         });
+    }
+
+    #[test]
+    fn streaming_sequencing_is_correct() {
+        init();
+
+        let token = StreamingCallbackToken {
+            angle: 0,
+            chunk_index: 0,
+            chunks: 11,
+            auth_token: None,
+        };
+
+        let response: StreamingCallbackHttpResponse = http_request_streaming_callback(token);
+
+        println!("{:#?}", response.token);
+        assert_eq!(response.token.unwrap().chunk_index, 1);
     }
 }

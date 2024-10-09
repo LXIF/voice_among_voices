@@ -52,10 +52,10 @@ type AddVoiceNodeResult = variant {
 };
 
 type StreamingCallbackToken = record {
-    id : nat32;
+    angle : nat32;
     chunk_index : nat32;
     chunks : nat32;
-    token : opt vec nat8;
+    auth_token : opt vec nat8;
 };
 
 type StreamingCallbackHttpResponse = record {
