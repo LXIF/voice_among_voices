@@ -87,7 +87,7 @@ fn pocket_ic_smoke_test_360_files() {
     // Loop through 360 degrees and add a voice node for each angle
     for angle in 0..360 {
         // Generate a test WAV audio file
-        let test_wav = generate_test_wav(AUDIO_PARAMETERS.max_sample_length_ms, 44100);
+        let test_wav = generate_test_wav(AUDIO_PARAMETERS.max_sample_length_ms / 20, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {

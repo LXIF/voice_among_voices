@@ -6,6 +6,10 @@ use audio::*;
 use candid::{define_function, CandidType, Principal};
 use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
 use ic_http_certification::HeaderField;
+use ic_stable_structures::{
+    memory_manager::{MemoryId, MemoryManager},
+    DefaultMemoryImpl, StableBTreeMap,
+};
 use once_cell::sync::Lazy;
 use physics::*;
 use serde::Deserialize;
@@ -426,9 +430,6 @@ fn get_audio_parameters() -> AudioParameters {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use candid::Decode;
-    use pocket_ic::{PocketIc, WasmResult};
-    use std::{fs::read, path::PathBuf};
 
     #[test]
     fn voice_nodes_get_added_correctly() {

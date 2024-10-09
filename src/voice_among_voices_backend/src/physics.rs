@@ -105,7 +105,7 @@ pub fn simulate_until_stopped(
     // apply force
     // step until no more forces
 
-    let max_steps = 10_000;
+    let max_steps = 1_000;
     let mut steps = 0;
 
     loop {
