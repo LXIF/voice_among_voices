@@ -103,7 +103,7 @@ struct AudioParameters {
 
 #[derive(CandidType, Debug)]
 enum AddVoiceNodeError {
-    NotWithinCircleError,
+    NotWithinCircleError(String),
     NotValidAudioFileError(String),
 }
 
@@ -230,7 +230,9 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
     let within_circle = node_within_circle(&node, &SIMULATION_PARAMETERS, node_radius);
 
     if !within_circle {
-        return Err(AddVoiceNodeError::NotWithinCircleError);
+        return Err(AddVoiceNodeError::NotWithinCircleError(
+            "Node out of bounds".to_string(),
+        ));
     };
 
     let mut sample_id = 0;
@@ -413,14 +415,14 @@ mod tests {
         collider_init();
 
         let voice_node = VoiceNodeIngress {
-            x: 50.,
-            y: 90.,
+            x: 0.,
+            y: 40.,
             sample: generate_test_wav(1000, 44100),
         };
 
         let another_voice_node = VoiceNodeIngress {
-            x: 5.,
-            y: 50.,
+            x: -45.,
+            y: 0.,
             sample: generate_test_wav(1000, 44100),
         };
 
@@ -437,49 +439,6 @@ mod tests {
         });
     }
 
-    // #[test]
-    // fn voice_nodes_have_correct_radius() {
-    //     collider_init();
-
-    //     let voice_node = VoiceNodeIngress {
-    //         x: 50.,
-    //         y: 50.,
-    //         sample: generate_test_wav(1000, 44100),
-    //     };
-    //     let sample_length = get_sample_length(&voice_node.sample).unwrap();
-    //     let node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
-    //         AUDIO_PARAMETERS.with(|audio_params| {
-    //             sample_length_to_radius(sample_length, sim_params, audio_params)
-    //         })
-    //     });
-
-    //     let another_voice_node = VoiceNodeIngress {
-    //         x: 60.,
-    //         y: 60.,
-    //         sample: generate_test_wav(2500, 44100),
-    //     };
-
-    //     let another_sample_length = get_sample_length(&another_voice_node.sample).unwrap();
-    //     let another_node_radius = SIMULATION_PARAMETERS.with(|sim_params| {
-    //         AUDIO_PARAMETERS.with(|audio_params| {
-    //             sample_length_to_radius(another_sample_length, sim_params, audio_params)
-    //         })
-    //     });
-
-    //     let result_a = add_voice_node(voice_node);
-    //     println!("{:#?}", result_a.unwrap());
-    //     let _ = add_voice_node(another_voice_node);
-
-    //     VOICE_NODES.with(|voice_nodes| {
-    //         SAMPLES.with(|samples| {
-    //             let radius = voice_nodes.borrow()[0].radius;
-    //             let sample_radius = get_sample_length(&samples.borrow()[0].sample).unwrap();
-
-    //             let another_radius = voice_nodes.borrow()[1].radius;
-    //             let another_sample = samples.borrow()[1];
-    //         });
-    //     });
-    // }
     #[test]
     fn get_correct_audio_params() {
         let audio_params = get_audio_parameters();
@@ -492,8 +451,8 @@ mod tests {
         collider_init();
 
         let voice_node = VoiceNodeIngress {
-            x: 0.,
-            y: 0.,
+            x: -50.,
+            y: -50.,
             sample: generate_test_wav(1000, 44100),
         };
 

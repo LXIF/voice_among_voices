@@ -70,13 +70,13 @@
         if (!scaled && context && logical_radius && canvasRatio) {
             scaled = true;
 
-            const translateX = (canvasWidth - usableCanvasWidth) / 2;
-            const translateY = (canvasHeight - usableCanvasHeight) / 2;
+            const translateX = canvasWidth / 2;
+            const translateY = canvasHeight / 2;
             context?.translate(translateX, translateY);
 
             context?.scale(
-                canvasRatio * ((usableCanvasWidth / 2) * logical_radius),
-                canvasRatio * ((usableCanvasHeight / 2) * logical_radius)
+                canvasRatio * (usableCanvasWidth / (2 * logical_radius)),
+                -canvasRatio * (usableCanvasHeight / (2 * logical_radius))
             );
         }
     }
@@ -454,9 +454,7 @@
             e.dataTransfer?.getData('nodeRadius') || '5'
         );
 
-        const distanceFromCenter = Math.sqrt(
-            (logicalX - logical_radius) ** 2 + (logicalY - logical_radius) ** 2
-        );
+        const distanceFromCenter = Math.sqrt(logicalX ** 2 + logicalY ** 2);
         const maxDistance = logical_radius - nodeRadius;
 
         if (distanceFromCenter > maxDistance) {

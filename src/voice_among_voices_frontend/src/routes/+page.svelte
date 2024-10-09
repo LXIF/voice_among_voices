@@ -36,8 +36,6 @@
         audioParameters = await backend.get_audio_parameters();
         myVoice = await backend.get_my_voice();
 
-        console.log(voiceNodes);
-
         if (myVoice.length > 0) {
             const audioURL = await handleBackendAudioData(myVoice[0].sample);
             myCurrentSampleAudioElement.src = audioURL;
@@ -73,7 +71,7 @@
             sampleLength,
             usableCanvasWidth,
             audioParameters.total_length_ms,
-            simulationParameters.logical_width
+            simulationParameters.logical_radius * 2
         );
 
         nodeWidthPx = nodeWidths.nodeWidthPx;

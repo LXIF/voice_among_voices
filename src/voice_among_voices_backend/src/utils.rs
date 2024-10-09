@@ -8,7 +8,7 @@ pub fn node_within_circle(
     let VoiceNodeIngress { x, y, .. } = node;
     let SimulationParameters { logical_radius, .. } = sim_params;
 
-    let distance_from_center = ((x - logical_radius).powi(2) + (y - logical_radius).powi(2)).sqrt();
+    let distance_from_center = (x.powi(2) + y.powi(2)).sqrt();
     let max_distance = logical_radius - node_radius;
 
     if distance_from_center > max_distance {
@@ -51,19 +51,30 @@ mod tests {
 
     #[test]
     fn allows_within_circle() {
-        let test_node: VoiceNodeIngress = VoiceNodeIngress {
-            x: 98.,
-            y: 50.,
-            sample: vec![],
-        };
+        {
+            let test_node: VoiceNodeIngress = VoiceNodeIngress {
+                x: -25.,
+                y: 25.,
+                sample: vec![],
+            };
 
-        assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
+            assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
+        }
+        {
+            let test_node: VoiceNodeIngress = VoiceNodeIngress {
+                x: -25.,
+                y: 0.,
+                sample: vec![],
+            };
+
+            assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
+        }
     }
 
     #[test]
     fn rejects_on_circle() {
         let test_node: VoiceNodeIngress = VoiceNodeIngress {
-            x: 99.,
+            x: 0.,
             y: 50.,
             sample: vec![],
         };
@@ -74,8 +85,8 @@ mod tests {
     #[test]
     fn rejects_outside_circle() {
         let test_node: VoiceNodeIngress = VoiceNodeIngress {
-            x: 0.,
-            y: 0.,
+            x: 50.,
+            y: 50.,
             sample: vec![],
         };
 
