@@ -304,15 +304,14 @@ fn check_if_still_moving(bodies: &Vec<PhysicsBody>, rigid_body_set: &RigidBodySe
 /// generates circular coordinates at full width for the circular collider
 pub fn create_circular_collider_coordinates(
     n_vertex: u64,
-    logical_width: f64,
-    logical_height: f64,
+    logical_radius: f64,
 ) -> Vec<ColliderCoordinate> {
     let mut coordinates: Vec<ColliderCoordinate> = Vec::with_capacity(n_vertex as usize);
 
     for i in 0..n_vertex {
         let angle: f64 = 2. * std::f64::consts::PI / n_vertex as f64 * i as f64;
-        let x = logical_width / 2. * angle.cos() + logical_width / 2.;
-        let y = logical_height / 2. * angle.sin() + logical_height / 2.;
+        let x = logical_radius * angle.cos();
+        let y = logical_radius * angle.sin();
 
         coordinates.push(ColliderCoordinate { x, y });
     }
@@ -335,43 +334,43 @@ mod tests {
     #[test]
     fn correct_number_of_circle_coordinates() {
         let n = 10;
-        let result = create_circular_collider_coordinates(n, 100., 100.);
+        let result = create_circular_collider_coordinates(n, 50.);
         assert_eq!(n, result.len() as u64);
     }
 
     #[test]
     fn correct_maximum_extents() {
         let n = 4;
-        let result = create_circular_collider_coordinates(n, 100., 100.);
+        let result = create_circular_collider_coordinates(n, 50.);
         let epsilon = 1e-6;
         // right
-        assert!(approximately_equal(result[0].x, 100., epsilon));
-        assert!(approximately_equal(result[0].y, 50., epsilon));
+        assert!(approximately_equal(result[0].x, 50., epsilon));
+        assert!(approximately_equal(result[0].y, 00., epsilon));
 
         // bottom
-        assert!(approximately_equal(result[1].x, 50., epsilon));
-        assert!(approximately_equal(result[1].y, 100., epsilon));
+        assert!(approximately_equal(result[1].x, 0., epsilon));
+        assert!(approximately_equal(result[1].y, 50., epsilon));
 
         // left
-        assert!(approximately_equal(result[2].x, 0., epsilon));
-        assert!(approximately_equal(result[2].y, 50., epsilon));
+        assert!(approximately_equal(result[2].x, -50., epsilon));
+        assert!(approximately_equal(result[2].y, 0., epsilon));
 
         // top
-        assert!(approximately_equal(result[3].x, 50., epsilon));
-        assert!(approximately_equal(result[3].y, 0., epsilon));
+        assert!(approximately_equal(result[3].x, 0., epsilon));
+        assert!(approximately_equal(result[3].y, -50., epsilon));
     }
 
     #[test]
     fn physics_sim_sanity_test() {
         let mut nodes: VoiceNodeLocalStore = vec![];
-        let collider_coordinates = create_circular_collider_coordinates(360, 100., 100.);
+        let collider_coordinates = create_circular_collider_coordinates(360, 50.);
         let mut result: VoiceNodeLocalStore = vec![];
 
         for i in 0..4 {
             let node = VoiceNodeLocal {
                 id: i,
-                x: 5. + 5. * i as f64,
-                y: 50.,
+                x: -50. + 5. + 5. * i as f64,
+                y: 0.,
                 sample_id: i,
                 radius: 1.,
             };
@@ -382,14 +381,14 @@ mod tests {
         result = simulate_until_stopped(&mut nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
         println!("{:#?}", result);
-        assert!(result[0].x > 0.);
-        assert!(result[0].x < 100.);
+        assert!(result[0].x > -50.);
+        assert!(result[0].x < 50.);
     }
 
     #[test]
     fn physics_moves_bodies() {
         let mut nodes: VoiceNodeLocalStore = vec![];
-        let collider_coordinates = create_circular_collider_coordinates(360, 100., 100.);
+        let collider_coordinates = create_circular_collider_coordinates(360, 50.);
         let mut result: VoiceNodeLocalStore = vec![];
 
         let node_a = VoiceNodeLocal {
@@ -421,7 +420,7 @@ mod tests {
     #[test]
     fn physics_moves_bodies_approximately_equally() {
         let mut nodes: VoiceNodeLocalStore = vec![];
-        let collider_coordinates = create_circular_collider_coordinates(360, 100., 100.);
+        let collider_coordinates = create_circular_collider_coordinates(360, 50.);
         let mut result: VoiceNodeLocalStore = vec![];
 
         let epsilon = 1e3;

@@ -71,7 +71,7 @@
             sampleLength,
             usableCanvasWidth,
             audioParameters.total_length_ms,
-            simulationParameters.logical_width
+            simulationParameters.logical_radius * 2
         );
 
         nodeWidthPx = nodeWidths.nodeWidthPx;

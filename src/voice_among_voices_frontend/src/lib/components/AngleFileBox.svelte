@@ -41,6 +41,7 @@
                     await backend.http_request_streaming_callback(
                         streamingToken
                     );
+                console.log(token[0]);
                 chunks.push(body);
                 if (token[0]) {
                     streamingToken = token[0];
