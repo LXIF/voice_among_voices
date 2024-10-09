@@ -14,9 +14,9 @@ export function mapToCanvasY(logicalY: number, logicalHeight: number, canvasHeig
 }
 
 // Converts canvas pixel coordinates to logical coordinates
-export function canvasToLogical(x: number, y: number, canvasWidth: number, canvasHeight: number, logical_width: number, logical_height: number) {
-    const logicalX = (x / canvasWidth) * logical_width;
-    const logicalY = (y / canvasHeight) * logical_height;
+export function canvasToLogical(x: number, y: number, canvasWidth: number, canvasHeight: number, logical_radius: number) {
+    const logicalX = (x / canvasWidth) * 2 * logical_radius;
+    const logicalY = (y / canvasHeight) * 2 * logical_radius;
     return {logicalX, logicalY};
 }
 

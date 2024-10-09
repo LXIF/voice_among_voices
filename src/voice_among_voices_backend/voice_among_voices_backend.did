@@ -24,8 +24,7 @@ type SimulationParameters = record {
     max_distance : float64;
     force_strength : float64;
     linear_damping : float64;
-    logical_width : float64;
-    logical_height : float64;
+    logical_radius : float64;
     n_collider_vertices : nat64;
     friction : float64;
 };

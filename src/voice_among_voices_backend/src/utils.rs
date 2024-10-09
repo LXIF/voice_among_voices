@@ -6,15 +6,10 @@ pub fn node_within_circle(
     node_radius: f64,
 ) -> bool {
     let VoiceNodeIngress { x, y, .. } = node;
-    let SimulationParameters {
-        logical_width,
-        logical_height,
-        ..
-    } = sim_params;
+    let SimulationParameters { logical_radius, .. } = sim_params;
 
-    let distance_from_center =
-        ((x - logical_width / 2.).powi(2) + (y - logical_height / 2.).powi(2)).sqrt();
-    let max_distance = logical_width / 2. - node_radius;
+    let distance_from_center = ((x - logical_radius).powi(2) + (y - logical_radius).powi(2)).sqrt();
+    let max_distance = logical_radius - node_radius;
 
     if distance_from_center > max_distance {
         false
@@ -28,7 +23,7 @@ pub fn sample_length_to_radius(
     sim_params: &SimulationParameters,
     audio_params: &AudioParameters,
 ) -> f64 {
-    let logical_per_ms = sim_params.logical_width / audio_params.total_length_ms as f64;
+    let logical_per_ms = 2. * sim_params.logical_radius / audio_params.total_length_ms as f64;
     sample_length * logical_per_ms / 2.
 }
 
@@ -48,8 +43,7 @@ mod tests {
         max_distance: 20.,
         force_strength: 3000.,
         linear_damping: 10.,
-        logical_height: 100.,
-        logical_width: 100.,
+        logical_radius: 50.,
         n_collider_vertices: 360,
         friction: 0.5,
         density: 2.,

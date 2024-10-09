@@ -86,8 +86,7 @@ struct SimulationParameters {
     max_distance: f64,
     force_strength: f64,
     linear_damping: f64,
-    logical_width: f64,
-    logical_height: f64,
+    logical_radius: f64,
     n_collider_vertices: u64,
     friction: f64,
     density: f64,
@@ -180,8 +179,7 @@ const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     max_distance: 20.,
     force_strength: 3000.,
     linear_damping: 10.,
-    logical_height: 100.,
-    logical_width: 100.,
+    logical_radius: 50.,
     n_collider_vertices: 360,
     friction: 0.5,
     density: 2.,
@@ -192,8 +190,7 @@ fn collider_init() {
     COLLIDER_COORDINATES.with(|collider_coordinates| {
         let fresh_vertices = create_circular_collider_coordinates(
             SIMULATION_PARAMETERS.n_collider_vertices,
-            SIMULATION_PARAMETERS.logical_width,
-            SIMULATION_PARAMETERS.logical_height,
+            SIMULATION_PARAMETERS.logical_radius,
         );
 
         collider_coordinates.borrow_mut().extend(fresh_vertices);
@@ -224,7 +221,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
     let node_radius = {
         let logical_per_ms =
-            SIMULATION_PARAMETERS.logical_width / AUDIO_PARAMETERS.total_length_ms as f64;
+            2. * SIMULATION_PARAMETERS.logical_radius / AUDIO_PARAMETERS.total_length_ms as f64;
 
         sample_length_ms * logical_per_ms / 2.
     };

@@ -57,15 +57,12 @@ fn generate_normalized_sample_positions<'a>(
 ) -> Vec<SamplePosition<'a>> {
     let mut sample_positions: Vec<SamplePosition> = vec![];
 
-    let radius = sim_params.logical_width / 2.;
+    let radius = sim_params.logical_radius;
     // loop through nodes
     for node in nodes.iter() {
         // store sample reference with normalized position between 0. and 1. and normalized pan position between -1. and 1.
-        let position =
-            distance_from_tangent(angle, radius, node.x, node.y) / sim_params.logical_width; // position within file, between 0. and 1.
-        let begins_at = (position - (node.radius / sim_params.logical_width))
-            .max(0.)
-            .min(1.); // starting position within file, position minus half the node's normalized width, between 0. and 1.
+        let position = distance_from_tangent(angle, radius, node.x, node.y) / (2. * radius); // position within file, between 0. and 1.
+        let begins_at = (position - (node.radius / (2. * radius))).max(0.).min(1.); // starting position within file, position minus half the node's normalized width, between 0. and 1.
         let pan_position = signed_distance_from_center_line(angle, radius, node.x, node.y) / radius; // panning coefficient, between -1. and 1.
 
         if let Some(sample) = samples.iter().find(|sample| sample.id == node.sample_id) {
@@ -124,8 +121,8 @@ fn generate_audio_vectors(
         {
             // figure out the panning multipliers
             let pan = sample_pos.pan_position;
-            let left_gain = ((1.0 + pan) * std::f64::consts::PI / 4.0).cos();
-            let right_gain = ((1.0 - pan) * std::f64::consts::PI / 4.0).cos();
+            let left_gain = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos();
+            let right_gain = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos();
 
             // println!("left_gain: {left_gain}");
             // println!("right_gain: {right_gain}");
@@ -325,8 +322,7 @@ fn signed_distance_from_center_line(angle: f64, radius: f64, x: f64, y: f64) -> 
 mod tests {
     use super::*;
     use core::f64;
-    use hound::{WavReader, WavSpec};
-    use rapier2d::na::coordinates;
+    use hound::WavReader;
 
     // needed because floats and trigo aren't perfect lol
     fn approximately_equal(a: f64, b: f64, epsilon: f64) -> bool {
@@ -357,8 +353,7 @@ mod tests {
             max_distance: 100.0,
             force_strength: 1.0,
             linear_damping: 1.0,
-            logical_width: 100.0, // Width of the simulated world
-            logical_height: 100.0,
+            logical_radius: 50.,
             n_collider_vertices: 10,
             friction: 0.1,
             density: 1.0,
@@ -570,7 +565,7 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_sanity() {
-        let nodes = generate_test_nodes(vec![(25., 50.), (50., 25.)]);
+        let nodes = generate_test_nodes(vec![(-25., 0.), (0., -25.)]);
         let samples = generate_test_dummy_audio_samples(2);
         let sim_params = generate_test_simulation_params();
 
@@ -583,6 +578,7 @@ mod tests {
 
         // Verify the positions
         let sample_position_1 = &sample_positions[0];
+        println!("{:#?}", sample_position_1);
         assert_eq!(sample_position_1.sample.id, 0); // Sample ID should match
         assert!(sample_position_1.position >= 0.0 && sample_position_1.position <= 1.0); // Position should be normalized
         assert!(sample_position_1.pan_position >= -1.0 && sample_position_1.pan_position <= 1.0); // Pan position should be within [-1, 1]
@@ -650,6 +646,8 @@ mod tests {
         assert_eq!(sample_positions.len(), 1);
         let sample_position = &sample_positions[0];
         assert_eq!(sample_position.sample.id, 0);
+        println!("{}", sample_position.position);
+        println!("{}", sample_position.pan_position);
         assert!(approximately_equal(sample_position.position, 0.5, 1e-6));
         assert_eq!(sample_position.pan_position, 0.);
     }
@@ -712,8 +710,7 @@ mod tests {
             max_distance: 20.,
             force_strength: 3000.,
             linear_damping: 10.,
-            logical_height: 100.,
-            logical_width: 100.,
+            logical_radius: 50.,
             n_collider_vertices: 360,
             friction: 0.5,
             density: 2.,
@@ -778,8 +775,7 @@ mod tests {
             max_distance: 20.,
             force_strength: 3000.,
             linear_damping: 10.,
-            logical_height: 100.,
-            logical_width: 100.,
+            logical_radius: 50.,
             n_collider_vertices: 360,
             friction: 0.5,
             density: 2.,

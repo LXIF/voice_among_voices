@@ -41,8 +41,7 @@
         force_strength: number,
         force_cutoff: number,
         linear_damping: number,
-        logical_height: number,
-        logical_width: number,
+        logical_radius: number,
         friction: number;
 
     let physicsActive = false;
@@ -68,13 +67,7 @@
     });
 
     $: {
-        if (
-            !scaled &&
-            context &&
-            logical_height &&
-            logical_width &&
-            canvasRatio
-        ) {
+        if (!scaled && context && logical_radius && canvasRatio) {
             scaled = true;
 
             const translateX = (canvasWidth - usableCanvasWidth) / 2;
@@ -82,8 +75,8 @@
             context?.translate(translateX, translateY);
 
             context?.scale(
-                canvasRatio * (usableCanvasWidth / logical_width),
-                canvasRatio * (usableCanvasHeight / logical_height)
+                canvasRatio * ((usableCanvasWidth / 2) * logical_radius),
+                canvasRatio * ((usableCanvasHeight / 2) * logical_radius)
             );
         }
     }
@@ -99,8 +92,7 @@
         force_strength = simulationParameters?.force_strength;
         force_cutoff = simulationParameters?.force_cutoff;
         linear_damping = simulationParameters?.linear_damping;
-        logical_height = simulationParameters?.logical_height;
-        logical_width = simulationParameters?.logical_width;
+        logical_radius = simulationParameters?.logical_radius;
         friction = simulationParameters?.friction;
     });
 
@@ -416,8 +408,7 @@
             canvasY,
             usableCanvasWidth,
             usableCanvasHeight,
-            logical_width,
-            logical_height
+            logical_radius
         );
 
         console.log('Clicked coordinates (logical):', {logicalX, logicalY});
@@ -454,8 +445,7 @@
             canvasY,
             usableCanvasWidth,
             usableCanvasHeight,
-            logical_width,
-            logical_height
+            logical_radius
         );
 
         console.log('dropped at logical coordinates:', {logicalX, logicalY});
@@ -465,10 +455,9 @@
         );
 
         const distanceFromCenter = Math.sqrt(
-            (logicalX - logical_width / 2) ** 2 +
-                (logicalY - logical_height / 2) ** 2
+            (logicalX - logical_radius) ** 2 + (logicalY - logical_radius) ** 2
         );
-        const maxDistance = logical_width / 2 - nodeRadius;
+        const maxDistance = logical_radius - nodeRadius;
 
         if (distanceFromCenter > maxDistance) {
             console.log('out');
