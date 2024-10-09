@@ -1,10 +1,9 @@
 use hound::{WavReader, WavSpec, WavWriter};
-use ic_cdk::api::time;
 use std::io::Cursor;
 
 use crate::{
     AddVoiceNodeError, AudioParameters, AudioSample, AudioSampleStore, SimulationParameters,
-    VoiceNodeLocal, VoiceNodeLocalStore,
+    VoiceNodeLocalStore,
 };
 
 #[derive(Debug)]
@@ -310,6 +309,7 @@ fn signed_distance_from_center_line(angle: f64, x: f64, y: f64, x_c: f64, y_c: f
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::VoiceNodeLocal;
     use core::f64;
     use hound::WavReader;
 
