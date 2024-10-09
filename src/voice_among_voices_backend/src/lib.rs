@@ -262,21 +262,11 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
             nodes.borrow_mut().push(new_node);
 
-            let simulated_nodes = simulate_until_stopped(
-                &nodes.borrow(),
+            simulate_until_stopped(
+                &mut nodes.borrow_mut(),
                 &SIMULATION_PARAMETERS,
                 &collider_coordinates.borrow(),
             );
-
-            for node in nodes.borrow_mut().iter_mut() {
-                if let Some(new_node) = simulated_nodes
-                    .iter()
-                    .find(|simulated_node| simulated_node.id == node.id)
-                {
-                    node.x = new_node.x;
-                    node.y = new_node.y;
-                }
-            }
 
             returnable_nodes = nodes
                 .borrow()
