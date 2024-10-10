@@ -7,6 +7,7 @@ mod utils;
 
 use audio::*;
 use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
+use ic_cdk_timers::set_timer;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
     DefaultMemoryImpl, StableBTreeMap,
@@ -14,7 +15,7 @@ use ic_stable_structures::{
 use once_cell::sync::Lazy;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::HashMap, time::Duration};
 use structs::*;
 use utils::{node_within_circle, split_into_chunks};
 
@@ -24,8 +25,9 @@ thread_local! { // TODO: replace with stable structures and make auto-scaling
     // static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
     static SAMPLES_MAP: RefCell<StableBTreeMap<u128, AudioSample, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))))
+        StableBTreeMap::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0))))
     );
+    static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
     // static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
@@ -54,13 +56,13 @@ const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
 
 // abstracting this because during dev things change and i don't want to restart dfx all the time
 fn collider_init() {
-    COLLIDER_COORDINATES.with(|collider_coordinates| {
+    COLLIDER_COORDINATES.with_borrow_mut(|collider_coordinates| {
         let fresh_vertices = create_circular_collider_coordinates(
             SIMULATION_PARAMETERS.n_collider_vertices,
             SIMULATION_PARAMETERS.logical_radius,
         );
 
-        collider_coordinates.borrow_mut().extend(fresh_vertices);
+        collider_coordinates.extend(fresh_vertices);
     });
 }
 
@@ -104,24 +106,22 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
     let mut sample_id = 0;
 
-    SAMPLES_MAP.with(|samples_map| {
-        sample_id = samples_map.borrow().len();
+    SAMPLES_MAP.with_borrow_mut(|samples_map| {
+        sample_id = samples_map.len();
         let new_sample = AudioSample {
             id: sample_id,
             sample: node.sample,
             sample_length_samples,
             sample_length_ms,
         };
-        samples_map
-            .borrow_mut()
-            .insert(sample_id as u128, new_sample);
+        samples_map.insert(sample_id as u128, new_sample);
     });
 
     let mut returnable_nodes: VoiceNodeEgressStore = vec![];
 
-    COLLIDER_COORDINATES.with(|collider_coordinates| {
-        VOICE_NODES.with(|nodes| {
-            let id = nodes.borrow().len().into();
+    COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
+        VOICE_NODES.with_borrow_mut(|nodes| {
+            let id = nodes.len().into();
             let new_node = VoiceNodeLocal {
                 id,
                 x: node.x,
@@ -131,20 +131,11 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
                 sample_length_samples,
             };
 
-            nodes.borrow_mut().push(new_node);
+            nodes.push(new_node);
 
-            simulate_until_stopped(
-                &mut nodes.borrow_mut(),
-                &SIMULATION_PARAMETERS,
-                &collider_coordinates.borrow(),
-            );
+            simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
-            returnable_nodes = nodes
-                .borrow()
-                .clone()
-                .into_iter()
-                .map(|node| node.into())
-                .collect();
+            returnable_nodes = nodes.clone().into_iter().map(|node| node.into()).collect();
         });
     });
 
@@ -153,42 +144,34 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
 #[query]
 fn get_voice_nodes() -> VoiceNodeEgressStore {
-    VOICE_NODES.with(|nodes| {
-        nodes
-            .borrow()
-            .clone()
-            .into_iter()
-            .map(|node| node.into())
-            .collect()
-    })
+    VOICE_NODES.with_borrow(|nodes| nodes.clone().into_iter().map(|node| node.into()).collect())
 }
 
 #[query]
 fn get_my_voice() -> Option<AudioSample> {
     //TODO: guard and return 'owned' sample
-    SAMPLES_MAP.with(|samples_map| {
-        if samples_map.borrow().len() >= 1 {
-            Some(samples_map.borrow().get(&(0 as u128)).unwrap())
+    SAMPLES_MAP.with_borrow(|samples_map| {
+        if samples_map.len() >= 1 {
+            Some(samples_map.get(&(0 as u128)).unwrap())
         } else {
             None
         }
     })
 }
 
-#[query]
+#[update]
 fn get_angle_file(angle: f64) -> HttpStreamingResponse {
     // TODO: guard to user, restrict angle
-    // TODO: maybe store the file, maybe another for historical files
     let beginning_cost = performance_counter(0);
 
     let mut result: Vec<u8> = vec![];
 
-    VOICE_NODES.with(|nodes| {
-        SAMPLES_MAP.with(|samples_map| {
+    VOICE_NODES.with_borrow(|nodes| {
+        SAMPLES_MAP.with_borrow(|samples_map| {
             result = generate_angle_file(
                 angle,
-                &*nodes.borrow(),
-                &*samples_map.borrow(),
+                nodes,
+                samples_map,
                 &AUDIO_PARAMETERS,
                 &SIMULATION_PARAMETERS,
             )
@@ -196,12 +179,25 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
         });
     });
 
+    // split into chunks
     let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
+
+    ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
+        cache.insert(angle as u32, chunks.clone());
+    });
+
+    set_timer(Duration::from_secs(60), move || {
+        // invalidate after 60s for now
+        ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
+            cache.remove(&(angle as u32));
+        });
+    }); //invalidate after 60 seconds
+
     let total_chunks = chunks.len() as u32;
 
     let first_chunk = chunks.get(0).cloned().unwrap_or_default();
     let token = StreamingCallbackToken {
-        angle: angle as u32, // TODO: look at this again, esp type casting - should work because nfts are for full degrees
+        angle: angle as u32,
         chunk_index: 0,
         chunks: total_chunks,
         auth_token: None, // TODO: maybe implement this for security purposes
@@ -226,25 +222,12 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
 fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
     // TODO: perhaps make function naming more concise as this is only for getting angle files
 
-    // TODO: perhaps cache the file
-
     let beginning_cost = performance_counter(0);
-    let mut result: Vec<u8> = vec![];
 
-    VOICE_NODES.with(|nodes| {
-        SAMPLES_MAP.with(|samples_map| {
-            result = generate_angle_file(
-                token.angle as f64,
-                &*nodes.borrow(),
-                &*samples_map.borrow(),
-                &AUDIO_PARAMETERS,
-                &SIMULATION_PARAMETERS,
-            )
-            .unwrap(); // TODO: error handling
-        });
-    });
-
-    let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
+    let chunks = match ANGLE_FILE_CACHE.with_borrow(|cache| cache.get(&token.angle).cloned()) {
+        Some(file_chunks) => file_chunks,
+        None => ic_cdk::trap("Cache out of date, connection too slow"),
+    };
 
     if let Some(token) = token.next() {
         if let Some(chunk) = chunks.get((token.chunk_index) as usize) {
@@ -286,7 +269,7 @@ fn get_simulation_parameters() -> SimulationParameters {
 
 #[query]
 fn get_collider_coordinates() -> Vec<ColliderCoordinate> {
-    COLLIDER_COORDINATES.with(|coords| coords.borrow().clone())
+    COLLIDER_COORDINATES.with_borrow(|coords| coords.clone())
 }
 
 #[query]
@@ -319,9 +302,9 @@ mod tests {
         println!("{:#?}", result_a.unwrap());
         let _ = add_voice_node(another_voice_node);
 
-        SAMPLES_MAP.with(|samples_map| {
-            let id = samples_map.borrow().get(&0).expect("No sample!").id;
-            let another_id = samples_map.borrow().get(&1).expect("No another_sample!").id;
+        SAMPLES_MAP.with_borrow(|samples_map| {
+            let id = samples_map.get(&0).expect("No sample!").id;
+            let another_id = samples_map.get(&1).expect("No another_sample!").id;
 
             assert_eq!(id, 0);
             assert_eq!(another_id, 1);
@@ -354,9 +337,9 @@ mod tests {
         let _ = add_voice_node(voice_node);
         let _ = add_voice_node(another_voice_node);
 
-        SAMPLES_MAP.with(|samples_map| {
-            println!("{}", samples_map.borrow().len());
-            assert!(samples_map.borrow().len() == 0);
+        SAMPLES_MAP.with_borrow(|samples_map| {
+            println!("{}", samples_map.len());
+            assert!(samples_map.len() == 0);
         });
     }
 
@@ -381,18 +364,18 @@ mod tests {
         let _ = add_voice_node(voice_node);
         let _ = add_voice_node(another_voice_node);
 
-        SAMPLES_MAP.with(|samples_map| {
-            println!("{}", samples_map.borrow().len());
-            assert!(samples_map.borrow().len() == 0);
+        SAMPLES_MAP.with_borrow(|samples_map| {
+            println!("{}", samples_map.len());
+            assert!(samples_map.len() == 0);
         });
     }
 
     #[test]
     fn init_creates_coordinates() {
         init();
-        COLLIDER_COORDINATES.with(|collider_coordinates| {
+        COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
             let n = SIMULATION_PARAMETERS.n_collider_vertices;
-            let len = collider_coordinates.borrow().len();
+            let len = collider_coordinates.len();
 
             assert_eq!(n, len as u64);
         });

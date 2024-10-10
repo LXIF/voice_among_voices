@@ -1,4 +1,5 @@
 use hound::{WavReader, WavWriter};
+use ic_cdk::spawn;
 use std::io::Cursor;
 
 use crate::{
@@ -546,8 +547,7 @@ mod tests {
 
     #[test]
     fn test_generate_audio_vectors_basic() {
-        SAMPLES_MAP.with(|samples_map| {
-            let mut map = samples_map.borrow_mut();
+        SAMPLES_MAP.with_borrow_mut(|samples_map| {
             let audio_params = AudioParameters {
                 fade_ms: 0,            // Fade duration in milliseconds
                 sample_rate: 44100,    // 44.1kHz
@@ -557,10 +557,10 @@ mod tests {
             };
             let sample = generate_static_test_sample(1000.0, 44100, 0);
             let sample_positions = generate_test_sample_positions(&sample);
-            map.insert(0, sample);
+            samples_map.insert(0, sample);
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, &mut map);
+                generate_audio_vectors(&sample_positions, &audio_params, samples_map);
 
             // Verify that the output vectors are of the correct length
             let expected_length = audio_params.total_length_ms * audio_params.sample_rate / 1000;
@@ -596,17 +596,16 @@ mod tests {
             density: 2.,
         };
 
-        SAMPLES_MAP.with(|samples_map| {
+        SAMPLES_MAP.with_borrow_mut(|samples_map| {
             let nodes = generate_short_test_nodes(vec![(0., 50.), (0., 0.), (0., -50.)]);
-            let mut map = samples_map.borrow_mut();
             for i in 0..3 {
-                map.insert(i as u128, generate_static_test_sample(10., 441, i));
+                samples_map.insert(i as u128, generate_static_test_sample(10., 441, i));
             }
 
             let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, 0.);
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, &mut map);
+                generate_audio_vectors(&sample_positions, &audio_params, &samples_map);
 
             // first and last and midpoint should be 11584
             // 1/3 and 2/3 should be 0

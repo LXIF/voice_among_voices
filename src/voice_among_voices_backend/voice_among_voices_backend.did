@@ -85,6 +85,6 @@ service : {
     "get_audio_parameters" : () -> (AudioParameters) query;
     "get_collider_coordinates" : () -> (vec ColliderCoordinate) query;
     "get_my_voice" : () -> (opt AudioSample) query;
-    "get_angle_file" : (float64) -> (HttpStreamingResponse) query;
+    "get_angle_file" : (float64) -> (HttpStreamingResponse);
     "http_request_streaming_callback" : (StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query;
 };

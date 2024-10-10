@@ -5,7 +5,7 @@ use ic_stable_structures::{
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 // LIB ////////////////////
 
@@ -78,6 +78,8 @@ impl Storable for AudioSample {
 }
 
 pub type AudioSampleStore = StableBTreeMap<u128, AudioSample, Memory>;
+
+pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
 
 // #[derive(Debug)]
 // pub struct NFTMap; // TODO: this is one of the last things to implement to make the whole thing NFT-compliant.
