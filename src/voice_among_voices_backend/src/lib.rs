@@ -1,170 +1,31 @@
-pub mod audio;
+mod audio;
 mod physics;
+mod structs;
 mod utils;
 
 use audio::*;
-use candid::{define_function, CandidType, Principal};
+use candid::{define_function, CandidType, Decode, Encode, Principal};
 use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
 use ic_http_certification::HeaderField;
 use ic_stable_structures::{
-    memory_manager::{MemoryId, MemoryManager},
-    DefaultMemoryImpl, Memory, StableBTreeMap,
+    memory_manager::{MemoryId, MemoryManager, VirtualMemory},
+    storable::Bound,
+    DefaultMemoryImpl, StableBTreeMap, Storable,
 };
 use once_cell::sync::Lazy;
 use physics::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::{cell::RefCell, collections::BTreeMap};
+use std::{borrow::Cow, cell::RefCell, collections::BTreeMap};
+use structs::*;
 use utils::{node_within_circle, split_into_chunks};
-
-#[derive(Debug)]
-struct User {
-    voice_node_id: usize,
-    signup_timestamp: u64,
-}
-
-type UserStore = BTreeMap<Principal, User>;
-
-#[derive(Clone, Debug, Deserialize, CandidType)]
-struct VoiceNodeIngress {
-    x: f64,
-    y: f64,
-    sample: Vec<u8>, // here it's still a blob
-}
-
-#[derive(Clone, Debug, Deserialize, CandidType)]
-struct VoiceNodeEgress {
-    id: usize,
-    x: f64,
-    y: f64,
-    radius: f64,
-}
-
-impl From<VoiceNodeLocal> for VoiceNodeEgress {
-    fn from(local: VoiceNodeLocal) -> Self {
-        VoiceNodeEgress {
-            id: local.id,
-            x: local.x,
-            y: local.y,
-            radius: local.radius,
-        }
-    }
-}
-
-#[derive(Clone, Debug, CandidType)]
-struct VoiceNodeLocal {
-    id: usize,
-    x: f64,
-    y: f64,
-    sample_id: usize,
-    radius: f64,
-}
-
-type VoiceNodeLocalStore = Vec<VoiceNodeLocal>;
-type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
-
-#[derive(Debug, CandidType, Clone)]
-struct AudioSample {
-    id: usize,
-    sample: Vec<u8>,
-    sample_length_ms: f64,
-    sample_length_samples: u32,
-}
-
-type AudioSampleStore = Vec<AudioSample>;
-
-#[derive(Debug)]
-struct NFTMap; // TODO: this is one of the last things to implement to make the whole thing NFT-compliant.
-
-#[derive(Debug)]
-struct HistoryFrame {
-    timestamp: u64,
-    nodes_states: Vec<VoiceNodeLocal>,
-}
-
-#[derive(Debug, Clone, Copy, CandidType, Deserialize)]
-struct SimulationParameters {
-    velocity_cutoff: f64,
-    force_cutoff: f64,
-    max_distance: f64,
-    force_strength: f64,
-    linear_damping: f64,
-    logical_radius: f64,
-    n_collider_vertices: u64,
-    friction: f64,
-    density: f64,
-}
-
-#[derive(Debug, Clone, Copy, CandidType)]
-struct AudioParameters {
-    total_length_ms: u32,
-    max_sample_length_ms: u32,
-    sample_rate: u32,
-    chunk_size: usize,
-    fade_ms: u32,
-}
-
-#[derive(CandidType, Debug)]
-enum AddVoiceNodeError {
-    NotWithinCircleError(String),
-    NotValidAudioFileError(String),
-}
-
-#[derive(CandidType, Deserialize, Clone, Default)]
-pub struct HttpStreamingResponse {
-    pub status_code: u16,
-    pub headers: Vec<HeaderField>,
-    pub body: ByteBuf,
-    pub upgrade: Option<bool>,
-    pub streaming_strategy: Option<StreamingStrategy>,
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-pub struct StreamingCallbackToken {
-    pub angle: u32,
-    pub chunk_index: u32,
-    pub chunks: u32,
-    pub auth_token: Option<ByteBuf>,
-}
-
-impl StreamingCallbackToken {
-    pub fn next(self) -> Option<StreamingCallbackToken> {
-        if self.chunk_index + 1 >= self.chunks {
-            None
-        } else {
-            Some(StreamingCallbackToken {
-                angle: self.angle,
-                chunk_index: self.chunk_index + 1,
-                chunks: self.chunks,
-                auth_token: self.auth_token,
-            })
-        }
-    }
-}
-
-define_function!(pub CallbackFunc : (StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query);
-
-#[derive(CandidType, Deserialize, Clone)]
-pub enum StreamingStrategy {
-    Callback {
-        token: StreamingCallbackToken,
-        callback: CallbackFunc,
-    },
-}
-
-#[derive(CandidType, Deserialize, Clone, Debug)]
-pub struct StreamingCallbackHttpResponse {
-    pub headers: Vec<HeaderField>,
-    pub body: ByteBuf,
-    pub token: Option<StreamingCallbackToken>,
-}
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
     static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
-    static SAMPLES_MAP: RefCell<StableBTreeMap<u128, Vec<u8>, Memory>> = RefCell::new(
+    static SAMPLES_MAP: RefCell<StableBTreeMap<u128, AudioSample, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))))
     );
     static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
@@ -244,15 +105,18 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
     };
 
     let mut sample_id = 0;
-    SAMPLES.with(|samples| {
+
+    SAMPLES_MAP.with(|samples_map| {
+        sample_id = samples_map.borrow().len();
         let new_sample = AudioSample {
-            id: samples.borrow().len(),
+            id: sample_id,
             sample: node.sample,
             sample_length_samples,
             sample_length_ms,
         };
-        sample_id = new_sample.id.clone();
-        samples.borrow_mut().push(new_sample);
+        samples_map
+            .borrow_mut()
+            .insert(sample_id as u128, new_sample);
     });
 
     let mut returnable_nodes: VoiceNodeEgressStore = vec![];
@@ -266,6 +130,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
                 y: node.y,
                 sample_id,
                 radius: node_radius,
+                sample_length_samples,
             };
 
             nodes.borrow_mut().push(new_node);
@@ -303,9 +168,9 @@ fn get_voice_nodes() -> VoiceNodeEgressStore {
 #[query]
 fn get_my_voice() -> Option<AudioSample> {
     //TODO: guard and return 'owned' sample
-    SAMPLES.with(|samples| {
-        if samples.borrow().len() >= 1 {
-            Some(samples.borrow()[0].clone())
+    SAMPLES_MAP.with(|samples_map| {
+        if samples_map.borrow().len() >= 1 {
+            Some(samples_map.borrow().get(&(0 as u128)).unwrap())
         } else {
             None
         }
@@ -321,11 +186,11 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
     let mut result: Vec<u8> = vec![];
 
     VOICE_NODES.with(|nodes| {
-        SAMPLES.with(|samples| {
+        SAMPLES_MAP.with(|samples_map| {
             result = generate_angle_file(
                 angle,
                 &*nodes.borrow(),
-                &*samples.borrow(),
+                &*samples_map.borrow(),
                 &AUDIO_PARAMETERS,
                 &SIMULATION_PARAMETERS,
             )
@@ -369,11 +234,11 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
     let mut result: Vec<u8> = vec![];
 
     VOICE_NODES.with(|nodes| {
-        SAMPLES.with(|samples| {
+        SAMPLES_MAP.with(|samples_map| {
             result = generate_angle_file(
                 token.angle as f64,
                 &*nodes.borrow(),
-                &*samples.borrow(),
+                &*samples_map.borrow(),
                 &AUDIO_PARAMETERS,
                 &SIMULATION_PARAMETERS,
             )
@@ -455,9 +320,9 @@ mod tests {
         println!("{:#?}", result_a.unwrap());
         let _ = add_voice_node(another_voice_node);
 
-        SAMPLES.with(|samples| {
-            let id = samples.borrow()[0].id;
-            let another_id = samples.borrow()[1].id;
+        SAMPLES_MAP.with(|samples_map| {
+            let id = samples_map.borrow().get(&0).expect("No sample!").id;
+            let another_id = samples_map.borrow().get(&1).expect("No another_sample!").id;
 
             assert_eq!(id, 0);
             assert_eq!(another_id, 1);
@@ -490,9 +355,9 @@ mod tests {
         let _ = add_voice_node(voice_node);
         let _ = add_voice_node(another_voice_node);
 
-        SAMPLES.with(|samples| {
-            println!("{}", samples.borrow().len());
-            assert!(samples.borrow().len() == 0);
+        SAMPLES_MAP.with(|samples_map| {
+            println!("{}", samples_map.borrow().len());
+            assert!(samples_map.borrow().len() == 0);
         });
     }
 
@@ -517,9 +382,9 @@ mod tests {
         let _ = add_voice_node(voice_node);
         let _ = add_voice_node(another_voice_node);
 
-        SAMPLES.with(|samples| {
-            println!("{}", samples.borrow().len());
-            assert!(samples.borrow().len() == 0);
+        SAMPLES_MAP.with(|samples_map| {
+            println!("{}", samples_map.borrow().len());
+            assert!(samples_map.borrow().len() == 0);
         });
     }
 

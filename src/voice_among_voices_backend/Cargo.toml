@@ -23,6 +23,7 @@ ic-stable-structures = "0.6.5"
 
 [dev-dependencies]
 pocket-ic = "5.0.0"
+rand = "0.8.5"
 
 [profile.dev.package.rapier3d]
 opt-level = 3

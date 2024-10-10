@@ -105,7 +105,7 @@ pub fn simulate_until_stopped(
     // apply force
     // step until no more forces
 
-    let max_steps = 1_000;
+    let max_steps = 10_000;
     let mut steps = 0;
 
     loop {
@@ -362,8 +362,9 @@ mod tests {
                 id: i,
                 x: -50. + 5. + 5. * i as f64,
                 y: 0.,
-                sample_id: i,
+                sample_id: i as u64,
                 radius: 1.,
+                sample_length_samples: 44100,
             };
 
             nodes.push(node);
@@ -387,6 +388,7 @@ mod tests {
             y: 0.,
             sample_id: 0,
             radius: 2.,
+            sample_length_samples: 44100,
         };
 
         let node_b = VoiceNodeLocal {
@@ -395,6 +397,7 @@ mod tests {
             y: 0.,
             sample_id: 1,
             radius: 2.,
+            sample_length_samples: 44100,
         };
 
         nodes.push(node_a);
@@ -421,6 +424,7 @@ mod tests {
             y: 50.,
             sample_id: 0,
             radius: 1.,
+            sample_length_samples: 44100,
         };
 
         let node_b = VoiceNodeLocal {
@@ -429,6 +433,7 @@ mod tests {
             y: 50.,
             sample_id: 1,
             radius: 1.,
+            sample_length_samples: 44100,
         };
 
         nodes.push(node_a);
