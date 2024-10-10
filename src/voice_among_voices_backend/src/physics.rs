@@ -1,6 +1,6 @@
-use crate::{SimulationParameters, VoiceNodeLocal, VoiceNodeLocalStore};
+use crate::{SimulationParameters, VoiceNodeLocalStore};
 use candid::CandidType;
-use nalgebra::{distance, Const, Isometry, Isometry2, OPoint, Point2, Vector2};
+use nalgebra::{distance, Const, OPoint, Point2, Vector2};
 use rapier2d::{parry::shape::Ball, prelude::*};
 
 #[derive(Debug, Copy, Clone, CandidType)]
@@ -314,7 +314,7 @@ pub fn create_circular_collider_coordinates(
 #[cfg(test)]
 mod tests {
 
-    use crate::SIMULATION_PARAMETERS;
+    use crate::{VoiceNodeLocal, SIMULATION_PARAMETERS};
 
     use super::*;
 
@@ -414,7 +414,6 @@ mod tests {
     fn physics_moves_bodies_approximately_equally() {
         let mut nodes: VoiceNodeLocalStore = vec![];
         let collider_coordinates = create_circular_collider_coordinates(360, 50.);
-        let mut result: VoiceNodeLocalStore = vec![];
 
         let epsilon = 1e3;
 

@@ -1,34 +1,32 @@
-mod audio;
+pub mod audio;
 mod physics;
 mod structs;
+#[cfg(test)]
+pub mod test_functions;
 mod utils;
 
 use audio::*;
-use candid::{define_function, CandidType, Decode, Encode, Principal};
 use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
-use ic_http_certification::HeaderField;
 use ic_stable_structures::{
-    memory_manager::{MemoryId, MemoryManager, VirtualMemory},
-    storable::Bound,
-    DefaultMemoryImpl, StableBTreeMap, Storable,
+    memory_manager::{MemoryId, MemoryManager},
+    DefaultMemoryImpl, StableBTreeMap,
 };
 use once_cell::sync::Lazy;
 use physics::*;
-use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::{borrow::Cow, cell::RefCell, collections::BTreeMap};
+use std::cell::RefCell;
 use structs::*;
 use utils::{node_within_circle, split_into_chunks};
 
 thread_local! { // TODO: replace with stable structures and make auto-scaling
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
+    // static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
     static SAMPLES_MAP: RefCell<StableBTreeMap<u128, AudioSample, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))))
     );
-    static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
+    // static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
 
@@ -298,6 +296,7 @@ fn get_audio_parameters() -> AudioParameters {
 
 #[cfg(test)]
 mod tests {
+    use super::test_functions::*;
     use super::*;
 
     #[test]
@@ -398,22 +397,4 @@ mod tests {
             assert_eq!(n, len as u64);
         });
     }
-
-    // would need to update with pocket-ic
-    // #[test]
-    // fn streaming_sequencing_is_correct() {
-    //     init();
-
-    //     let token = StreamingCallbackToken {
-    //         angle: 0,
-    //         chunk_index: 0,
-    //         chunks: 11,
-    //         auth_token: None,
-    //     };
-
-    //     let response: StreamingCallbackHttpResponse = http_request_streaming_callback(token);
-
-    //     println!("{:#?}", response.token);
-    //     assert_eq!(response.token.unwrap().chunk_index, 1);
-    // }
 }

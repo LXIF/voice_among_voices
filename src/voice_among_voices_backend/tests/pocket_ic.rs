@@ -596,7 +596,6 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
                     // Assert that the file was generated and headers exist
                     assert!(response.body.len() > 0);
                     assert!(response.headers.iter().any(|(k, _)| k == "content-type"));
-                    assert!(false);
                 }
                 Err(e) => {
                     println!("Failed to decode response: {:?}", e);

@@ -18,15 +18,6 @@ pub fn node_within_circle(
     }
 }
 
-pub fn sample_length_to_radius(
-    sample_length: f64,
-    sim_params: &SimulationParameters,
-    audio_params: &AudioParameters,
-) -> f64 {
-    let logical_per_ms = 2. * sim_params.logical_radius / audio_params.total_length_ms as f64;
-    sample_length * logical_per_ms / 2.
-}
-
 pub fn split_into_chunks(data: Vec<u8>, audio_params: &AudioParameters) -> Vec<Vec<u8>> {
     data.chunks(audio_params.chunk_size)
         .map(|chunk| chunk.to_vec())

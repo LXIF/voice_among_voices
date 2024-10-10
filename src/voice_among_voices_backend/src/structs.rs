@@ -1,19 +1,21 @@
-use candid::{define_function, CandidType, Decode, Encode, Principal};
+use candid::{define_function, CandidType, Decode, Encode};
 use ic_http_certification::HeaderField;
 use ic_stable_structures::{
     memory_manager::VirtualMemory, storable::Bound, DefaultMemoryImpl, StableBTreeMap, Storable,
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::{borrow::Cow, collections::BTreeMap};
+use std::borrow::Cow;
 
-#[derive(Debug)]
-pub struct User {
-    pub voice_node_id: usize,
-    pub signup_timestamp: u64,
-}
+// LIB ////////////////////
 
-pub type UserStore = BTreeMap<Principal, User>;
+// #[derive(Debug)]
+// pub struct User {
+//     pub voice_node_id: usize,
+//     pub signup_timestamp: u64,
+// }
+
+// pub type UserStore = BTreeMap<Principal, User>;
 
 #[derive(Clone, Debug, Deserialize, CandidType)]
 pub struct VoiceNodeIngress {
@@ -77,14 +79,14 @@ impl Storable for AudioSample {
 
 pub type AudioSampleStore = StableBTreeMap<u128, AudioSample, Memory>;
 
-#[derive(Debug)]
-pub struct NFTMap; // TODO: this is one of the last things to implement to make the whole thing NFT-compliant.
+// #[derive(Debug)]
+// pub struct NFTMap; // TODO: this is one of the last things to implement to make the whole thing NFT-compliant.
 
-#[derive(Debug)]
-pub struct HistoryFrame {
-    timestamp: u64,
-    nodes_states: Vec<VoiceNodeLocal>,
-}
+// #[derive(Debug)]
+// pub struct HistoryFrame {
+//     timestamp: u64,
+//     nodes_states: Vec<VoiceNodeLocal>,
+// }
 
 #[derive(Debug, Clone, Copy, CandidType, Deserialize)]
 pub struct SimulationParameters {
