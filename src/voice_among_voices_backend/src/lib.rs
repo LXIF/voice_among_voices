@@ -22,14 +22,14 @@ use utils::{node_within_circle, split_into_chunks};
 thread_local! { // TODO: replace with stable structures and make auto-scaling
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    // static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
+    static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
     static SAMPLES_MAP: RefCell<StableBTreeMap<u128, AudioSample, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0))))
     );
     static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
+    // static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
     // static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
-    static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
 }
 
 static STREAMING_CALLBACK: Lazy<CallbackFunc> =
