@@ -88,6 +88,7 @@ pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
 // pub struct HistoryFrame {
 //     timestamp: u64,
 //     nodes_states: Vec<VoiceNodeLocal>,
+//     changed_node: VoiceNodeLocal // which node was changed and where it was dropped to
 // }
 
 #[derive(Debug, Clone, Copy, CandidType, Deserialize)]
