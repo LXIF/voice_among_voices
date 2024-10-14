@@ -15,6 +15,7 @@
         handleBackendAudioData,
     } from '$lib/utils/convUtils';
     import AngleFileBox from '$lib/components/AngleFileBox.svelte';
+    import LoginButton from '$lib/components/LoginButton.svelte';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
@@ -103,6 +104,7 @@
 </script>
 
 <main class="flex justify-center items-center flex-col h-[100vh]">
+    <LoginButton />
     <NodeMapPhysics
         nodes={voiceNodes}
         backendNodes={backendSimulationResult}

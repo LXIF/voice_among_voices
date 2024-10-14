@@ -10,7 +10,7 @@ use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
 use ic_cdk_timers::set_timer;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
-    DefaultMemoryImpl, StableBTreeMap,
+    DefaultMemoryImpl, StableBTreeMap, StableVec,
 };
 use once_cell::sync::Lazy;
 use physics::*;
@@ -19,17 +19,17 @@ use std::{cell::RefCell, collections::HashMap, time::Duration};
 use structs::*;
 use utils::{node_within_circle, split_into_chunks};
 
-thread_local! { // TODO: replace with stable structures and make auto-scaling
+thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
-    static VOICE_NODES: RefCell<VoiceNodeLocalStore> = RefCell::new(vec![]);
+    static VOICE_NODES_MAP: RefCell<VoiceNodeLocalMap> = RefCell::new(
+        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0)))).unwrap()
+    );
     static SAMPLES_MAP: RefCell<StableBTreeMap<u128, AudioSample, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0))))
+        StableBTreeMap::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(1))))
     );
     static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
-    // static USERS: RefCell<UserStore> = RefCell::new(BTreeMap::new()); //TODO: check how init and pre/post upgrade affect this
-    // static HISTORY: RefCell<Vec<HistoryFrame>> = RefCell::new(vec![]);
 }
 
 static STREAMING_CALLBACK: Lazy<CallbackFunc> =
@@ -65,6 +65,14 @@ fn collider_init() {
         collider_coordinates.extend(fresh_vertices);
     });
 }
+
+// fn nodes_init() {
+//     VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+//         for i in 0..360 {
+//             nodes.push(&VoiceNodeLocal {});
+//         }
+//     });
+// }
 
 #[init]
 fn init() {
@@ -120,8 +128,8 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
     let mut returnable_nodes: VoiceNodeEgressStore = vec![];
 
     COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
-        VOICE_NODES.with_borrow_mut(|nodes| {
-            let id = nodes.len().into();
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            let id = nodes.len() as usize;
             let new_node = VoiceNodeLocal {
                 id,
                 x: node.x,
@@ -131,11 +139,11 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
                 sample_length_samples,
             };
 
-            nodes.push(new_node);
+            nodes.push(&new_node);
 
             simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
-            returnable_nodes = nodes.clone().into_iter().map(|node| node.into()).collect();
+            returnable_nodes = nodes.iter().map(|node| node.into()).collect();
         });
     });
 
@@ -144,7 +152,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
 #[query]
 fn get_voice_nodes() -> VoiceNodeEgressStore {
-    VOICE_NODES.with_borrow(|nodes| nodes.clone().into_iter().map(|node| node.into()).collect())
+    VOICE_NODES_MAP.with_borrow(|nodes| nodes.iter().map(|node| node.into()).collect())
 }
 
 #[query]
@@ -166,7 +174,7 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
 
     let mut result: Vec<u8> = vec![];
 
-    VOICE_NODES.with_borrow(|nodes| {
+    VOICE_NODES_MAP.with_borrow(|nodes| {
         SAMPLES_MAP.with_borrow(|samples_map| {
             result = generate_angle_file(
                 angle,
