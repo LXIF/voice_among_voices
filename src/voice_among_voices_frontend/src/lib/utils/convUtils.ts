@@ -88,6 +88,7 @@ export function handleBackendAudioData(audioData: Uint8Array): Promise<string> {
     return new Promise((resolve, reject) => {
 
        const arrayBuffer = audioData.buffer;
+       // @ts-ignore: this does work.
        const audioBlob = new Blob([arrayBuffer], { type: 'audio/wav' });
 
        const audioURL = window.URL.createObjectURL(audioBlob);

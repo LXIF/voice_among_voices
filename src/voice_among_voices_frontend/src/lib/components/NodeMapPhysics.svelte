@@ -133,7 +133,6 @@
 
     function resetNodes() {
         localNodes = [...nodes];
-        console.log(localNodes);
     }
 
     ///////////PHYSICS//////////
