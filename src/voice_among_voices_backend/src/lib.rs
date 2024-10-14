@@ -15,7 +15,7 @@ use ic_stable_structures::{
 use once_cell::sync::Lazy;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{cell::RefCell, collections::HashMap, time::Duration};
+use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
 use structs::*;
 use utils::{node_within_circle, split_into_chunks};
 
@@ -66,17 +66,27 @@ fn collider_init() {
     });
 }
 
-// fn nodes_init() {
-//     VOICE_NODES_MAP.with_borrow_mut(|nodes| {
-//         for i in 0..360 {
-//             nodes.push(&VoiceNodeLocal {});
-//         }
-//     });
-// }
+fn nodes_init() {
+    VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        for i in 0..360 {
+            nodes
+                .push(&VoiceNodeLocal {
+                    id: i,
+                    x: 0.,
+                    y: 0.,
+                    sample_id: u64::MAX,
+                    radius: f64::MAX,
+                    sample_length_samples: u32::MAX,
+                })
+                .unwrap();
+        }
+    });
+}
 
 #[init]
 fn init() {
     collider_init();
+    nodes_init();
 }
 
 #[post_upgrade]
@@ -85,7 +95,7 @@ fn post_upgrade() {
 }
 
 #[update]
-fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
+fn update_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     // first check radius
     let (sample_length_samples, sample_length_ms) = get_sample_length(&node.sample)?;
     let max_sample_length = AUDIO_PARAMETERS.max_sample_length_ms;
@@ -129,7 +139,7 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
     COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
         VOICE_NODES_MAP.with_borrow_mut(|nodes| {
-            let id = nodes.len() as usize;
+            let id = node.id;
             let new_node = VoiceNodeLocal {
                 id,
                 x: node.x,
@@ -139,11 +149,19 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
                 sample_length_samples,
             };
 
-            nodes.push(&new_node);
+            nodes.set(id as u64, &new_node);
 
             simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
-            returnable_nodes = nodes.iter().map(|node| node.into()).collect();
+            returnable_nodes = nodes
+                .iter()
+                .filter_map(|node| {
+                    if node.sample_id == u64::MAX {
+                        return None;
+                    }
+                    Some(node.into())
+                })
+                .collect();
         });
     });
 
@@ -152,7 +170,17 @@ fn add_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoi
 
 #[query]
 fn get_voice_nodes() -> VoiceNodeEgressStore {
-    VOICE_NODES_MAP.with_borrow(|nodes| nodes.iter().map(|node| node.into()).collect())
+    VOICE_NODES_MAP.with_borrow(|nodes| {
+        nodes
+            .iter()
+            .filter_map(|node| {
+                if node.sample_id == u64::MAX {
+                    return None;
+                }
+                Some(node.into())
+            })
+            .collect()
+    })
 }
 
 #[query]
@@ -293,22 +321,25 @@ mod tests {
     #[test]
     fn voice_nodes_get_added_correctly() {
         collider_init();
+        nodes_init();
 
         let voice_node = VoiceNodeIngress {
             x: 0.,
             y: 40.,
             sample: generate_test_wav(1000, 44100),
+            id: 0,
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: -45.,
             y: 0.,
             sample: generate_test_wav(1000, 44100),
+            id: 1,
         };
 
-        let result_a = add_voice_node(voice_node);
+        let result_a = update_voice_node(voice_node);
         println!("{:#?}", result_a.unwrap());
-        let _ = add_voice_node(another_voice_node);
+        let _ = update_voice_node(another_voice_node);
 
         SAMPLES_MAP.with_borrow(|samples_map| {
             let id = samples_map.get(&0).expect("No sample!").id;
@@ -334,16 +365,18 @@ mod tests {
             x: -50.,
             y: -50.,
             sample: generate_test_wav(1000, 44100),
+            id: 0,
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: 99.,
             y: 50.,
             sample: generate_test_wav(10000, 44100),
+            id: 1,
         };
 
-        let _ = add_voice_node(voice_node);
-        let _ = add_voice_node(another_voice_node);
+        let _ = update_voice_node(voice_node);
+        let _ = update_voice_node(another_voice_node);
 
         SAMPLES_MAP.with_borrow(|samples_map| {
             println!("{}", samples_map.len());
@@ -361,16 +394,18 @@ mod tests {
             x: 50.,
             y: 50.,
             sample: generate_test_wav(max_length + 10, 44100),
+            id: 0,
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: 60.,
             y: 60.,
             sample: generate_test_wav(max_length + 20, 44100),
+            id: 1,
         };
 
-        let _ = add_voice_node(voice_node);
-        let _ = add_voice_node(another_voice_node);
+        let _ = update_voice_node(voice_node);
+        let _ = update_voice_node(another_voice_node);
 
         SAMPLES_MAP.with_borrow(|samples_map| {
             println!("{}", samples_map.len());

@@ -1,12 +1,8 @@
 <script lang="ts">
     import {onDestroy, onMount} from 'svelte';
     import {createEventDispatcher} from 'svelte';
-    // import {
-    //     MediaRecorder,
-    //     register,
-    //     type IMediaRecorder,
-    // } from 'extendable-media-recorder';
-    // import {connect} from 'extendable-media-recorder-wav-encoder';
+
+    // @ts-ignore: Keeps motzing but is actually ok
     import {browser} from '$app/environment';
     import {encodeWav} from '$lib/utils/convUtils';
     import type {AudioParameters} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';

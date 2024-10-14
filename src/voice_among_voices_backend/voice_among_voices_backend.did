@@ -1,4 +1,5 @@
 type VoiceNodeIngress = record {
+    id : nat64;
     x : float64;
     y : float64;
     sample : vec nat8;
@@ -79,7 +80,7 @@ type HttpStreamingResponse = record {
 };
 
 service : {
-    "add_voice_node" : (VoiceNodeIngress) -> (AddVoiceNodeResult);
+    "update_voice_node" : (VoiceNodeIngress) -> (AddVoiceNodeResult);
     "get_voice_nodes" : () -> (VoiceNodeStoreEgress) query;
     "get_simulation_parameters" : () -> (SimulationParameters) query;
     "get_audio_parameters" : () -> (AudioParameters) query;

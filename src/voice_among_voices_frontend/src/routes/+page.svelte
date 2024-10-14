@@ -1,5 +1,6 @@
 <script lang="ts">
-    import {backend} from '$lib/canisters'; // complains but works
+    // @ts-ignore: motzes but works
+    import {backend} from '$lib/canisters';
     import {onMount} from 'svelte';
     import DroppableNode from '$lib/components/DroppableNode.svelte';
     import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
@@ -50,16 +51,14 @@
 
     const handleDropNewNode = async (event: CustomEvent) => {
         const sample = await blobToUint8Array(currentVoiceBlob);
-        const {x, y} = event.detail;
-        let backend_simulation_result = await backend.add_voice_node({
+        const {x, y, id} = event.detail;
+        let backend_simulation_result = await backend.update_voice_node({
+            id,
             x,
             y,
             sample,
         });
-        // let backend_simulation_result = await backend.add_voice_node({
-        //     ...event.detail,
-        //     sample: currentVoiceBlob,
-        // });
+
         if (backend_simulation_result.Ok) {
             backendSimulationResult = backend_simulation_result.Ok;
         } else {

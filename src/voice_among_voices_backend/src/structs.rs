@@ -14,6 +14,7 @@ pub type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 #[derive(Clone, Debug, Deserialize, CandidType)]
 pub struct VoiceNodeIngress {
+    pub id: usize,
     pub x: f64,
     pub y: f64,
     pub sample: Vec<u8>, // here it's still a blob

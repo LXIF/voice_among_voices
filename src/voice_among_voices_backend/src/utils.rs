@@ -44,6 +44,7 @@ mod tests {
     fn allows_within_circle() {
         {
             let test_node: VoiceNodeIngress = VoiceNodeIngress {
+                id: 0,
                 x: -25.,
                 y: 25.,
                 sample: vec![],
@@ -53,6 +54,7 @@ mod tests {
         }
         {
             let test_node: VoiceNodeIngress = VoiceNodeIngress {
+                id: 0,
                 x: -25.,
                 y: 0.,
                 sample: vec![],
@@ -65,6 +67,7 @@ mod tests {
     #[test]
     fn rejects_on_circle() {
         let test_node: VoiceNodeIngress = VoiceNodeIngress {
+            id: 0,
             x: 0.,
             y: 50.,
             sample: vec![],
@@ -76,6 +79,7 @@ mod tests {
     #[test]
     fn rejects_outside_circle() {
         let test_node: VoiceNodeIngress = VoiceNodeIngress {
+            id: 0,
             x: 50.,
             y: 50.,
             sample: vec![],

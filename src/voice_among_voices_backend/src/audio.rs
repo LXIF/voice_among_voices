@@ -3,7 +3,6 @@ use std::io::Cursor;
 
 use crate::{
     AddVoiceNodeError, AudioParameters, AudioSampleStore, SimulationParameters, VoiceNodeLocalMap,
-    VoiceNodeLocalStore,
 };
 
 #[derive(Debug)]
@@ -54,21 +53,30 @@ fn generate_normalized_sample_positions(
     sim_params: &SimulationParameters,
     angle: f64,
 ) -> Vec<SamplePosition> {
-    let mut sample_positions: Vec<SamplePosition> = Vec::with_capacity(nodes.len() as usize);
+    let mut sample_positions: Vec<SamplePosition> = Vec::with_capacity(
+        nodes
+            .iter()
+            .filter(|node| node.sample_id != u64::MAX)
+            .collect::<Vec<_>>()
+            .len() as usize,
+    );
     let radius = sim_params.logical_radius;
 
     // calculate tangency points
     let (x_c, y_c) = tangency_points(radius, angle);
 
-    sample_positions.extend(nodes.iter().map(|node| {
+    sample_positions.extend(nodes.iter().filter_map(|node| {
+        if node.sample_id == u64::MAX {
+            return None;
+        }
         let position = distance_from_tangent(angle, node.x, node.y, x_c, y_c) / (2. * radius);
-        SamplePosition {
+        Some(SamplePosition {
             begins_at: (position - (node.radius / (2. * radius))).max(0.).min(1.),
             pan_position: signed_distance_from_center_line(angle, node.x, node.y, y_c, x_c)
                 / radius,
             sample_id: node.sample_id,
             sample_length_samples: node.sample_length_samples,
-        }
+        })
     }));
 
     sample_positions

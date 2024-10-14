@@ -64,7 +64,10 @@ pub fn simulate_until_stopped(
 
     bodies = nodes
         .iter()
-        .map(|node| {
+        .filter_map(|node| {
+            if node.sample_id == u64::MAX {
+                return None;
+            }
             let new_rigid_body = RigidBodyBuilder::dynamic()
                 .translation(vector![node.x as f32, node.y as f32])
                 .lock_rotations()
@@ -84,11 +87,11 @@ pub fn simulate_until_stopped(
                 &mut rigid_body_set,
             );
 
-            PhysicsBody {
+            Some(PhysicsBody {
                 voice_node_id: node.id,
                 collider_handle,
                 rigid_body_handle,
-            }
+            })
         })
         .collect();
 
@@ -313,7 +316,7 @@ pub fn create_circular_collider_coordinates(
 #[cfg(test)]
 mod tests {
 
-    use crate::{VoiceNodeLocal, SIMULATION_PARAMETERS, VOICE_NODES_MAP};
+    use crate::{nodes_init, VoiceNodeLocal, SIMULATION_PARAMETERS, VOICE_NODES_MAP};
 
     use super::*;
 
@@ -408,6 +411,27 @@ mod tests {
             println!("{:#?}", nodes);
             assert!(nodes.get(0).unwrap().x < -2.);
             assert!(nodes.get(1).unwrap().x > 2.);
+        });
+    }
+
+    #[test]
+    fn physics_only_moves_activated_bodies() {
+        nodes_init();
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            let collider_coordinates = create_circular_collider_coordinates(360, 50.);
+            let node_a = nodes.get(0).unwrap();
+            let node_b = nodes.get(359).unwrap();
+
+            simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
+
+            let node_a_after = nodes.get(0).unwrap();
+            let node_b_after = nodes.get(359).unwrap();
+
+            assert_eq!(node_a.x, node_a_after.x);
+            assert_eq!(node_a.y, node_a_after.y);
+
+            assert_eq!(node_b.x, node_b_after.x);
+            assert_eq!(node_b.y, node_b_after.y);
         });
     }
 
