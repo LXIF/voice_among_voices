@@ -11,6 +11,9 @@ importers:
       '@dfinity/agent':
         specifier: ^2.0.0
         version: 2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0)
+      '@dfinity/auth-client':
+        specifier: ^2.1.2
+        version: 2.1.2(@dfinity/agent@2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0))(@dfinity/identity@2.1.2(@dfinity/agent@2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0)(@peculiar/webcrypto@1.5.0))(@dfinity/principal@2.0.0)
       '@dfinity/candid':
         specifier: ^2.0.0
         version: 2.0.0(@dfinity/principal@2.0.0)
@@ -117,10 +120,24 @@ packages:
       '@dfinity/candid': ^2.0.0
       '@dfinity/principal': ^2.0.0
 
+  '@dfinity/auth-client@2.1.2':
+    resolution: {integrity: sha512-3wIbap6NQi+6z/o+kEFfOQmWuIz94/j1efVlkBtLO0IWqC5NZqoMppwANZZCkENeMvI0krhqH3asQvediWKIsg==}
+    peerDependencies:
+      '@dfinity/agent': ^2.1.2
+      '@dfinity/identity': ^2.1.2
+      '@dfinity/principal': ^2.1.2
+
   '@dfinity/candid@2.0.0':
     resolution: {integrity: sha512-poxIEnzErcKBM5yroabQ3VqQpiYZnqYZdLJWFuIQZzioGdP1mlnVLHx7IbgHN4HBlqVXYPFmEzMU02FnyYUA1Q==}
     peerDependencies:
       '@dfinity/principal': ^2.0.0
+
+  '@dfinity/identity@2.1.2':
+    resolution: {integrity: sha512-LgskXJzyqm1UVsobAkF8bL1/SdLKFYW2kTIsKw7UOhuBy/COpnf3HZYmKeFCnxvharyIyq23W3WBhIpu9FeAvw==}
+    peerDependencies:
+      '@dfinity/agent': ^2.1.2
+      '@dfinity/principal': ^2.1.2
+      '@peculiar/webcrypto': ^1.4.0
 
   '@dfinity/principal@2.0.0':
     resolution: {integrity: sha512-cqJ5kOrPpxco+wvJC4TFBhdr4lkw9mnwKGAYunesyqdzSYi8lnFB4dShNqlHFWdwoxNAw6OZkt/B+0nLa+7Yqw==}
@@ -310,6 +327,17 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@peculiar/asn1-schema@2.3.13':
+    resolution: {integrity: sha512-3Xq3a01WkHRZL8X04Zsfg//mGaA21xlL4tlVn4v2xGT0JStiztATRkMwa5b+f/HXmY2smsiLXYK46Gwgzvfg3g==}
+
+  '@peculiar/json-schema@1.1.12':
+    resolution: {integrity: sha512-coUfuoMeIB7B8/NMekxaDzLhaYmp0HZNPEjYRm9goRou8UZIC3z21s0sL9AWoCw4EG876QyO3kYrc61WNF9B/w==}
+    engines: {node: '>=8.0.0'}
+
+  '@peculiar/webcrypto@1.5.0':
+    resolution: {integrity: sha512-BRs5XUAwiyCDQMsVA9IDvDa7UBR9gAvPHgugOeGng3YN6vJ9JYonyDc0lNczErgtCWtucjR5N7VtaonboD/ezg==}
+    engines: {node: '>=10.12.0'}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -582,6 +610,10 @@ packages:
 
   aria-query@5.3.0:
     resolution: {integrity: sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A==}
+
+  asn1js@3.0.5:
+    resolution: {integrity: sha512-FVnvrKJwpt9LP2lAMl8qZswRNm3T4q9CON+bxldk2iwk3FFpuwhx2FfinyitizWHsVYyaY+y5JzDR0rCMV5yTQ==}
+    engines: {node: '>=12.0.0'}
 
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
@@ -915,6 +947,9 @@ packages:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
 
+  idb@7.1.1:
+    resolution: {integrity: sha512-gchesWBzyvGHRO9W8tzUWFDycow5gwjvFKfyV9FF32Y7F50yZMp7mP+T2mJIWFx49zicqyC4uefHM17o6xKIVQ==}
+
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
 
@@ -1241,6 +1276,13 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  pvtsutils@1.3.5:
+    resolution: {integrity: sha512-ARvb14YB9Nm2Xi6nBq1ZX6dAM0FsJnuk+31aUp4TrcZEdKUlSqOqsxJHUPJDNE3qiIp+iUPEIeR6Je/tgV7zsA==}
+
+  pvutils@1.1.3:
+    resolution: {integrity: sha512-pMpnA0qRdFp32b1sJl1wOJNxZLQ2cbQx+k6tjNtZ8CpvVhNqEPRgivZ2WOUev2YMajecdH7ctUPDvEe87nariQ==}
+    engines: {node: '>=6.0.0'}
 
   querystringify@2.2.0:
     resolution: {integrity: sha512-FIqgj2EUvTa7R50u0rGsyTftzjYmv/a3hO345bZNrqabNqjtgiDMgmo4mkUjd+nzU5oF3dClKqFIPUKybUyqoQ==}
@@ -1626,6 +1668,9 @@ packages:
     resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
     engines: {node: '>=18'}
 
+  webcrypto-core@1.8.1:
+    resolution: {integrity: sha512-P+x1MvlNCXlKbLSOY4cYrdreqPG5hbzkmawbcXLKN/mf6DZW0SdNNkZ+sjwsqVkI4A4Ko2sPZmkZtCKY58w83A==}
+
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
 
@@ -1719,9 +1764,25 @@ snapshots:
       buffer: 6.0.3
       simple-cbor: 0.4.1
 
+  '@dfinity/auth-client@2.1.2(@dfinity/agent@2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0))(@dfinity/identity@2.1.2(@dfinity/agent@2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0)(@peculiar/webcrypto@1.5.0))(@dfinity/principal@2.0.0)':
+    dependencies:
+      '@dfinity/agent': 2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0)
+      '@dfinity/identity': 2.1.2(@dfinity/agent@2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0)(@peculiar/webcrypto@1.5.0)
+      '@dfinity/principal': 2.0.0
+      idb: 7.1.1
+
   '@dfinity/candid@2.0.0(@dfinity/principal@2.0.0)':
     dependencies:
       '@dfinity/principal': 2.0.0
+
+  '@dfinity/identity@2.1.2(@dfinity/agent@2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0)(@peculiar/webcrypto@1.5.0)':
+    dependencies:
+      '@dfinity/agent': 2.0.0(@dfinity/candid@2.0.0(@dfinity/principal@2.0.0))(@dfinity/principal@2.0.0)
+      '@dfinity/principal': 2.0.0
+      '@noble/curves': 1.6.0
+      '@noble/hashes': 1.5.0
+      '@peculiar/webcrypto': 1.5.0
+      borc: 2.1.2
 
   '@dfinity/principal@2.0.0':
     dependencies:
@@ -1843,6 +1904,24 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.17.1
+
+  '@peculiar/asn1-schema@2.3.13':
+    dependencies:
+      asn1js: 3.0.5
+      pvtsutils: 1.3.5
+      tslib: 2.7.0
+
+  '@peculiar/json-schema@1.1.12':
+    dependencies:
+      tslib: 2.7.0
+
+  '@peculiar/webcrypto@1.5.0':
+    dependencies:
+      '@peculiar/asn1-schema': 2.3.13
+      '@peculiar/json-schema': 1.1.12
+      pvtsutils: 1.3.5
+      tslib: 2.7.0
+      webcrypto-core: 1.8.1
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
@@ -2082,6 +2161,12 @@ snapshots:
   aria-query@5.3.0:
     dependencies:
       dequal: 2.0.3
+
+  asn1js@3.0.5:
+    dependencies:
+      pvtsutils: 1.3.5
+      pvutils: 1.1.3
+      tslib: 2.7.0
 
   assertion-error@2.0.1: {}
 
@@ -2451,6 +2536,8 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
+  idb@7.1.1: {}
+
   ieee754@1.2.1: {}
 
   immutable@4.3.7: {}
@@ -2729,6 +2816,12 @@ snapshots:
   psl@1.9.0: {}
 
   punycode@2.3.1: {}
+
+  pvtsutils@1.3.5:
+    dependencies:
+      tslib: 2.7.0
+
+  pvutils@1.1.3: {}
 
   querystringify@2.2.0: {}
 
@@ -3137,6 +3230,14 @@ snapshots:
   w3c-xmlserializer@5.0.0:
     dependencies:
       xml-name-validator: 5.0.0
+
+  webcrypto-core@1.8.1:
+    dependencies:
+      '@peculiar/asn1-schema': 2.3.13
+      '@peculiar/json-schema': 1.1.12
+      asn1js: 3.0.5
+      pvtsutils: 1.3.5
+      tslib: 2.7.0
 
   webidl-conversions@3.0.1: {}
 

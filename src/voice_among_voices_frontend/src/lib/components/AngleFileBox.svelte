@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {onMount, tick, createEventDispatcher} from 'svelte';
-    import {Principal} from '@dfinity/principal';
+    import {tick, createEventDispatcher} from 'svelte';
+    // @ts-ignore: Motzes but is ok
     import {backend} from '$lib/canisters';
     import {handleBackendAudioData} from '$lib/utils/convUtils';
     import type {

@@ -1,9 +1,8 @@
 use hound::{WavReader, WavWriter};
-use ic_cdk::spawn;
 use std::io::Cursor;
 
 use crate::{
-    AddVoiceNodeError, AudioParameters, AudioSampleStore, SimulationParameters, VoiceNodeLocalStore,
+    AddVoiceNodeError, AudioParameters, AudioSampleStore, SimulationParameters, VoiceNodeLocalMap,
 };
 
 #[derive(Debug)]
@@ -31,7 +30,7 @@ pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<(u32, f64), AddVoiceNod
 /// Whichever sample it hits gets played
 pub fn generate_angle_file(
     angle: f64,
-    nodes: &VoiceNodeLocalStore,
+    nodes: &VoiceNodeLocalMap,
     samples_map: &AudioSampleStore,
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
@@ -50,25 +49,34 @@ pub fn generate_angle_file(
 }
 
 fn generate_normalized_sample_positions(
-    nodes: &VoiceNodeLocalStore,
+    nodes: &VoiceNodeLocalMap,
     sim_params: &SimulationParameters,
     angle: f64,
 ) -> Vec<SamplePosition> {
-    let mut sample_positions: Vec<SamplePosition> = Vec::with_capacity(nodes.len());
+    let mut sample_positions: Vec<SamplePosition> = Vec::with_capacity(
+        nodes
+            .iter()
+            .filter(|node| node.sample_id != u64::MAX)
+            .collect::<Vec<_>>()
+            .len() as usize,
+    );
     let radius = sim_params.logical_radius;
 
     // calculate tangency points
     let (x_c, y_c) = tangency_points(radius, angle);
 
-    sample_positions.extend(nodes.iter().map(|node| {
+    sample_positions.extend(nodes.iter().filter_map(|node| {
+        if node.sample_id == u64::MAX {
+            return None;
+        }
         let position = distance_from_tangent(angle, node.x, node.y, x_c, y_c) / (2. * radius);
-        SamplePosition {
+        Some(SamplePosition {
             begins_at: (position - (node.radius / (2. * radius))).max(0.).min(1.),
             pan_position: signed_distance_from_center_line(angle, node.x, node.y, y_c, x_c)
                 / radius,
             sample_id: node.sample_id,
             sample_length_samples: node.sample_length_samples,
-        }
+        })
     }));
 
     sample_positions
@@ -286,7 +294,7 @@ fn signed_distance_from_center_line(angle: f64, x: f64, y: f64, x_c: f64, y_c: f
 mod tests {
     use super::*;
     use crate::test_functions::*;
-    use crate::{VoiceNodeLocal, SAMPLES_MAP};
+    use crate::{VoiceNodeLocal, SAMPLES_MAP, VOICE_NODES_MAP};
     use core::f64;
     use hound::WavReader;
 
@@ -387,162 +395,191 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_sanity() {
-        let nodes = generate_test_nodes(vec![(-25., 0.), (0., -25.)]);
-        let sim_params = generate_test_simulation_params();
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            for node in generate_test_nodes(vec![(-25., 0.), (0., -25.)]).iter() {
+                nodes.push(node).unwrap();
+            }
+            let sim_params = generate_test_simulation_params();
 
-        let angle = 0.0;
-        let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
+            let angle = 0.0;
+            let sample_positions = generate_normalized_sample_positions(nodes, &sim_params, angle);
 
-        // There should be 2 sample positions generated since there are 2 nodes
-        assert_eq!(sample_positions.len(), 2);
+            // There should be 2 sample positions generated since there are 2 nodes
+            assert_eq!(sample_positions.len(), 2);
 
-        // Verify the positions
-        let sample_position_1 = &sample_positions[0];
-        println!("{:#?}", sample_position_1);
-        assert_eq!(sample_position_1.sample_id, 0); // Sample ID should match
-        assert!(sample_position_1.begins_at >= 0.0 && sample_position_1.begins_at <= 1.0); // Position should be normalized
-        assert!(sample_position_1.pan_position >= -1.0 && sample_position_1.pan_position <= 1.0); // Pan position should be within [-1, 1]
+            // Verify the positions
+            let sample_position_1 = &sample_positions[0];
+            println!("{:#?}", sample_position_1);
+            assert_eq!(sample_position_1.sample_id, 0); // Sample ID should match
+            assert!(sample_position_1.begins_at >= 0.0 && sample_position_1.begins_at <= 1.0); // Position should be normalized
+            assert!(
+                sample_position_1.pan_position >= -1.0 && sample_position_1.pan_position <= 1.0
+            ); // Pan position should be within [-1, 1]
 
-        let sample_position_2 = &sample_positions[1];
-        assert_eq!(sample_position_2.sample_id, 1);
-        assert!(sample_position_2.begins_at >= 0.0 && sample_position_2.begins_at <= 1.0);
-        println!("{}", sample_position_2.pan_position);
-        assert!(sample_position_2.pan_position >= -1.0 && sample_position_2.pan_position <= 1.0);
+            let sample_position_2 = &sample_positions[1];
+            assert_eq!(sample_position_2.sample_id, 1);
+            assert!(sample_position_2.begins_at >= 0.0 && sample_position_2.begins_at <= 1.0);
+            println!("{}", sample_position_2.pan_position);
+            assert!(
+                sample_position_2.pan_position >= -1.0 && sample_position_2.pan_position <= 1.0
+            );
+        });
     }
 
     #[test]
     fn test_generate_sample_positions_basic() {
-        let nodes = generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -25.)]);
-        println!("{:#?}", nodes);
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            for node in generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -25.)]) {
+                nodes.push(&node).unwrap();
+            }
+            println!("{:#?}", nodes);
 
-        let sim_params = generate_test_simulation_params();
+            let sim_params = generate_test_simulation_params();
 
-        let angle = 0.0;
-        let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
+            let angle = 0.0;
+            let sample_positions = generate_normalized_sample_positions(nodes, &sim_params, angle);
 
-        // There should be 3 sample positions generated since there are 3 nodes
-        assert_eq!(sample_positions.len(), 3);
+            // There should be 3 sample positions generated since there are 3 nodes
+            assert_eq!(sample_positions.len(), 3);
 
-        // Verify the actual positions
-        let sample_position_1 = &sample_positions[0];
+            // Verify the actual positions
+            let sample_position_1 = &sample_positions[0];
 
-        let sample_position_2 = &sample_positions[1];
+            let sample_position_2 = &sample_positions[1];
 
-        let sample_position_3 = &sample_positions[2];
+            let sample_position_3 = &sample_positions[2];
 
-        // first one should be at 0.
-        assert_eq!(sample_position_1.begins_at, 0.);
-        // pan 1 should be at 0.
-        assert_eq!(sample_position_1.pan_position, 0.);
+            // first one should be at 0.
+            assert_eq!(sample_position_1.begins_at, 0.);
+            // pan 1 should be at 0.
+            assert_eq!(sample_position_1.pan_position, 0.);
 
-        // second one should be at 0.5
-        assert_eq!(sample_position_2.begins_at, 0.4);
-        // pan 2 should be at -1.
-        assert_eq!(sample_position_2.pan_position, -1.);
+            // second one should be at 0.5
+            assert_eq!(sample_position_2.begins_at, 0.4);
+            // pan 2 should be at -1.
+            assert_eq!(sample_position_2.pan_position, -1.);
 
-        // third one should be at 0.5
-        assert_eq!(sample_position_3.begins_at, 0.65);
-        // pan 3 should be at -1.
-        assert_eq!(sample_position_3.pan_position, 0.);
+            // third one should be at 0.5
+            assert_eq!(sample_position_3.begins_at, 0.65);
+            // pan 3 should be at -1.
+            assert_eq!(sample_position_3.pan_position, 0.);
+        });
     }
 
     #[test]
     fn test_generate_sample_positions_center_case() {
-        let nodes = vec![VoiceNodeLocal {
-            id: 1,
-            x: 0.0, //center
-            y: 0.0, //center
-            sample_id: 0,
-            radius: 10.0,
-            sample_length_samples: 44100 * 12,
-        }];
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            nodes
+                .push(&VoiceNodeLocal {
+                    id: 1,
+                    x: 0.0, //center
+                    y: 0.0, //center
+                    sample_id: 0,
+                    radius: 10.0,
+                    sample_length_samples: 44100 * 12,
+                })
+                .unwrap();
 
-        let sim_params = generate_test_simulation_params();
+            let sim_params = generate_test_simulation_params();
 
-        let angle = 45.0; // Diagonal angle
-        let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
+            let angle = 45.0; // Diagonal angle
+            let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
 
-        assert_eq!(sample_positions.len(), 1);
-        let sample_position = &sample_positions[0];
-        assert_eq!(sample_position.sample_id, 0);
-        println!("{}", sample_position.begins_at);
-        println!("{}", sample_position.pan_position);
-        assert!(approximately_equal(sample_position.begins_at, 0.4, 1e-6));
-        assert_eq!(sample_position.pan_position, 0.);
+            assert_eq!(sample_positions.len(), 1);
+            let sample_position = &sample_positions[0];
+            assert_eq!(sample_position.sample_id, 0);
+            println!("{}", sample_position.begins_at);
+            println!("{}", sample_position.pan_position);
+            assert!(approximately_equal(sample_position.begins_at, 0.4, 1e-6));
+            assert_eq!(sample_position.pan_position, 0.);
+        });
     }
 
     #[test]
     fn test_generate_sample_positions_no_samples() {
-        let nodes = vec![]; // No nodes
-        let sim_params = generate_test_simulation_params();
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            let sim_params = generate_test_simulation_params();
 
-        let angle = 0.0;
-        let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
+            let angle = 0.0;
+            let sample_positions = generate_normalized_sample_positions(nodes, &sim_params, angle);
 
-        // No sample positions should be generated
-        assert_eq!(sample_positions.len(), 0);
+            // No sample positions should be generated
+            assert_eq!(sample_positions.len(), 0);
+        });
     }
 
     #[test]
     fn test_generate_sample_positions_varying_angles() {
-        let nodes = generate_test_nodes(vec![(25., 50.), (50., 25.)]);
-        let sim_params = generate_test_simulation_params();
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            for node in generate_test_nodes(vec![(25., 50.), (50., 25.)]).iter() {
+                nodes.push(node).unwrap();
+            }
+            let sim_params = generate_test_simulation_params();
 
-        let angle_0 = 0.0;
-        let angle_90 = 90.0;
-        let angle_180 = 180.0;
-        let angle_270 = 270.0;
+            let angle_0 = 0.0;
+            let angle_90 = 90.0;
+            let angle_180 = 180.0;
+            let angle_270 = 270.0;
 
-        let positions_0 = generate_normalized_sample_positions(&nodes, &sim_params, angle_0);
-        let positions_90 = generate_normalized_sample_positions(&nodes, &sim_params, angle_90);
-        let positions_180 = generate_normalized_sample_positions(&nodes, &sim_params, angle_180);
-        let positions_270 = generate_normalized_sample_positions(&nodes, &sim_params, angle_270);
+            let positions_0 = generate_normalized_sample_positions(&nodes, &sim_params, angle_0);
+            let positions_90 = generate_normalized_sample_positions(&nodes, &sim_params, angle_90);
+            let positions_180 =
+                generate_normalized_sample_positions(&nodes, &sim_params, angle_180);
+            let positions_270 =
+                generate_normalized_sample_positions(&nodes, &sim_params, angle_270);
 
-        // There should always be 2 sample positions, but their properties (position, pan) should vary
-        assert_eq!(positions_0.len(), 2);
-        assert_eq!(positions_90.len(), 2);
-        assert_eq!(positions_180.len(), 2);
-        assert_eq!(positions_270.len(), 2);
+            // There should always be 2 sample positions, but their properties (position, pan) should vary
+            assert_eq!(positions_0.len(), 2);
+            assert_eq!(positions_90.len(), 2);
+            assert_eq!(positions_180.len(), 2);
+            assert_eq!(positions_270.len(), 2);
 
-        // Check that positions change based on the angle
-        assert_ne!(positions_0[0].begins_at, positions_90[0].begins_at);
-        assert_ne!(positions_90[0].begins_at, positions_180[0].begins_at);
-        assert_ne!(positions_180[0].begins_at, positions_270[0].begins_at);
+            // Check that positions change based on the angle
+            assert_ne!(positions_0[0].begins_at, positions_90[0].begins_at);
+            assert_ne!(positions_90[0].begins_at, positions_180[0].begins_at);
+            assert_ne!(positions_180[0].begins_at, positions_270[0].begins_at);
+        });
     }
 
     #[test]
     fn test_generate_sample_positions_cross() {
-        let nodes =
-            generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -50.), (-50., 0.), (0., 0.)]);
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            for node in
+                generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -50.), (-50., 0.), (0., 0.)])
+                    .iter()
+            {
+                nodes.push(node).unwrap();
+            }
 
-        let angle = 0.;
-        let sim_params = SimulationParameters {
-            velocity_cutoff: 0.2,
-            force_cutoff: 100.,
-            max_distance: 20.,
-            force_strength: 3000.,
-            linear_damping: 10.,
-            logical_radius: 50.,
-            n_collider_vertices: 360,
-            friction: 0.5,
-            density: 2.,
-        };
+            let angle = 0.;
+            let sim_params = SimulationParameters {
+                velocity_cutoff: 0.2,
+                force_cutoff: 100.,
+                max_distance: 20.,
+                force_strength: 3000.,
+                linear_damping: 10.,
+                logical_radius: 50.,
+                n_collider_vertices: 360,
+                friction: 0.5,
+                density: 2.,
+            };
 
-        for node in nodes.iter() {
-            println!("{:#?}", node);
-        }
+            for node in nodes.iter() {
+                println!("{:#?}", node);
+            }
 
-        let positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
+            let positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
 
-        for position in positions.iter() {
-            println!("{:#?}", position);
-        }
+            for position in positions.iter() {
+                println!("{:#?}", position);
+            }
 
-        assert_eq!(positions[0].begins_at, 0.);
-        assert_eq!(positions[1].begins_at, 0.4);
-        assert_eq!(positions[2].begins_at, 0.9);
-        assert_eq!(positions[3].begins_at, 0.4);
-        assert_eq!(positions[4].begins_at, 0.4);
+            assert_eq!(positions[0].begins_at, 0.);
+            assert_eq!(positions[1].begins_at, 0.4);
+            assert_eq!(positions[2].begins_at, 0.9);
+            assert_eq!(positions[3].begins_at, 0.4);
+            assert_eq!(positions[4].begins_at, 0.4);
+        });
     }
 
     #[test]
@@ -597,71 +634,77 @@ mod tests {
         };
 
         SAMPLES_MAP.with_borrow_mut(|samples_map| {
-            let nodes = generate_short_test_nodes(vec![(0., 50.), (0., 0.), (0., -50.)]);
-            for i in 0..3 {
-                samples_map.insert(i as u128, generate_static_test_sample(10., 441, i));
-            }
+            VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+                for node in generate_short_test_nodes(vec![(0., 50.), (0., 0.), (0., -50.)]).iter()
+                {
+                    nodes.push(node).unwrap();
+                }
+                for i in 0..3 {
+                    samples_map.insert(i as u128, generate_static_test_sample(10., 441, i));
+                }
 
-            let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, 0.);
+                let sample_positions =
+                    generate_normalized_sample_positions(&nodes, &sim_params, 0.);
 
-            let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, &samples_map);
+                let (left_channel, right_channel) =
+                    generate_audio_vectors(&sample_positions, &audio_params, &samples_map);
 
-            // first and last and midpoint should be 11584
-            // 1/3 and 2/3 should be 0
-            let total_length_samples =
-                audio_params.total_length_ms * audio_params.sample_rate / 1000;
+                // first and last and midpoint should be 11584
+                // 1/3 and 2/3 should be 0
+                let total_length_samples =
+                    audio_params.total_length_ms * audio_params.sample_rate / 1000;
 
-            let first_first_index = 0;
-            let first_last_index = (sample_positions[0].sample_length_samples - 1) as usize;
+                let first_first_index = 0;
+                let first_last_index = (sample_positions[0].sample_length_samples - 1) as usize;
 
-            let mid_first_index =
-                (sample_positions[1].begins_at * total_length_samples as f64) as usize;
-            let mid_last_index =
-                mid_first_index + sample_positions[1].sample_length_samples as usize - 1;
+                let mid_first_index =
+                    (sample_positions[1].begins_at * total_length_samples as f64) as usize;
+                let mid_last_index =
+                    mid_first_index + sample_positions[1].sample_length_samples as usize - 1;
 
-            let last_first_index =
-                (sample_positions[2].begins_at * total_length_samples as f64) as usize;
-            let last_last_index = (total_length_samples - 1) as usize;
+                let last_first_index =
+                    (sample_positions[2].begins_at * total_length_samples as f64) as usize;
+                let last_last_index = (total_length_samples - 1) as usize;
 
-            let first_zero_point = (1. / 3. * total_length_samples as f64) as usize;
-            let second_zero_point = (2. / 3. * total_length_samples as f64) as usize;
+                let first_zero_point = (1. / 3. * total_length_samples as f64) as usize;
+                let second_zero_point = (2. / 3. * total_length_samples as f64) as usize;
 
-            assert_eq!(left_channel[first_first_index], 11584);
-            assert_eq!(right_channel[first_first_index], 11584);
+                assert_eq!(left_channel[first_first_index], 11584);
+                assert_eq!(right_channel[first_first_index], 11584);
 
-            assert_eq!(left_channel[first_last_index], 11584);
-            assert_eq!(right_channel[first_last_index], 11584);
+                assert_eq!(left_channel[first_last_index], 11584);
+                assert_eq!(right_channel[first_last_index], 11584);
 
-            assert_eq!(left_channel[first_last_index + 1], 0);
-            assert_eq!(right_channel[first_last_index + 1], 0);
+                assert_eq!(left_channel[first_last_index + 1], 0);
+                assert_eq!(right_channel[first_last_index + 1], 0);
 
-            assert_eq!(left_channel[mid_first_index - 1], 0);
-            assert_eq!(right_channel[mid_first_index - 1], 0);
+                assert_eq!(left_channel[mid_first_index - 1], 0);
+                assert_eq!(right_channel[mid_first_index - 1], 0);
 
-            assert_eq!(left_channel[mid_first_index], 11584);
-            assert_eq!(right_channel[mid_first_index], 11584);
+                assert_eq!(left_channel[mid_first_index], 11584);
+                assert_eq!(right_channel[mid_first_index], 11584);
 
-            assert_eq!(left_channel[mid_last_index], 11584);
-            assert_eq!(right_channel[mid_last_index], 11584);
+                assert_eq!(left_channel[mid_last_index], 11584);
+                assert_eq!(right_channel[mid_last_index], 11584);
 
-            assert_eq!(left_channel[mid_last_index + 1], 0);
-            assert_eq!(right_channel[mid_last_index + 1], 0);
+                assert_eq!(left_channel[mid_last_index + 1], 0);
+                assert_eq!(right_channel[mid_last_index + 1], 0);
 
-            assert_eq!(left_channel[last_first_index - 1], 0);
-            assert_eq!(right_channel[last_first_index - 1], 0);
+                assert_eq!(left_channel[last_first_index - 1], 0);
+                assert_eq!(right_channel[last_first_index - 1], 0);
 
-            assert_eq!(left_channel[last_first_index], 11584);
-            assert_eq!(right_channel[last_first_index], 11584);
+                assert_eq!(left_channel[last_first_index], 11584);
+                assert_eq!(right_channel[last_first_index], 11584);
 
-            assert_eq!(left_channel[last_last_index], 11584);
-            assert_eq!(right_channel[last_last_index], 11584);
+                assert_eq!(left_channel[last_last_index], 11584);
+                assert_eq!(right_channel[last_last_index], 11584);
 
-            assert_eq!(left_channel[first_zero_point], 0);
-            assert_eq!(right_channel[first_zero_point], 0);
+                assert_eq!(left_channel[first_zero_point], 0);
+                assert_eq!(right_channel[first_zero_point], 0);
 
-            assert_eq!(left_channel[second_zero_point], 0);
-            assert_eq!(right_channel[second_zero_point], 0);
+                assert_eq!(left_channel[second_zero_point], 0);
+                assert_eq!(right_channel[second_zero_point], 0);
+            });
         });
     }
 

@@ -1,4 +1,5 @@
 import { createActor, canisterId } from 'declarations/voice_among_voices_backend';
+
 import { building } from '$app/environment';
 
 function dummyActor() {

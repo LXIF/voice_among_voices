@@ -1,11 +1,13 @@
 <script lang="ts">
     import {onMount} from 'svelte';
     import {mapRange, clamp} from '$lib/utils/mathUtils';
-    import DroppableNode from './DroppableNode.svelte';
     import {createEventDispatcher} from 'svelte';
     import RAPIER from '@dimforge/rapier2d-compat';
-    import {browser} from '$app/environment'; // ts keeps motzing but it works
-    import {backend} from '$lib/canisters'; // motzes but works
+
+    // @ts-ignore: Motzes but ok
+    import {browser} from '$app/environment';
+    // @ts-ignore: Motzes but ok
+    import {backend} from '$lib/canisters';
     import type {
         ColliderCoordinate,
         VoiceNodeEgress,
@@ -55,6 +57,9 @@
     let moving = false;
     let scaled = false;
     let fastForward = false;
+
+    let nodeId = 0;
+
     const dispatch = createEventDispatcher();
 
     type PhysicsBody = {
@@ -128,6 +133,7 @@
 
     function resetNodes() {
         localNodes = [...nodes];
+        console.log(localNodes);
     }
 
     ///////////PHYSICS//////////
@@ -553,18 +559,30 @@
             return;
         }
 
-        const voiceNode = {
+        const voiceNode: VoiceNodeIngress = {
+            id: BigInt(nodeId),
             x: logicalX,
             y: logicalY,
             sample: [],
         };
-        dispatch('dropNewNode', voiceNode as VoiceNodeIngress);
-        localNodes.push({
-            x: logicalX,
-            y: logicalY,
-            id: BigInt(nodes.length),
-            radius: nodeRadius,
-        } as VoiceNodeEgress);
+        dispatch('dropNewNode', voiceNode);
+        let updatableNode = localNodes.find(
+            (node) => node.id === BigInt(nodeId)
+        );
+
+        if (updatableNode) {
+            updatableNode.x = logicalX;
+            updatableNode.y = logicalY;
+            updatableNode.radius = nodeRadius;
+        } else {
+            localNodes.push({
+                x: logicalX,
+                y: logicalY,
+                radius: nodeRadius,
+                id: BigInt(nodeId),
+            });
+        }
+
         resetPhysics();
         physicsActive = true;
         rendering = false;
@@ -581,6 +599,14 @@
         on:drop={handleDrop}
         class={`w-[${canvasWidth}px] h-[${canvasHeight}px]`}
     ></canvas>
+    <label for="node-id">node id</label>
+    <input
+        id="node-id"
+        type="number"
+        min="0"
+        max="359"
+        bind:value={nodeId}
+    />
     {#if physicsActive && backendNodes.length > 0}
         <button
             class="hover:shadow-lg rounded-full bg-slate-500 px-5"

@@ -1,7 +1,8 @@
 use candid::{define_function, CandidType, Decode, Encode};
 use ic_http_certification::HeaderField;
 use ic_stable_structures::{
-    memory_manager::VirtualMemory, storable::Bound, DefaultMemoryImpl, StableBTreeMap, Storable,
+    memory_manager::VirtualMemory, storable::Bound, DefaultMemoryImpl, StableBTreeMap, StableVec,
+    Storable,
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -9,16 +10,11 @@ use std::{borrow::Cow, collections::HashMap};
 
 // LIB ////////////////////
 
-// #[derive(Debug)]
-// pub struct User {
-//     pub voice_node_id: usize,
-//     pub signup_timestamp: u64,
-// }
-
-// pub type UserStore = BTreeMap<Principal, User>;
+pub type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 #[derive(Clone, Debug, Deserialize, CandidType)]
 pub struct VoiceNodeIngress {
+    pub id: usize,
     pub x: f64,
     pub y: f64,
     pub sample: Vec<u8>, // here it's still a blob
@@ -43,7 +39,7 @@ impl From<VoiceNodeLocal> for VoiceNodeEgress {
     }
 }
 
-#[derive(Clone, Debug, CandidType)]
+#[derive(Clone, Debug, CandidType, Deserialize)]
 pub struct VoiceNodeLocal {
     pub id: usize,
     pub x: f64,
@@ -53,7 +49,21 @@ pub struct VoiceNodeLocal {
     pub sample_length_samples: u32,
 }
 
+impl Storable for VoiceNodeLocal {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
+    }
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+    const BOUND: Bound = Bound::Bounded {
+        max_size: 79,
+        is_fixed_size: true,
+    };
+}
+
 pub type VoiceNodeLocalStore = Vec<VoiceNodeLocal>;
+pub type VoiceNodeLocalMap = StableVec<VoiceNodeLocal, Memory>;
 pub type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 
 #[derive(Debug, CandidType, Clone, Deserialize, Serialize)]
@@ -80,16 +90,6 @@ impl Storable for AudioSample {
 pub type AudioSampleStore = StableBTreeMap<u128, AudioSample, Memory>;
 
 pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
-
-// #[derive(Debug)]
-// pub struct NFTMap; // TODO: this is one of the last things to implement to make the whole thing NFT-compliant.
-
-// #[derive(Debug)]
-// pub struct HistoryFrame {
-//     timestamp: u64,
-//     nodes_states: Vec<VoiceNodeLocal>,
-//     changed_node: VoiceNodeLocal // which node was changed and where it was dropped to
-// }
 
 #[derive(Debug, Clone, Copy, CandidType, Deserialize)]
 pub struct SimulationParameters {
@@ -167,5 +167,3 @@ pub struct StreamingCallbackHttpResponse {
     pub body: ByteBuf,
     pub token: Option<StreamingCallbackToken>,
 }
-
-pub type Memory = VirtualMemory<DefaultMemoryImpl>;

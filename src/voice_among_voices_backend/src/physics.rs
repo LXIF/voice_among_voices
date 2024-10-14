@@ -1,4 +1,4 @@
-use crate::{SimulationParameters, VoiceNodeLocalStore};
+use crate::{SimulationParameters, VoiceNodeLocalMap};
 use candid::CandidType;
 use nalgebra::{distance, Const, OPoint, Point2, Vector2};
 use rapier2d::{parry::shape::Ball, prelude::*};
@@ -26,7 +26,7 @@ struct PhysicsBody {
 /// mutates nodes in place
 pub fn simulate_until_stopped(
     //mutates the store!
-    nodes: &mut VoiceNodeLocalStore,
+    nodes: &mut VoiceNodeLocalMap,
     parameters: &SimulationParameters,
     collider_coordinates: &Vec<ColliderCoordinate>,
 ) {
@@ -64,7 +64,10 @@ pub fn simulate_until_stopped(
 
     bodies = nodes
         .iter()
-        .map(|node| {
+        .filter_map(|node| {
+            if node.sample_id == u64::MAX {
+                return None;
+            }
             let new_rigid_body = RigidBodyBuilder::dynamic()
                 .translation(vector![node.x as f32, node.y as f32])
                 .lock_rotations()
@@ -84,11 +87,11 @@ pub fn simulate_until_stopped(
                 &mut rigid_body_set,
             );
 
-            PhysicsBody {
+            Some(PhysicsBody {
                 voice_node_id: node.id,
                 collider_handle,
                 rigid_body_handle,
-            }
+            })
         })
         .collect();
 
@@ -166,13 +169,12 @@ pub fn simulate_until_stopped(
                     .get(physics_body.rigid_body_handle)
                     .unwrap()
                     .translation();
-                let node_to_be_updated = nodes
-                    .iter_mut()
-                    .find(|node| node.id == physics_body.voice_node_id)
-                    .unwrap();
+                let mut node_to_be_updated = nodes.get(physics_body.voice_node_id as u64).unwrap();
 
                 node_to_be_updated.x = position[0].into();
                 node_to_be_updated.y = position[1].into();
+
+                nodes.set(physics_body.voice_node_id as u64, &node_to_be_updated);
             }
             break;
         }
@@ -314,7 +316,7 @@ pub fn create_circular_collider_coordinates(
 #[cfg(test)]
 mod tests {
 
-    use crate::{VoiceNodeLocal, SIMULATION_PARAMETERS};
+    use crate::{nodes_init, VoiceNodeLocal, SIMULATION_PARAMETERS, VOICE_NODES_MAP};
 
     use super::*;
 
@@ -354,102 +356,126 @@ mod tests {
 
     #[test]
     fn physics_sim_sanity_test() {
-        let mut nodes: VoiceNodeLocalStore = vec![];
-        let collider_coordinates = create_circular_collider_coordinates(360, 50.);
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            let collider_coordinates = create_circular_collider_coordinates(360, 50.);
 
-        for i in 0..4 {
-            let node = VoiceNodeLocal {
-                id: i,
-                x: -50. + 5. + 5. * i as f64,
-                y: 0.,
-                sample_id: i as u64,
-                radius: 1.,
-                sample_length_samples: 44100,
-            };
+            for i in 0..4 {
+                let node = VoiceNodeLocal {
+                    id: i,
+                    x: -50. + 5. + 5. * i as f64,
+                    y: 0.,
+                    sample_id: i as u64,
+                    radius: 1.,
+                    sample_length_samples: 44100,
+                };
 
-            nodes.push(node);
-        }
+                nodes.push(&node).unwrap();
+            }
 
-        simulate_until_stopped(&mut nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
+            simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
-        println!("{:#?}", nodes);
-        assert!(nodes[0].x > -50.);
-        assert!(nodes[0].x < 50.);
+            println!("{:#?}", nodes);
+            assert!(nodes.get(0).unwrap().x > -50.);
+            assert!(nodes.get(0).unwrap().x < 50.);
+        });
     }
 
     #[test]
     fn physics_moves_bodies() {
-        let mut nodes: VoiceNodeLocalStore = vec![];
-        let collider_coordinates = create_circular_collider_coordinates(360, 50.);
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            let collider_coordinates = create_circular_collider_coordinates(360, 50.);
 
-        let node_a = VoiceNodeLocal {
-            id: 0,
-            x: -2.,
-            y: 0.,
-            sample_id: 0,
-            radius: 2.,
-            sample_length_samples: 44100,
-        };
+            let node_a = VoiceNodeLocal {
+                id: 0,
+                x: -2.,
+                y: 0.,
+                sample_id: 0,
+                radius: 2.,
+                sample_length_samples: 44100,
+            };
 
-        let node_b = VoiceNodeLocal {
-            id: 1,
-            x: 2.,
-            y: 0.,
-            sample_id: 1,
-            radius: 2.,
-            sample_length_samples: 44100,
-        };
+            let node_b = VoiceNodeLocal {
+                id: 1,
+                x: 2.,
+                y: 0.,
+                sample_id: 1,
+                radius: 2.,
+                sample_length_samples: 44100,
+            };
 
-        nodes.push(node_a);
-        nodes.push(node_b);
+            nodes.push(&node_a).unwrap();
+            nodes.push(&node_b).unwrap();
 
-        simulate_until_stopped(&mut nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
+            simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
-        println!("{:#?}", nodes);
-        assert!(nodes[0].x < -2.);
-        assert!(nodes[1].x > 2.);
+            println!("{:#?}", nodes);
+            assert!(nodes.get(0).unwrap().x < -2.);
+            assert!(nodes.get(1).unwrap().x > 2.);
+        });
+    }
+
+    #[test]
+    fn physics_only_moves_activated_bodies() {
+        nodes_init();
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            let collider_coordinates = create_circular_collider_coordinates(360, 50.);
+            let node_a = nodes.get(0).unwrap();
+            let node_b = nodes.get(359).unwrap();
+
+            simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
+
+            let node_a_after = nodes.get(0).unwrap();
+            let node_b_after = nodes.get(359).unwrap();
+
+            assert_eq!(node_a.x, node_a_after.x);
+            assert_eq!(node_a.y, node_a_after.y);
+
+            assert_eq!(node_b.x, node_b_after.x);
+            assert_eq!(node_b.y, node_b_after.y);
+        });
     }
 
     #[test]
     fn physics_moves_bodies_approximately_equally() {
-        let mut nodes: VoiceNodeLocalStore = vec![];
-        let collider_coordinates = create_circular_collider_coordinates(360, 50.);
+        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+            let collider_coordinates = create_circular_collider_coordinates(360, 50.);
 
-        let epsilon = 1e3;
+            let epsilon = 1e3;
 
-        let node_a = VoiceNodeLocal {
-            id: 0,
-            x: 48.,
-            y: 50.,
-            sample_id: 0,
-            radius: 1.,
-            sample_length_samples: 44100,
-        };
+            let node_a = VoiceNodeLocal {
+                id: 0,
+                x: 48.,
+                y: 50.,
+                sample_id: 0,
+                radius: 1.,
+                sample_length_samples: 44100,
+            };
 
-        let node_b = VoiceNodeLocal {
-            id: 1,
-            x: 52.,
-            y: 50.,
-            sample_id: 1,
-            radius: 1.,
-            sample_length_samples: 44100,
-        };
+            let node_b = VoiceNodeLocal {
+                id: 1,
+                x: 52.,
+                y: 50.,
+                sample_id: 1,
+                radius: 1.,
+                sample_length_samples: 44100,
+            };
 
-        nodes.push(node_a);
-        nodes.push(node_b);
+            nodes.push(&node_a).unwrap();
+            nodes.push(&node_b).unwrap();
 
-        simulate_until_stopped(&mut nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
+            simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
 
-        println!("{:#?}", nodes);
-        assert!(approximately_equal(
-            nodes[0].x.abs(),
-            100. - nodes[1].x.abs(),
-            epsilon
-        ));
-        assert!(approximately_equal(
-            nodes[0].y.abs(),
-            nodes[1].y.abs(),
-            epsilon
-        ));
+            println!("{:#?}", nodes);
+            assert!(approximately_equal(
+                nodes.get(0).unwrap().x.abs(),
+                100. - nodes.get(1).unwrap().x.abs(),
+                epsilon
+            ));
+            assert!(approximately_equal(
+                nodes.get(0).unwrap().y.abs(),
+                nodes.get(1).unwrap().y.abs(),
+                epsilon
+            ));
+        });
     }
 }

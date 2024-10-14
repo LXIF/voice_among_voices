@@ -34,8 +34,9 @@ fn pic_initialize_canister(pic: &PocketIc) -> Principal {
     let mut wasm_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     wasm_path.pop();
     wasm_path.pop();
-    wasm_path
-        .push(".dfx/local/canisters/voice_among_voices_backend/voice_among_voices_backend.wasm");
+    wasm_path.push("target/wasm32-unknown-unknown/release/voice_among_voices_backend.wasm");
+    // wasm_path
+    //     .push(".dfx/local/canisters/voice_among_voices_backend/voice_among_voices_backend.wasm");
     println!("{:?}", wasm_path);
 
     let wasm_bytes = read(wasm_path).expect("failed to read wasm");
@@ -91,6 +92,7 @@ fn pocket_ic_sample_to_angle_file_single() {
 
     // Create a sample voice node
     let voice_node = VoiceNodeIngress {
+        id: 0,
         x: 0.0,
         y: 0.0,
         sample: test_wav,
@@ -101,17 +103,17 @@ fn pocket_ic_sample_to_angle_file_single() {
         .update_call(
             canister_id,
             Principal::anonymous(),
-            "add_voice_node",
+            "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         )
-        .expect("Failed to call add_voice_node");
+        .expect("Failed to call update_voice_node");
 
     match add_result {
         WasmResult::Reply(_) => {
             println!("Voice node successfully added.");
         }
         WasmResult::Reject(err) => {
-            println!("add_voice_node rejected: {:?}", err);
+            println!("update_voice_node rejected: {:?}", err);
             assert!(false);
         }
     }
@@ -166,6 +168,7 @@ fn pocket_ic_smoke_test_50_files_1ms() {
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
+            id: 0,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary y based on angle
             sample: test_wav,
@@ -176,17 +179,19 @@ fn pocket_ic_smoke_test_50_files_1ms() {
             .update_call(
                 canister_id,
                 Principal::anonymous(),
-                "add_voice_node",
+                "update_voice_node",
                 candid::encode_one(voice_node).unwrap(),
             )
-            .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+            .expect(&format!(
+                "Failed to call update_voice_node for angle {angle}"
+            ));
 
         match add_result {
             WasmResult::Reply(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
             WasmResult::Reject(err) => {
-                println!("add_voice_node rejected for angle {angle}: {:?}", err);
+                println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
         }
@@ -242,6 +247,7 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
+            id: 0,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary y based on angle
             sample: test_wav,
@@ -252,17 +258,19 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
             .update_call(
                 canister_id,
                 Principal::anonymous(),
-                "add_voice_node",
+                "update_voice_node",
                 candid::encode_one(voice_node).unwrap(),
             )
-            .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+            .expect(&format!(
+                "Failed to call update_voice_node for angle {angle}"
+            ));
 
         match add_result {
             WasmResult::Reply(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
             WasmResult::Reject(err) => {
-                println!("add_voice_node rejected for angle {angle}: {:?}", err);
+                println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
         }
@@ -318,6 +326,7 @@ fn pocket_ic_smoke_test_100_files_1ms() {
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
+            id: 0,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary y based on angle
             sample: test_wav,
@@ -328,17 +337,19 @@ fn pocket_ic_smoke_test_100_files_1ms() {
             .update_call(
                 canister_id,
                 Principal::anonymous(),
-                "add_voice_node",
+                "update_voice_node",
                 candid::encode_one(voice_node).unwrap(),
             )
-            .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+            .expect(&format!(
+                "Failed to call update_voice_node for angle {angle}"
+            ));
 
         match add_result {
             WasmResult::Reply(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
             WasmResult::Reject(err) => {
-                println!("add_voice_node rejected for angle {angle}: {:?}", err);
+                println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
         }
@@ -394,6 +405,7 @@ fn pocket_ic_smoke_test_360_files_1ms() {
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
+            id: 0,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary y based on angle
             sample: test_wav,
@@ -404,17 +416,19 @@ fn pocket_ic_smoke_test_360_files_1ms() {
             .update_call(
                 canister_id,
                 Principal::anonymous(),
-                "add_voice_node",
+                "update_voice_node",
                 candid::encode_one(voice_node).unwrap(),
             )
-            .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+            .expect(&format!(
+                "Failed to call update_voice_node for angle {angle}"
+            ));
 
         match add_result {
             WasmResult::Reply(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
             WasmResult::Reject(err) => {
-                println!("add_voice_node rejected for angle {angle}: {:?}", err);
+                println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
         }
@@ -470,6 +484,7 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
+            id: 0,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary y based on angle
             sample: test_wav,
@@ -480,17 +495,19 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
             .update_call(
                 canister_id,
                 Principal::anonymous(),
-                "add_voice_node",
+                "update_voice_node",
                 candid::encode_one(voice_node).unwrap(),
             )
-            .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+            .expect(&format!(
+                "Failed to call update_voice_node for angle {angle}"
+            ));
 
         match add_result {
             WasmResult::Reply(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
             WasmResult::Reject(err) => {
-                println!("add_voice_node rejected for angle {angle}: {:?}", err);
+                println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
         }
@@ -546,6 +563,7 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
+            id: 0,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary y based on angle
             sample: test_wav,
@@ -556,17 +574,19 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
             .update_call(
                 canister_id,
                 Principal::anonymous(),
-                "add_voice_node",
+                "update_voice_node",
                 candid::encode_one(voice_node).unwrap(),
             )
-            .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+            .expect(&format!(
+                "Failed to call update_voice_node for angle {angle}"
+            ));
 
         match add_result {
             WasmResult::Reply(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
             WasmResult::Reject(err) => {
-                println!("add_voice_node rejected for angle {angle}: {:?}", err);
+                println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
         }
@@ -624,6 +644,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
         // Create a sample voice node, use angle to vary x and y
         let random_scale: f64 = rng.gen();
         let voice_node = VoiceNodeIngress {
+            id: 0,
             x: (angle as f64).cos()
                 * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * random_scale))), // Vary x based on angle
             y: (angle as f64).sin()
@@ -636,17 +657,19 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
             .update_call(
                 canister_id,
                 Principal::anonymous(),
-                "add_voice_node",
+                "update_voice_node",
                 candid::encode_one(voice_node).unwrap(),
             )
-            .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+            .expect(&format!(
+                "Failed to call update_voice_node for angle {angle}"
+            ));
 
         match add_result {
             WasmResult::Reply(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
             WasmResult::Reject(err) => {
-                println!("add_voice_node rejected for angle {angle}: {:?}", err);
+                println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
         }
@@ -704,6 +727,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
 //         // Create a sample voice node, use angle to vary x and y
 //         let random_scale: f64 = rng.gen();
 //         let voice_node = VoiceNodeIngress {
+// id: 0,
 //             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius * random_scale), // Vary x based on angle
 //             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius * random_scale), // Vary y based on angle
 //             sample: test_wav,
@@ -714,17 +738,17 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
 //             .update_call(
 //                 canister_id,
 //                 Principal::anonymous(),
-//                 "add_voice_node",
+//                 "update_voice_node",
 //                 candid::encode_one(voice_node).unwrap(),
 //             )
-//             .expect(&format!("Failed to call add_voice_node for angle {angle}"));
+//             .expect(&format!("Failed to call update_voice_node for angle {angle}"));
 
 //         match add_result {
 //             WasmResult::Reply(_) => {
 //                 println!("Voice node successfully added for angle {angle}.");
 //             }
 //             WasmResult::Reject(err) => {
-//                 println!("add_voice_node rejected for angle {angle}: {:?}", err);
+//                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
 //                 assert!(false);
 //             }
 //         }
@@ -850,6 +874,7 @@ pub struct HttpStreamingResponse {
 
 #[derive(Clone, Debug, Deserialize, CandidType)]
 struct VoiceNodeIngress {
+    id: usize,
     x: f64,
     y: f64,
     sample: Vec<u8>, // here it's still a blob
