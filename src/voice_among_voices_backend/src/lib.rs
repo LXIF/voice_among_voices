@@ -108,6 +108,7 @@ fn samples_init() {
 fn init() {
     collider_init();
     nodes_init();
+    samples_init();
 }
 
 #[post_upgrade]

@@ -19,9 +19,19 @@ const buildingOrTesting = building || process.env.NODE_ENV === "test";
 
 const identityAgent: Writable<HttpAgent | undefined> = writable();
 
-export const backend = buildingOrTesting
-    ? dummyActor()
-    : get(identityAgent) === undefined ? createActor(canisterId) : createActor(canisterId, {identity: get(identityAgent)});
+let backend = dummyActor();
+
+identityAgent.subscribe(agent => {
+    if(buildingOrTesting) {
+        backend = dummyActor();
+    } else if (agent === undefined) {
+        backend = createActor(canisterId);
+    } else {
+        backend = createActor(canisterId, { agent });
+    }
+});
+
+export { backend };
 
 export const loginWithInternetIdentity = async () => {
     let iiUrl;
@@ -47,9 +57,5 @@ export const loginWithInternetIdentity = async () => {
 
     const identity = authClient.getIdentity();
 
-    const agent = await HttpAgent.create({identity});
-
-    identityAgent.set(createActor(canisterId, {
-        agent
-    }));
+    identityAgent.set(await HttpAgent.create({identity}));
 };

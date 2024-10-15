@@ -37,6 +37,8 @@
     let angle = 0;
     let fileLoaded = false;
 
+    let myPrincipal: string | undefined = undefined;
+
     onMount(async () => {
         voiceNodes = await backend.get_voice_nodes();
         simulationParameters = await backend.get_simulation_parameters();
@@ -102,10 +104,18 @@
             nodeWidthLogical: sampleLength * logicalPerMs,
         };
     };
+
+    const handleGetPrincipal = async () => {
+        myPrincipal = await backend.get_my_principal();
+    };
 </script>
 
 <main class="flex justify-center items-center flex-col h-[100vh]">
     <LoginButton />
+    <button on:click={handleGetPrincipal}>get principal</button>
+    {#if myPrincipal}
+        <div>{myPrincipal}</div>
+    {/if}
     <NodeMapPhysics
         nodes={voiceNodes}
         backendNodes={backendSimulationResult}

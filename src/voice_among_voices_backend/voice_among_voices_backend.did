@@ -88,4 +88,5 @@ service : {
     "get_my_voice" : () -> (opt AudioSample) query;
     "get_angle_file" : (float64) -> (HttpStreamingResponse);
     "http_request_streaming_callback" : (StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query;
+    "get_my_principal" : () -> (text) query;
 };
