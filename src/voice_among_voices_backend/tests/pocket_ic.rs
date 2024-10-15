@@ -83,6 +83,47 @@ fn pocket_ic_get_sim_params() {
 }
 
 #[test]
+fn pocket_ic_get_zero_file() {
+    let pic = PocketIc::new();
+    let canister_id = pic_initialize_canister(&pic);
+
+    let get_zero_file_result = pic
+        .query_call(
+            canister_id,
+            Principal::anonymous(),
+            "get_zero_file",
+            candid::encode_one(()).unwrap(),
+        )
+        .expect("Failed to call get_zero_file");
+
+    match get_zero_file_result {
+        WasmResult::Reply(bytes) => {
+            // Decode the response as an HttpStreamingResponse
+            let decoded_response = Decode!(&bytes, HttpStreamingResponse);
+
+            match decoded_response {
+                Ok(response) => {
+                    println!("Headers: {:?}", response.headers);
+                    println!("Body size: {:?}", response.body.len());
+
+                    // Assert that the file was generated and headers exist
+                    assert!(response.body.len() > 0);
+                    assert!(response.headers.iter().any(|(k, _)| k == "content-type"));
+                }
+                Err(e) => {
+                    println!("Failed to decode response: {:?}", e);
+                    assert!(false);
+                }
+            }
+        }
+        WasmResult::Reject(err) => {
+            println!("get_angle_file rejected: {:?}", err);
+            assert!(false);
+        }
+    }
+}
+
+#[test]
 fn pocket_ic_sample_to_angle_file_single() {
     let pic = PocketIc::new();
     let canister_id = pic_initialize_canister(&pic);

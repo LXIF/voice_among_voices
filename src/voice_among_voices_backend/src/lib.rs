@@ -17,7 +17,7 @@ use ic_stable_structures::{
 use once_cell::sync::Lazy;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
+use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, time::Duration, u64};
 use structs::*;
 use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
@@ -25,14 +25,15 @@ use utils::{node_within_circle, split_into_chunks};
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static VOICE_NODES_MAP: RefCell<VoiceNodeLocalMemory> = RefCell::new(
+    static VOICE_NODES_MEMORY: RefCell<VoiceNodeLocalMemory> = RefCell::new(
         StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0)))).expect("Failed to initialize voice nodes map")
     );
-    static SAMPLES_MAP: RefCell<AudioSampleMemory> = RefCell::new(
+    static SAMPLES_MEMORY: RefCell<AudioSampleMemory> = RefCell::new(
         StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(1)))).expect("Failed to initialize samples map")
     );
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
+    static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
 }
 
 static STREAMING_CALLBACK: Lazy<CallbackFunc> =
@@ -70,7 +71,7 @@ fn collider_init() {
 }
 
 fn nodes_init() {
-    VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+    VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
         for i in 0..360 {
             nodes
                 .push(&VoiceNodeLocal {
@@ -87,7 +88,7 @@ fn nodes_init() {
 }
 
 fn samples_init() {
-    SAMPLES_MAP.with_borrow_mut(|samples| {
+    SAMPLES_MEMORY.with_borrow_mut(|samples| {
         let sample_length_ms = AUDIO_PARAMETERS.max_sample_length_ms;
         let sample_rate = AUDIO_PARAMETERS.sample_rate;
         let start_sample = generate_test_wav(sample_length_ms, sample_rate);
@@ -104,11 +105,36 @@ fn samples_init() {
     });
 }
 
+fn zero_cache_init() {
+    zero_cache_update();
+}
+
+fn zero_cache_update() {
+    ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
+        SAMPLES_MEMORY.with_borrow(|samples| {
+            VOICE_NODES_MEMORY.with_borrow(|nodes| {
+                let new_file = generate_angle_file(
+                    0 as f64,
+                    nodes,
+                    samples,
+                    &AUDIO_PARAMETERS,
+                    &SIMULATION_PARAMETERS,
+                )
+                .expect("failed to init zero cache");
+                let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
+                cache.clear();
+                cache.extend(chunks.clone());
+            })
+        });
+    });
+}
+
 #[init]
 fn init() {
     collider_init();
     nodes_init();
     samples_init();
+    zero_cache_init();
 }
 
 #[post_upgrade]
@@ -144,7 +170,7 @@ fn update_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, Add
         ));
     };
 
-    SAMPLES_MAP.with_borrow_mut(|samples_map| {
+    SAMPLES_MEMORY.with_borrow_mut(|samples_map| {
         let new_sample = AudioSample {
             id: node.id as u64,
             sample: node.sample,
@@ -157,7 +183,7 @@ fn update_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, Add
     let mut returnable_nodes: VoiceNodeEgressStore = vec![];
 
     COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             let id = node.id;
             let new_node = VoiceNodeLocal {
                 id,
@@ -184,12 +210,13 @@ fn update_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, Add
         });
     });
 
+    zero_cache_update();
     Ok(returnable_nodes)
 }
 
 #[query]
 fn get_voice_nodes() -> VoiceNodeEgressStore {
-    VOICE_NODES_MAP.with_borrow(|nodes| {
+    VOICE_NODES_MEMORY.with_borrow(|nodes| {
         nodes
             .iter()
             .filter_map(|node| {
@@ -208,8 +235,8 @@ fn get_my_voice() -> Option<AudioSample> {
     let mut result: Option<AudioSample> = None;
     let index = 0;
 
-    VOICE_NODES_MAP.with_borrow(|nodes| {
-        SAMPLES_MAP.with_borrow(|samples| {
+    VOICE_NODES_MEMORY.with_borrow(|nodes| {
+        SAMPLES_MEMORY.with_borrow(|samples| {
             if let Some(node) = nodes.get(index) {
                 if node.sample_id != u64::MAX {
                     if let Some(sample) = samples.get(node.sample_id) {
@@ -230,8 +257,8 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
 
     let mut result: Vec<u8> = vec![];
 
-    VOICE_NODES_MAP.with_borrow(|nodes| {
-        SAMPLES_MAP.with_borrow(|samples_map| {
+    VOICE_NODES_MEMORY.with_borrow(|nodes| {
+        SAMPLES_MEMORY.with_borrow(|samples_map| {
             result = generate_angle_file(
                 angle,
                 nodes,
@@ -282,25 +309,49 @@ fn get_angle_file(angle: f64) -> HttpStreamingResponse {
     }
 }
 
+#[query]
+fn get_zero_file() -> HttpStreamingResponse {
+    ZERO_DEGREE_FILE_CACHE.with_borrow(|chunks| {
+        let total_chunks = chunks.len() as u32;
+
+        let first_chunk = chunks.get(0).cloned().unwrap_or_default();
+        let token = StreamingCallbackToken {
+            angle: 0 as u32,
+            chunk_index: 0,
+            chunks: total_chunks,
+            auth_token: None, // TODO: maybe implement this for security purposes
+        };
+
+        HttpStreamingResponse {
+            status_code: 200,
+            headers: vec![("content-type".to_string(), "audio/wav".to_string())],
+            body: ByteBuf::from(first_chunk),
+            upgrade: None,
+            streaming_strategy: create_strategy(token),
+        }
+    })
+}
+
 #[query(hidden = true)]
 fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
-    // TODO: perhaps make function naming more concise as this is only for getting angle files
+    let chunks: Vec<Vec<u8>>;
 
-    let beginning_cost = performance_counter(0);
-
-    let chunks = match ANGLE_FILE_CACHE.with_borrow(|cache| cache.get(&token.angle).cloned()) {
-        Some(file_chunks) => file_chunks,
-        None => ic_cdk::trap("Cache out of date, connection too slow"),
-    };
+    match token.angle {
+        0 => {
+            chunks = ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| cache.clone());
+        }
+        _ => {
+            chunks = match ANGLE_FILE_CACHE.with_borrow(|cache| cache.get(&token.angle).cloned()) {
+                Some(file_chunks) => file_chunks,
+                None => ic_cdk::trap("Cache out of date, connection too slow"),
+            };
+        }
+    }
 
     if let Some(token) = token.next() {
         if let Some(chunk) = chunks.get((token.chunk_index) as usize) {
-            let end_cost = performance_counter(0);
             StreamingCallbackHttpResponse {
-                headers: vec![
-                    ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
-                    ("x-end-cost".to_string(), end_cost.to_string()), // Profiling header
-                ],
+                headers: vec![],
                 body: ByteBuf::from(chunk.clone()),
                 token: Some(token),
             }
@@ -308,12 +359,8 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
             ic_cdk::trap("Chunk not found");
         }
     } else {
-        let end_cost = performance_counter(0);
         StreamingCallbackHttpResponse {
-            headers: vec![
-                ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
-                ("x-end-cost".to_string(), end_cost.to_string()),             // Profiling header
-            ],
+            headers: vec![],
             body: ByteBuf::new(),
             token: None,
         }
@@ -375,7 +422,7 @@ mod tests {
         println!("{:#?}", result_a.unwrap());
         let _ = update_voice_node(another_voice_node);
 
-        SAMPLES_MAP.with_borrow(|samples_map| {
+        SAMPLES_MEMORY.with_borrow(|samples_map| {
             let id = samples_map.get(0).expect("No sample!").id;
             let another_id = samples_map.get(1).expect("No another_sample!").id;
 
@@ -412,7 +459,7 @@ mod tests {
         let _ = update_voice_node(voice_node);
         let _ = update_voice_node(another_voice_node);
 
-        SAMPLES_MAP.with_borrow(|samples_map| {
+        SAMPLES_MEMORY.with_borrow(|samples_map| {
             println!("{}", samples_map.len());
             assert!(samples_map.len() == 0);
         });
@@ -441,7 +488,7 @@ mod tests {
         let _ = update_voice_node(voice_node);
         let _ = update_voice_node(another_voice_node);
 
-        SAMPLES_MAP.with_borrow(|samples_map| {
+        SAMPLES_MEMORY.with_borrow(|samples_map| {
             println!("{}", samples_map.len());
             assert!(samples_map.len() == 0);
         });
@@ -455,6 +502,42 @@ mod tests {
             let len = collider_coordinates.len();
 
             assert_eq!(n, len as u64);
+        });
+    }
+
+    #[test]
+    fn init_creates_nodes() {
+        init();
+
+        VOICE_NODES_MEMORY.with_borrow(|nodes| {
+            assert_eq!(nodes.len(), 360);
+            for node in nodes.iter() {
+                assert_eq!(node.sample_id, u64::MAX);
+            }
+        });
+    }
+
+    #[test]
+    fn init_creates_samples() {
+        init();
+
+        SAMPLES_MEMORY.with_borrow(|samples| {
+            assert_eq!(samples.len(), 360);
+            for sample in samples.iter() {
+                assert_eq!(
+                    sample.sample_length_ms as u32,
+                    AUDIO_PARAMETERS.max_sample_length_ms
+                );
+            }
+        });
+    }
+
+    #[test]
+    fn init_creates_zero_cache() {
+        init();
+
+        ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| {
+            assert!(cache.len() > 0);
         });
     }
 }

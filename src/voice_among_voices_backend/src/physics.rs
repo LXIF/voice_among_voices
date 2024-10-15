@@ -316,7 +316,7 @@ pub fn create_circular_collider_coordinates(
 #[cfg(test)]
 mod tests {
 
-    use crate::{nodes_init, VoiceNodeLocal, SIMULATION_PARAMETERS, VOICE_NODES_MAP};
+    use crate::{nodes_init, VoiceNodeLocal, SIMULATION_PARAMETERS, VOICE_NODES_MEMORY};
 
     use super::*;
 
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn physics_sim_sanity_test() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             let collider_coordinates = create_circular_collider_coordinates(360, 50.);
 
             for i in 0..4 {
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn physics_moves_bodies() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             let collider_coordinates = create_circular_collider_coordinates(360, 50.);
 
             let node_a = VoiceNodeLocal {
@@ -417,7 +417,7 @@ mod tests {
     #[test]
     fn physics_only_moves_activated_bodies() {
         nodes_init();
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             let collider_coordinates = create_circular_collider_coordinates(360, 50.);
             let node_a = nodes.get(0).unwrap();
             let node_b = nodes.get(359).unwrap();
@@ -437,7 +437,7 @@ mod tests {
 
     #[test]
     fn physics_moves_bodies_approximately_equally() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             let collider_coordinates = create_circular_collider_coordinates(360, 50.);
 
             let epsilon = 1e3;

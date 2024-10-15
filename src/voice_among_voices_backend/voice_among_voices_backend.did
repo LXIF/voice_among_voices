@@ -89,4 +89,5 @@ service : {
     "get_angle_file" : (float64) -> (HttpStreamingResponse);
     "http_request_streaming_callback" : (StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query;
     "get_my_principal" : () -> (text) query;
+    "get_zero_file" : () -> (HttpStreamingResponse) query;
 };

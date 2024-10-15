@@ -32,7 +32,7 @@ pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<(u32, f64), AddVoiceNod
 pub fn generate_angle_file(
     angle: f64,
     nodes: &VoiceNodeLocalMemory,
-    samples_map: &AudioSampleMemory,
+    samples: &AudioSampleMemory,
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
 ) -> Result<Vec<u8>, hound::Error> {
@@ -40,7 +40,7 @@ pub fn generate_angle_file(
     let sample_positions = generate_normalized_sample_positions(nodes, sim_params, angle);
     // generate stereo sample vectors
     let (left_samples, right_samples) =
-        generate_audio_vectors(&sample_positions, audio_params, samples_map);
+        generate_audio_vectors(&sample_positions, audio_params, samples);
 
     // generate resulting file
 
@@ -86,7 +86,7 @@ fn generate_normalized_sample_positions(
 fn generate_audio_vectors(
     sample_positions: &Vec<SamplePosition>,
     audio_params: &AudioParameters,
-    sample_map: &AudioSampleMemory,
+    samples: &AudioSampleMemory,
 ) -> (Vec<i16>, Vec<i16>) {
     // Convert fade duration from milliseconds to samples
     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
@@ -107,7 +107,7 @@ fn generate_audio_vectors(
         let end_sample = (start_sample + sample_pos.sample_length_samples as usize - 1)
             .min(total_length_samples as usize - 1);
         // use reader to read sample
-        let input_samples = read_wav(&sample_map.get(sample_pos.sample_id as u64).unwrap().sample);
+        let input_samples = read_wav(&samples.get(sample_pos.sample_id as u64).unwrap().sample);
 
         // figure out the panning multipliers
         let pan = sample_pos.pan_position;
@@ -290,7 +290,7 @@ fn signed_distance_from_center_line(angle: f64, x: f64, y: f64, x_c: f64, y_c: f
 mod tests {
     use super::*;
     use crate::test_functions::*;
-    use crate::{VoiceNodeLocal, SAMPLES_MAP, VOICE_NODES_MAP};
+    use crate::{VoiceNodeLocal, SAMPLES_MEMORY, VOICE_NODES_MEMORY};
     use core::f64;
     use hound::WavReader;
 
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_sanity() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             for node in generate_test_nodes(vec![(-25., 0.), (0., -25.)]).iter() {
                 nodes.push(node).unwrap();
             }
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_basic() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             for node in generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -25.)]) {
                 nodes.push(&node).unwrap();
             }
@@ -464,7 +464,7 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_center_case() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             nodes
                 .push(&VoiceNodeLocal {
                     id: 1,
@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_no_samples() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             let sim_params = generate_test_simulation_params();
 
             let angle = 0.0;
@@ -506,7 +506,7 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_varying_angles() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             for node in generate_test_nodes(vec![(25., 50.), (50., 25.)]).iter() {
                 nodes.push(node).unwrap();
             }
@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn test_generate_sample_positions_cross() {
-        VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
             for node in
                 generate_test_nodes(vec![(0., 50.), (50., 0.), (0., -50.), (-50., 0.), (0., 0.)])
                     .iter()
@@ -580,7 +580,7 @@ mod tests {
 
     #[test]
     fn test_generate_audio_vectors_basic() {
-        SAMPLES_MAP.with_borrow_mut(|samples_map| {
+        SAMPLES_MEMORY.with_borrow_mut(|samples_memory| {
             let audio_params = AudioParameters {
                 fade_ms: 0,            // Fade duration in milliseconds
                 sample_rate: 44100,    // 44.1kHz
@@ -590,10 +590,10 @@ mod tests {
             };
             let sample = generate_static_test_sample(1000.0, 44100, 0);
             let sample_positions = generate_test_sample_positions(&sample);
-            samples_map.push(&sample).unwrap();
+            samples_memory.push(&sample).unwrap();
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, samples_map);
+                generate_audio_vectors(&sample_positions, &audio_params, samples_memory);
 
             // Verify that the output vectors are of the correct length
             let expected_length = audio_params.total_length_ms * audio_params.sample_rate / 1000;
@@ -629,14 +629,14 @@ mod tests {
             density: 2.,
         };
 
-        SAMPLES_MAP.with_borrow_mut(|samples_map| {
-            VOICE_NODES_MAP.with_borrow_mut(|nodes| {
+        SAMPLES_MEMORY.with_borrow_mut(|samples_memory| {
+            VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
                 for node in generate_short_test_nodes(vec![(0., 50.), (0., 0.), (0., -50.)]).iter()
                 {
                     nodes.push(node).unwrap();
                 }
                 for i in 0..3 {
-                    samples_map
+                    samples_memory
                         .push(&generate_static_test_sample(10., 441, i))
                         .unwrap();
                 }
@@ -645,7 +645,7 @@ mod tests {
                     generate_normalized_sample_positions(&nodes, &sim_params, 0.);
 
                 let (left_channel, right_channel) =
-                    generate_audio_vectors(&sample_positions, &audio_params, &samples_map);
+                    generate_audio_vectors(&sample_positions, &audio_params, &samples_memory);
 
                 // first and last and midpoint should be 11584
                 // 1/3 and 2/3 should be 0
@@ -708,8 +708,8 @@ mod tests {
 
     #[test]
     fn test_generate_audio_vectors_fading() {
-        SAMPLES_MAP.with(|samples_map| {
-            let mut map = samples_map.borrow_mut();
+        SAMPLES_MEMORY.with(|samples_memory| {
+            let mut map = samples_memory.borrow_mut();
             let audio_params = AudioParameters {
                 fade_ms: 100,          // Fade duration in milliseconds
                 sample_rate: 44100,    // 44.1kHz
@@ -761,8 +761,7 @@ mod tests {
 
     #[test]
     fn test_generate_audio_vectors_no_sample() {
-        SAMPLES_MAP.with(|samples_map| {
-            let mut map = samples_map.borrow_mut();
+        SAMPLES_MEMORY.with_borrow_mut(|samples| {
             let audio_params = AudioParameters {
                 fade_ms: 100,          // Fade duration in milliseconds
                 sample_rate: 44100,    // 44.1kHz
@@ -773,7 +772,7 @@ mod tests {
             let sample_positions: Vec<SamplePosition> = vec![]; // No samples
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, &mut map);
+                generate_audio_vectors(&sample_positions, &audio_params, samples);
 
             // Both channels should be silent (all zeros)
             assert!(left_channel.iter().all(|&sample| sample == 0));
@@ -783,8 +782,7 @@ mod tests {
 
     #[test]
     fn test_generate_audio_vectors_clipping_prevention() {
-        SAMPLES_MAP.with(|samples_map| {
-            let mut map = samples_map.borrow_mut();
+        SAMPLES_MEMORY.with_borrow_mut(|samples| {
             let audio_params = AudioParameters {
                 fade_ms: 100,          // Fade duration in milliseconds
                 sample_rate: 44100,    // 44.1kHz
@@ -793,12 +791,13 @@ mod tests {
                 chunk_size: 1024 * 1024,
             };
             // map.insert(0 as u128, generate_static_test_sample(1000.0, 44100, 1));
-            map.push(&generate_extreme_test_sample(1000., 44100, 0))
+            samples
+                .push(&generate_extreme_test_sample(1000., 44100, 0))
                 .unwrap();
-            let sample_positions = generate_test_sample_positions(&map.get(0 as u64).unwrap());
+            let sample_positions = generate_test_sample_positions(&samples.get(0 as u64).unwrap());
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, &mut map);
+                generate_audio_vectors(&sample_positions, &audio_params, samples);
 
             // Ensure that no values exceed the i16 range
             for &sample in left_channel.iter().chain(right_channel.iter()) {
@@ -810,8 +809,7 @@ mod tests {
 
     #[test]
     fn test_generate_audio_vectors_pan_position() {
-        SAMPLES_MAP.with(|samples_map| {
-            let mut map = samples_map.borrow_mut();
+        SAMPLES_MEMORY.with_borrow_mut(|samples| {
             let audio_params = AudioParameters {
                 fade_ms: 0,            // Fade duration in milliseconds
                 sample_rate: 44100,    // 44.1kHz
@@ -821,7 +819,8 @@ mod tests {
             };
 
             for i in 0..3 {
-                map.push(&generate_static_test_sample(1000.0, 44100, i))
+                samples
+                    .push(&generate_static_test_sample(1000.0, 44100, i))
                     .unwrap();
             }
 
@@ -848,7 +847,7 @@ mod tests {
             ];
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, &mut map);
+                generate_audio_vectors(&sample_positions, &audio_params, samples);
 
             // Left pan should result in higher values in the left channel
             for (left, right) in left_channel.iter().zip(right_channel.iter()) {
@@ -865,7 +864,7 @@ mod tests {
                     pan_position: 0.0,
                 }],
                 &audio_params,
-                &mut map,
+                samples,
             );
             for (left, right) in center_left.iter().zip(center_right.iter()) {
                 assert_eq!(left, right);
@@ -880,7 +879,7 @@ mod tests {
                     sample_length_samples: 44100,
                 }],
                 &audio_params,
-                &mut map,
+                samples,
             );
             for (left, right) in right_left.iter().zip(right_right.iter()) {
                 assert!(right > left);
