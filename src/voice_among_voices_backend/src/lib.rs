@@ -1,7 +1,6 @@
 pub mod audio;
 mod physics;
 mod structs;
-#[cfg(test)]
 pub mod test_functions;
 mod utils;
 
@@ -10,25 +9,26 @@ use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
 use ic_cdk_timers::set_timer;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
-    DefaultMemoryImpl, StableBTreeMap, StableVec,
+    DefaultMemoryImpl, StableVec,
 };
 use once_cell::sync::Lazy;
 use physics::*;
 use serde_bytes::ByteBuf;
 use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
 use structs::*;
+use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
+    static VOICE_NODES_MAP: RefCell<VoiceNodeLocalMemory> = RefCell::new(
+        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0)))).expect("Failed to initialize voice nodes map")
+    );
+    static SAMPLES_MAP: RefCell<AudioSampleMemory> = RefCell::new(
+        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(1)))).expect("Failed to initialize samples map")
+    );
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
-    static VOICE_NODES_MAP: RefCell<VoiceNodeLocalMap> = RefCell::new(
-        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0)))).unwrap()
-    );
-    static SAMPLES_MAP: RefCell<StableBTreeMap<u128, AudioSample, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(1))))
-    );
     static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
 }
 
@@ -78,7 +78,25 @@ fn nodes_init() {
                     radius: f64::MAX,
                     sample_length_samples: u32::MAX,
                 })
-                .unwrap();
+                .expect("Failed to initialize voice nodes");
+        }
+    });
+}
+
+fn samples_init() {
+    SAMPLES_MAP.with_borrow_mut(|samples| {
+        let sample_length_ms = AUDIO_PARAMETERS.max_sample_length_ms;
+        let sample_rate = AUDIO_PARAMETERS.sample_rate;
+        let start_sample = generate_test_wav(sample_length_ms, sample_rate);
+        for i in 0..360 {
+            samples
+                .push(&AudioSample {
+                    id: i,
+                    sample: start_sample.clone(),
+                    sample_length_ms: sample_length_ms as f64,
+                    sample_length_samples: sample_length_ms * sample_rate / 1000,
+                })
+                .expect("Failed to initialize samples");
         }
     });
 }
@@ -122,17 +140,14 @@ fn update_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, Add
         ));
     };
 
-    let mut sample_id = 0;
-
     SAMPLES_MAP.with_borrow_mut(|samples_map| {
-        sample_id = samples_map.len();
         let new_sample = AudioSample {
-            id: sample_id,
+            id: node.id as u64,
             sample: node.sample,
             sample_length_samples,
             sample_length_ms,
         };
-        samples_map.insert(sample_id as u128, new_sample);
+        samples_map.set(node.id as u64, &new_sample);
     });
 
     let mut returnable_nodes: VoiceNodeEgressStore = vec![];
@@ -144,7 +159,7 @@ fn update_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, Add
                 id,
                 x: node.x,
                 y: node.y,
-                sample_id,
+                sample_id: node.id as u64,
                 radius: node_radius,
                 sample_length_samples,
             };
@@ -186,13 +201,22 @@ fn get_voice_nodes() -> VoiceNodeEgressStore {
 #[query]
 fn get_my_voice() -> Option<AudioSample> {
     //TODO: guard and return 'owned' sample
-    SAMPLES_MAP.with_borrow(|samples_map| {
-        if samples_map.len() >= 1 {
-            Some(samples_map.get(&(0 as u128)).unwrap())
-        } else {
-            None
-        }
-    })
+    let mut result: Option<AudioSample> = None;
+    let index = 0;
+
+    VOICE_NODES_MAP.with_borrow(|nodes| {
+        SAMPLES_MAP.with_borrow(|samples| {
+            if let Some(node) = nodes.get(index) {
+                if node.sample_id != u64::MAX {
+                    if let Some(sample) = samples.get(node.sample_id) {
+                        result = Some(sample);
+                    }
+                }
+            }
+        });
+    });
+
+    result
 }
 
 #[update]
@@ -322,6 +346,7 @@ mod tests {
     fn voice_nodes_get_added_correctly() {
         collider_init();
         nodes_init();
+        samples_init();
 
         let voice_node = VoiceNodeIngress {
             x: 0.,
@@ -342,8 +367,8 @@ mod tests {
         let _ = update_voice_node(another_voice_node);
 
         SAMPLES_MAP.with_borrow(|samples_map| {
-            let id = samples_map.get(&0).expect("No sample!").id;
-            let another_id = samples_map.get(&1).expect("No another_sample!").id;
+            let id = samples_map.get(0).expect("No sample!").id;
+            let another_id = samples_map.get(1).expect("No another_sample!").id;
 
             assert_eq!(id, 0);
             assert_eq!(another_id, 1);

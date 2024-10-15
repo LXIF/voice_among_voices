@@ -14,6 +14,7 @@ function dummyActor() {
     return new Proxy({}, { get() { throw new Error("Canister invoked while building"); } });
 }
 
+// @ts-ignore
 const buildingOrTesting = building || process.env.NODE_ENV === "test";
 
 const identityAgent: Writable<HttpAgent | undefined> = writable();
@@ -24,8 +25,10 @@ export const backend = buildingOrTesting
 
 export const loginWithInternetIdentity = async () => {
     let iiUrl;
+    // @ts-ignore
     if (process.env.DFX_NETWORK === 'local') {
         iiUrl = `http://${IIcanisterId}.localhost:4943/`;
+        // @ts-ignore
     } else if (process.env.DFX_NETWORK === 'ic') {
         iiUrl = `https://${IIcanisterId}.ic0.app`;
     } else {

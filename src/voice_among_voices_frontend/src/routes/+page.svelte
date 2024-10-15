@@ -44,7 +44,9 @@
         myVoice = await backend.get_my_voice();
 
         if (myVoice.length > 0) {
-            const audioURL = await handleBackendAudioData(myVoice[0].sample);
+            const audioURL = await handleBackendAudioData(
+                myVoice[angle].sample
+            );
             myCurrentSampleAudioElement.src = audioURL;
         }
     });
@@ -127,8 +129,7 @@
         on:voiceRecorded={handleVoiceRecorded}
         {audioParameters}
     />
-    <h1>Current first voice:</h1>
-    <p>TODO: replace with own voice</p>
+    <h1>Current own voice:</h1>
     <audio
         controls
         bind:this={myCurrentSampleAudioElement}

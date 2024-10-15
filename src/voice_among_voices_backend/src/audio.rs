@@ -2,7 +2,8 @@ use hound::{WavReader, WavWriter};
 use std::io::Cursor;
 
 use crate::{
-    AddVoiceNodeError, AudioParameters, AudioSampleStore, SimulationParameters, VoiceNodeLocalMap,
+    AddVoiceNodeError, AudioParameters, AudioSampleMemory, SimulationParameters,
+    VoiceNodeLocalMemory,
 };
 
 #[derive(Debug)]
@@ -30,8 +31,8 @@ pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<(u32, f64), AddVoiceNod
 /// Whichever sample it hits gets played
 pub fn generate_angle_file(
     angle: f64,
-    nodes: &VoiceNodeLocalMap,
-    samples_map: &AudioSampleStore,
+    nodes: &VoiceNodeLocalMemory,
+    samples_map: &AudioSampleMemory,
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
 ) -> Result<Vec<u8>, hound::Error> {
@@ -49,7 +50,7 @@ pub fn generate_angle_file(
 }
 
 fn generate_normalized_sample_positions(
-    nodes: &VoiceNodeLocalMap,
+    nodes: &VoiceNodeLocalMemory,
     sim_params: &SimulationParameters,
     angle: f64,
 ) -> Vec<SamplePosition> {
@@ -85,7 +86,7 @@ fn generate_normalized_sample_positions(
 fn generate_audio_vectors(
     sample_positions: &Vec<SamplePosition>,
     audio_params: &AudioParameters,
-    sample_map: &AudioSampleStore,
+    sample_map: &AudioSampleMemory,
 ) -> (Vec<i16>, Vec<i16>) {
     // Convert fade duration from milliseconds to samples
     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
@@ -106,12 +107,7 @@ fn generate_audio_vectors(
         let end_sample = (start_sample + sample_pos.sample_length_samples as usize - 1)
             .min(total_length_samples as usize - 1);
         // use reader to read sample
-        let input_samples = read_wav(
-            &sample_map
-                .get(&(sample_pos.sample_id as u128))
-                .unwrap()
-                .sample,
-        );
+        let input_samples = read_wav(&sample_map.get(sample_pos.sample_id as u64).unwrap().sample);
 
         // figure out the panning multipliers
         let pan = sample_pos.pan_position;
@@ -594,7 +590,7 @@ mod tests {
             };
             let sample = generate_static_test_sample(1000.0, 44100, 0);
             let sample_positions = generate_test_sample_positions(&sample);
-            samples_map.insert(0, sample);
+            samples_map.push(&sample).unwrap();
 
             let (left_channel, right_channel) =
                 generate_audio_vectors(&sample_positions, &audio_params, samples_map);
@@ -640,7 +636,9 @@ mod tests {
                     nodes.push(node).unwrap();
                 }
                 for i in 0..3 {
-                    samples_map.insert(i as u128, generate_static_test_sample(10., 441, i));
+                    samples_map
+                        .push(&generate_static_test_sample(10., 441, i))
+                        .unwrap();
                 }
 
                 let sample_positions =
@@ -719,7 +717,8 @@ mod tests {
                 max_sample_length_ms: 1000,
                 chunk_size: 1024 * 1024,
             };
-            map.insert(0 as u128, generate_static_test_sample(1000., 44100, 1));
+            map.push(&generate_static_test_sample(1000., 44100, 1))
+                .unwrap();
 
             let sample_positions = vec![SamplePosition {
                 // midpoint is in the middle
@@ -794,8 +793,9 @@ mod tests {
                 chunk_size: 1024 * 1024,
             };
             // map.insert(0 as u128, generate_static_test_sample(1000.0, 44100, 1));
-            map.insert(0 as u128, generate_extreme_test_sample(1000., 44100, 0));
-            let sample_positions = generate_test_sample_positions(&map.get(&(0 as u128)).unwrap());
+            map.push(&generate_extreme_test_sample(1000., 44100, 0))
+                .unwrap();
+            let sample_positions = generate_test_sample_positions(&map.get(0 as u64).unwrap());
 
             let (left_channel, right_channel) =
                 generate_audio_vectors(&sample_positions, &audio_params, &mut map);
@@ -821,7 +821,8 @@ mod tests {
             };
 
             for i in 0..3 {
-                map.insert(i as u128, generate_static_test_sample(1000.0, 44100, 1));
+                map.push(&generate_static_test_sample(1000.0, 44100, i))
+                    .unwrap();
             }
 
             // Test with left pan (-1.0), center (0.0), and right pan (1.0)
