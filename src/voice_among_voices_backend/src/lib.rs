@@ -5,7 +5,10 @@ pub mod test_functions;
 mod utils;
 
 use audio::*;
-use ic_cdk::{api::performance_counter, init, post_upgrade, query, update};
+use ic_cdk::{
+    api::{caller, performance_counter},
+    init, post_upgrade, query, update,
+};
 use ic_cdk_timers::set_timer;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
@@ -314,6 +317,11 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
             token: None,
         }
     }
+}
+
+#[query]
+fn get_my_principal() -> String {
+    format!("{}", caller())
 }
 
 fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {
