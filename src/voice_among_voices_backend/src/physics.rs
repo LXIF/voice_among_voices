@@ -1,4 +1,4 @@
-use crate::{SimulationParameters, VoiceNodeLocalMap};
+use crate::{SimulationParameters, VoiceNodeLocalMemory};
 use candid::CandidType;
 use nalgebra::{distance, Const, OPoint, Point2, Vector2};
 use rapier2d::{parry::shape::Ball, prelude::*};
@@ -26,7 +26,7 @@ struct PhysicsBody {
 /// mutates nodes in place
 pub fn simulate_until_stopped(
     //mutates the store!
-    nodes: &mut VoiceNodeLocalMap,
+    nodes: &mut VoiceNodeLocalMemory,
     parameters: &SimulationParameters,
     collider_coordinates: &Vec<ColliderCoordinate>,
 ) {

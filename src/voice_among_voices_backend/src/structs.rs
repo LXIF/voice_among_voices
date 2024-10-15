@@ -1,8 +1,7 @@
 use candid::{define_function, CandidType, Decode, Encode};
 use ic_http_certification::HeaderField;
 use ic_stable_structures::{
-    memory_manager::VirtualMemory, storable::Bound, DefaultMemoryImpl, StableBTreeMap, StableVec,
-    Storable,
+    memory_manager::VirtualMemory, storable::Bound, DefaultMemoryImpl, StableVec, Storable,
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -63,7 +62,7 @@ impl Storable for VoiceNodeLocal {
 }
 
 pub type VoiceNodeLocalStore = Vec<VoiceNodeLocal>;
-pub type VoiceNodeLocalMap = StableVec<VoiceNodeLocal, Memory>;
+pub type VoiceNodeLocalMemory = StableVec<VoiceNodeLocal, Memory>;
 pub type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 
 #[derive(Debug, CandidType, Clone, Deserialize, Serialize)]
@@ -87,7 +86,7 @@ impl Storable for AudioSample {
     };
 }
 
-pub type AudioSampleStore = StableBTreeMap<u128, AudioSample, Memory>;
+pub type AudioSampleMemory = StableVec<AudioSample, Memory>;
 
 pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import {canisterId} from '../../../../declarations/internet_identity';
     import {AuthClient} from '@dfinity/auth-client';
     import {loginWithInternetIdentity, backend} from '$lib/canisters';
     // import {HttpAgent} from '@dfinity/agent';
