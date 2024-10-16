@@ -38,6 +38,8 @@
 <div class="flex justify-center items-center h-20 w-full">
     <div
         draggable="true"
+        role="button"
+        tabindex="0"
         aria-roledescription="drag this onto the map to place your node"
         on:dragstart={handleDragStart}
         on:dragend={handleDragEnd}

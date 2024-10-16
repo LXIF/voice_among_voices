@@ -93,7 +93,9 @@
     }
 
     onMount(async () => {
+        // @ts-ignore
         simulationParameters = await backend.get_simulation_parameters();
+        // @ts-ignore
         colliderCoordinates = await backend.get_collider_coordinates();
 
         if (!simulationParameters) return;

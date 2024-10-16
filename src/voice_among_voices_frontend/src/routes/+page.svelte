@@ -17,6 +17,7 @@
     } from '$lib/utils/convUtils';
     import AngleFileBox from '$lib/components/AngleFileBox.svelte';
     import LoginButton from '$lib/components/LoginButton.svelte';
+    import ZeroFileBox from '$lib/components/ZeroFileBox.svelte';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
@@ -40,9 +41,13 @@
     let myPrincipal: string | undefined = undefined;
 
     onMount(async () => {
+        // @ts-ignore
         voiceNodes = await backend.get_voice_nodes();
+        // @ts-ignore
         simulationParameters = await backend.get_simulation_parameters();
+        // @ts-ignore
         audioParameters = await backend.get_audio_parameters();
+        // @ts-ignore
         myVoice = await backend.get_my_voice();
 
         if (myVoice.length > 0) {
@@ -56,6 +61,7 @@
     const handleDropNewNode = async (event: CustomEvent) => {
         const sample = await blobToUint8Array(currentVoiceBlob);
         const {x, y, id} = event.detail;
+        // @ts-ignore
         let backend_simulation_result = await backend.update_voice_node({
             id,
             x,
@@ -69,6 +75,7 @@
             // TODO: potentially provide user feedback
             console.log(backend_simulation_result.Err.NotValidAudioFileError);
         }
+        // @ts-ignore
         voiceNodes = await backend.get_voice_nodes();
     };
 
@@ -106,6 +113,7 @@
     };
 
     const handleGetPrincipal = async () => {
+        // @ts-ignore
         myPrincipal = await backend.get_my_principal();
     };
 </script>
@@ -145,6 +153,12 @@
         bind:this={myCurrentSampleAudioElement}
     ></audio>
     <AngleFileBox
+        {externalPlaybackPosition}
+        on:playbackPosition={(e) => (playheadPosition = e.detail)}
+        on:fileAngle={(e) => (angle = e.detail)}
+        on:fileLoaded={(e) => (fileLoaded = e.detail)}
+    />
+    <ZeroFileBox
         {externalPlaybackPosition}
         on:playbackPosition={(e) => (playheadPosition = e.detail)}
         on:fileAngle={(e) => (angle = e.detail)}

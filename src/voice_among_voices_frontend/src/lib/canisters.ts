@@ -7,8 +7,7 @@ import {AuthClient} from '@dfinity/auth-client';
 import { building } from '$app/environment';
 
 import { writable, type Writable, get } from 'svelte/store';
-import type { Identity } from '@dfinity/agent';
-import { Actor } from '@dfinity/agent';
+import type { Actor } from '@dfinity/agent';
 
 function dummyActor() {
     return new Proxy({}, { get() { throw new Error("Canister invoked while building"); } });
@@ -19,7 +18,7 @@ const buildingOrTesting = building || process.env.NODE_ENV === "test";
 
 const identityAgent: Writable<HttpAgent | undefined> = writable();
 
-let backend = dummyActor();
+let backend: Actor | {} = dummyActor();
 
 identityAgent.subscribe(agent => {
     if(buildingOrTesting) {

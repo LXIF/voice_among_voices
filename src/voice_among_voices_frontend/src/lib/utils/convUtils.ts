@@ -96,3 +96,7 @@ export function handleBackendAudioData(audioData: Uint8Array): Promise<string> {
 
     });
 }
+
+export function angleToRadians(angle: number): number {
+    return (angle * Math.PI) / 180;
+  }

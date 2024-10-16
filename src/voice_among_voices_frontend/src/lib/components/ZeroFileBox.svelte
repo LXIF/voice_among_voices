@@ -8,7 +8,6 @@
         StreamingCallbackHttpResponse,
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
-    let angle: number = 0;
     let audioURL: string = '';
     let error: string = '';
     let isPlaying = false; // To track play/pause state
@@ -21,18 +20,13 @@
 
     // Fetch audio file based on angle
     async function fetchAudioFile() {
-        if (angle < 0 || angle > 359) {
-            error = 'Please input an angle between 0 and 359.';
-            return;
-        }
-
         try {
             error = '';
             audioURL = '';
 
             const response: HttpStreamingResponse =
                 // @ts-ignore
-                await backend.get_angle_file(Math.round(angle));
+                await backend.get_zero_file();
 
             if (!response.streaming_strategy) {
                 throw new Error('No streaming strategy provided.');
@@ -64,8 +58,8 @@
             audioURL = await handleBackendAudioData(audioData);
             await tick();
             downloadLink.href = audioURL;
-            downloadLink.download = `audio_angle_${angle}.wav`;
-            dispatch('fileAngle', angle);
+            downloadLink.download = 'zero_angle.wav';
+            dispatch('fileAngle', 0);
             dispatch('fileLoaded', true);
         } catch (e) {
             error = 'Error fetching the audio file.';
@@ -112,19 +106,7 @@
 </script>
 
 <div class="container">
-    <div>
-        <label for="angle-input">Enter an angle (0 - 359):</label>
-        <input
-            type="number"
-            id="angle-input"
-            bind:value={angle}
-            min="0"
-            max="359"
-            class="angle-input"
-        />
-    </div>
-
-    <button on:click={fetchAudioFile}>Request Audio File</button>
+    <button on:click={fetchAudioFile}>Request Zero Audio File</button>
 
     {#if error}
         <p class="error">{error}</p>
@@ -167,11 +149,6 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
-    }
-
-    .angle-input {
-        width: 100px;
-        padding: 0.5rem;
     }
 
     .error {
