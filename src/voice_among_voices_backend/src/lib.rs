@@ -17,7 +17,7 @@ use ic_stable_structures::{
 use once_cell::sync::Lazy;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, time::Duration, u64};
+use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
 use structs::*;
 use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
@@ -254,6 +254,10 @@ fn get_my_voice() -> Option<AudioSample> {
 fn get_angle_file(angle: f64) -> HttpStreamingResponse {
     // TODO: guard to user, restrict angle
     let beginning_cost = performance_counter(0);
+
+    if angle == 0. {
+        ic_cdk::trap("zero angle file is available via get_zero_file");
+    }
 
     let mut result: Vec<u8> = vec![];
 

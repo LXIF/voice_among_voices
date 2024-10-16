@@ -28,12 +28,19 @@
       ],
       "type": "assets",
       "workspace": "voice_among_voices_frontend"
+    },
+    "voice_among_voices_nft": {
+      "dependencies": [
+        "voice_among_voices_backend"
+      ],
+      "main" : "src/voice_among_voices_nft/main.mo",
+      "type" : "motoko"
     }
   },
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "mops sources"
     }
   },
   "output_env_file": ".env",
