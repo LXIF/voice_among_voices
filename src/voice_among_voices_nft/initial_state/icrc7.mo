@@ -3,12 +3,12 @@ import ICRC7 "mo:icrc7-mo";
 module {
     public let defaultConfig = func(caller : Principal) : ICRC7.InitArgs {
         ?{
-            symbol = ?"NBL";
-            name = ?"NASA Nebulas";
-            description = ?"A Collection of Nebulas Captured by NASA";
-            logo = ?"https://www.nasa.gov/wp-content/themes/nasa/assets/images/nasa-logo.svg";
-            supply_cap = null;
-            allow_transfers = null;
+            symbol = ?"VAV";
+            name = ?"Voice Among Voices";
+            description = ?"A voice on the map and an angle to listen";
+            logo = ?""; //TODO
+            supply_cap = 360;
+            allow_transfers = true;
             max_query_batch_size = ?100;
             max_update_batch_size = ?100;
             default_take_value = ?1000;

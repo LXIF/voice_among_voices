@@ -21,7 +21,8 @@
     },
     "voice_among_voices_frontend": {
       "dependencies": [
-        "voice_among_voices_backend"
+        "voice_among_voices_backend",
+        "voice_among_voices_nft"
       ],
       "source": [
         "src/voice_among_voices_frontend/dist"
@@ -34,7 +35,8 @@
         "voice_among_voices_backend"
       ],
       "main" : "src/voice_among_voices_nft/main.mo",
-      "type" : "motoko"
+      "type" : "motoko",
+      "init_arg": ""
     }
   },
   "defaults": {
