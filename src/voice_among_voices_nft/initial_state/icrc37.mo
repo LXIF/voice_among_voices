@@ -8,7 +8,7 @@ module {
             collection_approval_requires_token = ?true;
             max_approvals = null;
             settle_to_approvals = null;
-            deployer = caller;
+            deployer = caller; // TODO: here we would input our main canister
         };
     };
 };

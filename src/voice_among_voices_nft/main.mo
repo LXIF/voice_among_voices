@@ -6,6 +6,7 @@ import Time "mo:base/Time";
 import Nat "mo:base/Nat";
 import D "mo:base/Debug";
 import CertifiedData "mo:base/CertifiedData";
+import Iter "mo:base/Iter";
 
 import CertTree "mo:cert/CertTree";
 
@@ -453,33 +454,65 @@ shared (_init_msg) actor class Example(
     // one might deploy an NFT.
     /////////
 
-    public shared (msg) func icrcX_mint(tokens : ICRC7.SetNFTRequest) : async [ICRC7.SetNFTResult] {
+    // public shared (msg) func icrcX_mint(tokens : ICRC7.SetNFTRequest) : async [ICRC7.SetNFTResult] {
 
-        //for now we require an owner to mint.
-        switch (icrc7().set_nfts<system>(msg.caller, tokens, true)) {
-            case (#ok(val)) val;
-            case (#err(err)) D.trap(err);
-        };
-    };
+    //     //for now we require an owner to mint.
+    //     switch (icrc7().set_nfts<system>(msg.caller, tokens, true)) {
+    //         case (#ok(val)) val;
+    //         case (#err(err)) D.trap(err);
+    //     };
+    // };
 
-    public shared (msg) func icrcX_burn(tokens : ICRC7.BurnNFTRequest) : async ICRC7.BurnNFTBatchResponse {
-        switch (icrc7().burn_nfts<system>(msg.caller, tokens)) {
-            case (#ok(val)) val;
-            case (#err(err)) D.trap(err);
-        };
-    };
+    // public shared (msg) func icrcX_burn(tokens : ICRC7.BurnNFTRequest) : async ICRC7.BurnNFTBatchResponse {
+    //     switch (icrc7().burn_nfts<system>(msg.caller, tokens)) {
+    //         case (#ok(val)) val;
+    //         case (#err(err)) D.trap(err);
+    //     };
+    // };
 
     private stable var _init = false;
     public shared (msg) func init() : async () {
         //can only be called once
 
-        //Warning:  This is a test scenario and should not be used in production.  This creates an approval for the owner of the canister and this can be garbage collected if the max_approvals is hit.  We advise minting with the target owner in the metadata or creating an assign function (see assign)
         if (_init == false) {
-            //approve the deployer as a spender on all tokens...
-            let current_val = icrc37().get_state().ledger_info.collection_approval_requires_token;
-            let update = icrc37().update_ledger_info([#CollectionApprovalRequiresToken(false)]);
-            let result = icrc37().approve_collection<system>(Principal.fromActor(this), [{ approval_info = { from_subaccount = null; spender = { owner = icrc7().get_state().owner; subaccount = null }; memo = null; expires_at = null; created_at_time = null } }]);
-            let update2 = icrc37().update_ledger_info([#CollectionApprovalRequiresToken(current_val)]);
+
+            // TODO: here we mint 360 tokens and assign them to our main canister.
+
+            var new_tokens : [ICRC7.SetNFTRequest] = [];
+
+            for (i in Iter.range(0, 359)) {
+                let token : ICRC7.SetNFTRequest = {
+                    token_id = i;
+                    owner = ?{
+                        owner = icrc7().get_state().owner;
+                        subaccount = null;
+                    };
+                    metadata = {
+                        vec[
+                            {
+                                key = "name";
+                                value = #Text("Voice Among Voices"); //TODO
+                            },
+                            {
+                                key = "description";
+                                value = #Text("Cool thing! Very"); //TODO
+                            },
+                            {
+                                key = "assets";
+                                value = #Text("https://127.0.0.1"); //TODO
+                            },
+                        ];
+                    };
+                    override = true;
+                };
+
+                new_tokens.push(token);
+            };
+
+            let result = switch (icrc7().set_nfts<system>(msg.caller, new_tokens, true)) {
+                case (#ok(val)) val;
+                case (#err(err)) D.trap(err);
+            };
 
             D.print(
                 "initialized" # debug_show (
@@ -496,8 +529,8 @@ shared (_init_msg) actor class Example(
                     },
                 )
             );
+            _init := true;
         };
-        _init := true;
     };
 
     //this lets an admin assign a token to an account
@@ -511,6 +544,10 @@ shared (_init_msg) actor class Example(
             case (_) D.trap("unknown");
 
         };
+    };
+
+    public shared (msg) func get_owner() : async Principal {
+        return icrc7().get_state().owner;
     };
 
 };

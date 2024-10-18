@@ -7,8 +7,8 @@ module {
             name = ?"Voice Among Voices";
             description = ?"A voice on the map and an angle to listen";
             logo = ?""; //TODO
-            supply_cap = 360;
-            allow_transfers = true;
+            supply_cap = ?360;
+            allow_transfers = ?true;
             max_query_batch_size = ?100;
             max_update_batch_size = ?100;
             default_take_value = ?1000;
@@ -17,7 +17,7 @@ module {
             permitted_drift = null;
             tx_window = null;
             burn_account = null; //burned nfts are deleted
-            deployer = caller;
+            deployer = caller; // TODO: here we would input our main canister
             supported_standards = null;
         };
     };

@@ -1,6 +1,7 @@
 // @ts-ignore
 import { createActor, canisterId } from 'declarations/voice_among_voices_backend';
 import { canisterId as IIcanisterId } from '../../../declarations/internet_identity';
+import { createActor as createNFTActor, canisterId as NFTcanisterId } from 'declarations/voice_among_voices_nft';
 import { HttpAgent } from '@dfinity/agent';
 import {AuthClient} from '@dfinity/auth-client';
 // @ts-ignore
