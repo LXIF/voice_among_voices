@@ -15,5 +15,8 @@
   "type": "module",
   "workspaces": [
     "src/voice_among_voices_frontend"
-  ]
+  ],
+  "devDependencies": {
+    "@types/node": "^22.10.1"
+  }
 }

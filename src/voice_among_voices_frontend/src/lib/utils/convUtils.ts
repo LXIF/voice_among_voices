@@ -40,8 +40,8 @@ export function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = function () {
-      const arrayBuffer = reader.result;
-      const uint8Array = new Uint8Array(arrayBuffer as ArrayBufferLike);
+      const arrayBuffer = reader.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
       resolve(uint8Array);
     };
     reader.onerror = reject;
@@ -99,7 +99,9 @@ function writeString(view: DataView, offset: number, string: string) {
 export function handleBackendAudioData(audioData: Uint8Array): Promise<string> {
   return new Promise((resolve, reject) => {
     const arrayBuffer = audioData.buffer;
-    const audioBlob = new Blob([arrayBuffer], { type: "audio/wav" });
+    const audioBlob = new Blob([arrayBuffer as ArrayBuffer], {
+      type: "audio/wav",
+    });
 
     const audioURL = window.URL.createObjectURL(audioBlob);
     resolve(audioURL);
