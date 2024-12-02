@@ -41,13 +41,9 @@
     let myPrincipal: string | undefined = undefined;
 
     onMount(async () => {
-        // @ts-ignore
         voiceNodes = await backend.get_voice_nodes();
-        // @ts-ignore
         simulationParameters = await backend.get_simulation_parameters();
-        // @ts-ignore
         audioParameters = await backend.get_audio_parameters();
-        // @ts-ignore
         myVoice = await backend.get_my_voice();
 
         if (myVoice.length > 0) {
