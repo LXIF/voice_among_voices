@@ -8,7 +8,6 @@
     let nodes: VoiceNodeEgress[];
 
     onMount(async () => {
-        // @ts-ignore
         nodes = await backend.get_voice_nodes();
     });
 </script>

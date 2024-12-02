@@ -1,5 +1,4 @@
 <script lang="ts">
-    // @ts-ignore: motzes but works
     import {backend} from '$lib/canisters';
     import {onMount} from 'svelte';
     import DroppableNode from '$lib/components/DroppableNode.svelte';
@@ -47,8 +46,9 @@
         myVoice = await backend.get_my_voice();
 
         if (myVoice.length > 0) {
+            const sample = myVoice[angle].sample;
             const audioURL = await handleBackendAudioData(
-                myVoice[angle].sample
+                sample instanceof Uint8Array ? sample : new Uint8Array(sample)
             );
             myCurrentSampleAudioElement.src = audioURL;
         }
@@ -57,7 +57,7 @@
     const handleDropNewNode = async (event: CustomEvent) => {
         const sample = await blobToUint8Array(currentVoiceBlob);
         const {x, y, id} = event.detail;
-        // @ts-ignore
+
         let backend_simulation_result = await backend.update_voice_node({
             id,
             x,
@@ -65,13 +65,15 @@
             sample,
         });
 
-        if (backend_simulation_result.Ok) {
+        if ('Ok' in backend_simulation_result) {
             backendSimulationResult = backend_simulation_result.Ok;
         } else {
-            // TODO: potentially provide user feedback
-            console.log(backend_simulation_result.Err.NotValidAudioFileError);
+            if ('NotValidAudioFileError' in backend_simulation_result.Err) {
+                console.log(backend_simulation_result.Err.NotValidAudioFileError);
+            } else if ('NotWithinCircleError' in backend_simulation_result.Err) {
+                console.log('Not within circle error');
+            }
         }
-        // @ts-ignore
         voiceNodes = await backend.get_voice_nodes();
     };
 
@@ -109,7 +111,6 @@
     };
 
     const handleGetPrincipal = async () => {
-        // @ts-ignore
         myPrincipal = await backend.get_my_principal();
     };
 </script>

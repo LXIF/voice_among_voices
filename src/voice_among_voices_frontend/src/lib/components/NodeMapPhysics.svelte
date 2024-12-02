@@ -4,9 +4,7 @@
     import {createEventDispatcher} from 'svelte';
     import RAPIER from '@dimforge/rapier2d-compat';
 
-    // @ts-ignore: Motzes but ok
     import {browser} from '$app/environment';
-    // @ts-ignore: Motzes but ok
     import {backend} from '$lib/canisters';
     import type {
         ColliderCoordinate,
@@ -93,9 +91,7 @@
     }
 
     onMount(async () => {
-        // @ts-ignore
         simulationParameters = await backend.get_simulation_parameters();
-        // @ts-ignore
         colliderCoordinates = await backend.get_collider_coordinates();
 
         if (!simulationParameters) return;

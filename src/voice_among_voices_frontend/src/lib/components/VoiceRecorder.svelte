@@ -2,7 +2,6 @@
     import {onDestroy, onMount} from 'svelte';
     import {createEventDispatcher} from 'svelte';
 
-    // @ts-ignore: Keeps motzing but is actually ok
     import {browser} from '$app/environment';
     import {encodeWav} from '$lib/utils/convUtils';
     import type {AudioParameters} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';

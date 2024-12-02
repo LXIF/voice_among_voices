@@ -1,6 +1,5 @@
 <script lang="ts">
     import {tick, createEventDispatcher} from 'svelte';
-    // @ts-ignore: Motzes but is ok
     import {backend} from '$lib/canisters';
     import {handleBackendAudioData} from '$lib/utils/convUtils';
     import type {
@@ -25,7 +24,6 @@
             audioURL = '';
 
             const response: HttpStreamingResponse =
-                // @ts-ignore
                 await backend.get_zero_file();
 
             if (!response.streaming_strategy) {
@@ -37,7 +35,7 @@
 
             while (streamingToken) {
                 const {body, token} =
-                    // @ts-ignore
+
                     await backend.http_request_streaming_callback(
                         streamingToken
                     );

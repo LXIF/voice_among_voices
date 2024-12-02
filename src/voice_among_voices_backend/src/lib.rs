@@ -17,7 +17,7 @@ use ic_stable_structures::{
 use once_cell::sync::Lazy;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, time::Duration, u64};
+use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
 use structs::*;
 use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
