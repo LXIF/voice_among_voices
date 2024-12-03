@@ -38,7 +38,7 @@
     "build": "tsc && vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
     "prebuild": "dfx generate",
-    "setup": "pnpm i && dfx canister create voice_among_voices_backend && dfx generate voice_among_voices_backend && dfx deploy",
+    "setup": "npm i && dfx canister create voice_among_voices_backend && dfx generate voice_among_voices_backend && dfx deploy",
     "start": "vite --port 3000",
     "test": "vitest run",
     "dev": "vite dev"
