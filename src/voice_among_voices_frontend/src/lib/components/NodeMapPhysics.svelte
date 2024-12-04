@@ -66,12 +66,12 @@
         voiceNode: VoiceNodeEgress;
     };
 
-    let canvasRatio: number | undefined = undefined;
+    let canvasRatio: number = 1;
 
     onMount(() => {
         if (canvas) {
             context = canvas.getContext('2d');
-            canvasRatio = window.devicePixelRatio;
+            canvasRatio = window.devicePixelRatio || 1;
         }
     });
 
@@ -79,8 +79,8 @@
         if (!scaled && context && logical_radius && canvasRatio) {
             scaled = true;
 
-            const translateX = canvasWidth / 2;
-            const translateY = canvasHeight / 2;
+            const translateX = canvasRatio * canvasWidth / 2;
+            const translateY = canvasRatio * canvasHeight / 2;
             context?.translate(translateX, translateY);
 
             context?.scale(
@@ -466,17 +466,19 @@
     function handleClick(e: MouseEvent) {
         const rect = canvas.getBoundingClientRect();
         const canvasX =
-            e.clientX - rect.left - (canvasWidth - usableCanvasWidth) / 2;
+            (e.clientX - rect.left) - (canvasWidth - usableCanvasWidth) / 2 * canvasRatio;
         const canvasY =
-            e.clientY - rect.top - (canvasHeight - usableCanvasHeight) / 2;
+            (e.clientY - rect.top) - (canvasHeight - usableCanvasHeight) / 2 * canvasRatio;
 
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            usableCanvasWidth,
-            usableCanvasHeight,
+            usableCanvasWidth * canvasRatio,
+            usableCanvasHeight * canvasRatio,
             logical_radius
         );
+
+        console.log(logicalX, logicalY);
 
         if (showPlayHead) {
             // Calculate the position along the playHead line
@@ -532,15 +534,15 @@
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
         const canvasX =
-            e.clientX - rect.left - (canvasWidth - usableCanvasWidth) / 2;
+            e.clientX - rect.left - (canvasWidth - usableCanvasWidth) / 2 * canvasRatio;
         const canvasY =
-            e.clientY - rect.top - (canvasHeight - usableCanvasHeight) / 2;
+            e.clientY - rect.top - (canvasHeight - usableCanvasHeight) / 2 * canvasRatio;
 
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            usableCanvasWidth,
-            usableCanvasHeight,
+            usableCanvasWidth * canvasRatio,
+            usableCanvasHeight * canvasRatio,
             logical_radius
         );
 
