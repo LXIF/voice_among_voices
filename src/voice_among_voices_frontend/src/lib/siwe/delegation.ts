@@ -1,9 +1,9 @@
 import type { DerEncodedPublicKey, Signature } from "@dfinity/agent";
-import type { PublicKey } from "./siweStore";
+import type { PublicKey } from "./siweStore.svelte";
 import { Principal } from "@dfinity/principal";
 import { Delegation } from "@dfinity/identity";
 import { DelegationChain, type SignedDelegation } from "@dfinity/identity";
-import type { SignedDelegation as ServiceSignedDelegation } from "./siweStore";
+import type { SignedDelegation as ServiceSignedDelegation } from "./siweStore.svelte";
 
 /**
  * Converts a Uint8Array or number array to a Signature object.
