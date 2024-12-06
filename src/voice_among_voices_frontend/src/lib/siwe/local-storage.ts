@@ -4,7 +4,7 @@ import {
   Ed25519KeyIdentity,
 } from "@dfinity/identity";
 
-import type { SiweIdentityStorage } from "./siweStore.svelte";
+import type { SiweIdentityStorage } from "./storage.type";
 
 const STORAGE_KEY = "siweIdentity";
 

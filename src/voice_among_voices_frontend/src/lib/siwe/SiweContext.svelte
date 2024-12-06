@@ -1,15 +1,4 @@
-//TODO: TRANSLATE TO SVELTEKIT
-
-/* eslint-disable react-refresh/only-export-components */
-// import {
-//   createContext,
-//   useContext,
-//   type ReactNode,
-//   useEffect,
-//   useState,
-//   useRef,
-//   useCallback,
-// } from "react";
+<script lang="ts">
 import { type ActorConfig, type HttpAgentOptions } from "@dfinity/agent";
 import { DelegationIdentity, Ed25519KeyIdentity } from "@dfinity/identity";
 // import type { SiweIdentityContextType } from "./context.type";
@@ -34,77 +23,12 @@ import type { SignMessageErrorType } from "@wagmi/core";
 import { createDelegationChain } from "./delegation";
 import { normalizeError } from "./error";
 
-import { connected, signerAddress } from "svelte-wagmi";
+import { connected, signerAddress, wagmiConfig } from "svelte-wagmi";
 import { writable, get } from "svelte/store";
+import { setContext } from "svelte";
 
-/**
- * Re-export types
- */
-// export * from "./context.type";
-export * from "./service.interface";
-export * from "./storage.type";
+let { children, idlFactory, canisterId, httpAgentOptions, actorOptions }: { children: any, idlFactory: IDL.InterfaceFactory, canisterId: string, httpAgentOptions: HttpAgentOptions, actorOptions: ActorConfig} = $props();
 
-// TODO DELET
-/**
- * React context for managing SIWE (Sign-In with Ethereum) identity.
- */
-// export const SiweIdentityContext = createContext<
-//   SiweIdentityContextType | undefined
-// >(undefined);
-
-// TODO DELET
-/**
- * Hook to access the SiweIdentityContext.
- */
-// export const useSiweIdentity = (): SiweIdentityContextType => {
-//   const context = useContext(SiweIdentityContext);
-//   if (!context) {
-//     throw new Error(
-//       "useSiweIdentity must be used within an SiweIdentityProvider"
-//     );
-//   }
-//   return context;
-// };
-
-//TODO get the props somehow (maybe this is a derived store?)
-/**
- * Provider component for the SIWE identity context. Manages identity state and provides authentication-related functionalities.
- *
- * @prop {IDL.InterfaceFactory} idlFactory - Required. The Interface Description Language (IDL) factory for the canister. This factory is used to create an actor interface for the canister.
- * @prop {string} canisterId - Required. The unique identifier of the canister on the Internet Computer network. This ID is used to establish a connection to the canister.
- * @prop {HttpAgentOptions} httpAgentOptions - Optional. Configuration options for the HTTP agent used to communicate with the Internet Computer network.
- * @prop {ActorConfig} actorOptions - Optional. Configuration options for the actor. These options are passed to the actor upon its creation.
- * @prop {ReactNode} children - Required. The child components that the SiweIdentityProvider will wrap. This allows any child component to access the authentication context provided by the SiweIdentityProvider.
- *
- * @example
- * ```tsx
- * import { SiweIdentityProvider } from 'ic-use-siwe-identity';
- * import {canisterId, idlFactory} from "path-to/siwe-enabled-canister/index";
- * import { _SERVICE } from "path-to/siwe-enabled-canister.did";
- *
- * function App() {
- *   return (
- *     <SiweIdentityProvider<_SERVICE>
- *       idlFactory={idlFactory}
- *       canisterId={canisterId}
- *       // ...other props
- *     >
- *       {... your app components}
- *     </App>
- *   );
- * }
- *
- * import { SiweIdentityProvider } from "ic-use-siwe-identity";
- *```
- */
-// // eslint-disable-next-line @typescript-eslint/no-unused-vars
-// export function SiweIdentityProvider<T extends SIWE_IDENTITY_SERVICE>({
-//   httpAgentOptions,
-//   actorOptions,
-//   idlFactory,
-//   canisterId,
-//   children,
-// }: {
 //   /** Configuration options for the HTTP agent used to communicate with the Internet Computer network. */
 //   httpAgentOptions?: HttpAgentOptions;
 
@@ -122,6 +46,7 @@ export * from "./storage.type";
 // }) {
 //   const { address: connectedEthAddress } = useAccount();
 
+
 import { signMessage } from "@wagmi/core";
 
 let prepareLoginOkResponse = $state<PrepareLoginOkResponse | undefined>(
@@ -135,14 +60,14 @@ let prepareLoginOkResponse = $state<PrepareLoginOkResponse | undefined>(
 //   loginStatus: "idle",
 // });
 
-let state = $state<State>({
+let contextState = $state<State>({
   isInitializing: true,
   prepareLoginStatus: "idle",
   loginStatus: "idle",
 });
 
 const updateState = (newState: Partial<State>) => {
-  state = { ...state, ...newState };
+  contextState = { ...contextState, ...newState };
 };
 
 // Keep track of the promise handlers for the login method during the async login process.
@@ -161,12 +86,14 @@ let loginPromiseHandlers = $state<{
   reject: (error: Error) => void;
 } | null>(null);
 
+
+
 /**
  * Load a SIWE message from the provider, to be used for login. Calling prepareLogin
  * is optional, as it will be called automatically on login if not called manually.
  */
-async function prepareLogin(): Promise<PrepareLoginOkResponse | undefined> {
-  if (!state.anonymousActor) {
+ async function prepareLogin(): Promise<PrepareLoginOkResponse | undefined> {
+  if (!contextState.anonymousActor) {
     throw new Error(
       "Hook not initialized properly. Make sure to supply all required props to the SiweIdentityProvider."
     );
@@ -184,7 +111,7 @@ async function prepareLogin(): Promise<PrepareLoginOkResponse | undefined> {
 
   try {
     const response = await callPrepareLogin(
-      state.anonymousActor,
+      contextState.anonymousActor,
       get(signerAddress) ? (get(signerAddress) as `0x${string}`) : undefined
     );
     updateState({
@@ -218,11 +145,12 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
   loginPromiseHandlers?.reject(new Error(errorMessage));
 }
 
+
 /**
  * This function is called when the signMessage hook has settled, that is, when the
  * user has signed the message or canceled the signing process.
  */
-async function onLoginSignatureSettled(
+ async function onLoginSignatureSettled(
   loginSignature: `0x${string}` | undefined,
   error: SignMessageErrorType | null
 ) {
@@ -242,7 +170,7 @@ async function onLoginSignatureSettled(
   const sessionIdentity = Ed25519KeyIdentity.generate();
   const sessionPublicKey = sessionIdentity.getPublicKey().toDer();
 
-  if (!state.anonymousActor || !get(signerAddress)) {
+  if (!contextState.anonymousActor || !get(signerAddress)) {
     rejectLoginWithError(new Error("Invalid actor or address."));
     return;
   }
@@ -258,7 +186,7 @@ async function onLoginSignatureSettled(
   let loginOkResponse: LoginOkResponse;
   try {
     loginOkResponse = await callLogin(
-      state.anonymousActor,
+      contextState.anonymousActor,
       loginSignature,
       get(signerAddress) ? (get(signerAddress) as `0x${string}`) : undefined,
       sessionPublicKey,
@@ -273,7 +201,7 @@ async function onLoginSignatureSettled(
   let signedDelegation: ServiceSignedDelegation;
   try {
     signedDelegation = await callGetDelegation(
-      state.anonymousActor,
+      contextState.anonymousActor,
       get(signerAddress) ? (get(signerAddress) as `0x${string}`) : undefined,
       sessionPublicKey,
       loginOkResponse.expiration
@@ -318,6 +246,7 @@ async function onLoginSignatureSettled(
   //reset();
 }
 
+
 /**
  * Initiates the login process. If a SIWE message is not already available, it will be
  * generated by calling prepareLogin.
@@ -326,13 +255,13 @@ async function onLoginSignatureSettled(
  * the loginError property.
  */
 
-async function login() {
+ async function login() {
   const promise = new Promise<DelegationIdentity>((resolve, reject) => {
     loginPromiseHandlers = { resolve, reject };
   });
   // Set the promise handlers immediately to ensure they are available for error handling.
 
-  if (!state.anonymousActor) {
+  if (!contextState.anonymousActor) {
     rejectLoginWithError(
       new Error(
         "Hook not initialized properly. Make sure to supply all required props to the SiweIdentityProvider."
@@ -348,7 +277,7 @@ async function login() {
     );
     return promise;
   }
-  if (state.prepareLoginStatus === "preparing") {
+  if (contextState.prepareLoginStatus === "preparing") {
     rejectLoginWithError(
       new Error("Don't call login while prepareLogin is running.")
     );
@@ -362,7 +291,7 @@ async function login() {
 
   try {
     // The SIWE message can be prepared in advance, or it can be generated as part of the login process.
-    let prepareLoginOkResponse = state.prepareLoginOkResponse;
+    let prepareLoginOkResponse = contextState.prepareLoginOkResponse;
     if (!prepareLoginOkResponse) {
       prepareLoginOkResponse = await prepareLogin();
       if (!prepareLoginOkResponse) {
@@ -370,12 +299,13 @@ async function login() {
       }
     }
 
-    signMessage(
-      { message: prepareLoginOkResponse.siwe_message },
-      {
-        onSettled: onLoginSignatureSettled,
-      }
+    const signature = await signMessage( // TODO: maybe handle user error better
+        $wagmiConfig,
+        {
+            message: prepareLoginOkResponse.siwe_message,
+        }
     );
+    onLoginSignatureSettled(signature, null);
   } catch (e) {
     rejectLoginWithError(e);
   }
@@ -401,6 +331,7 @@ function clear() {
   prepareLoginOkResponse = undefined;
   clearIdentity();
 }
+
 
 /**
  * Load the identity from local storage on mount.
@@ -456,8 +387,8 @@ $effect(() => {
 // }, [connectedEthAddress]);
 
 $effect(() => {
-  connectedEthAddress;
-  if (state.isInitializing) return;
+  $signerAddress;
+  if (contextState.isInitializing) return;
   clear();
 });
 
@@ -490,26 +421,27 @@ $effect(() => {
   });
 });
 
-//   return (
-//     <SiweIdentityContext.Provider
-//       value={{
-//         ...state,
-//         prepareLogin,
-//         isPreparingLogin: state.prepareLoginStatus === "preparing",
-//         isPrepareLoginError: state.prepareLoginStatus === "error",
-//         isPrepareLoginSuccess: state.prepareLoginStatus === "success",
-//         isPrepareLoginIdle: state.prepareLoginStatus === "idle",
-//         login,
-//         isLoggingIn: state.loginStatus === "logging-in",
-//         isLoginError: state.loginStatus === "error",
-//         isLoginSuccess: state.loginStatus === "success",
-//         isLoginIdle: state.loginStatus === "idle",
-//         signMessageStatus,
-//         signMessageError,
-//         clear,
-//       }}
-//     >
-//       {children}
-//     </SiweIdentityContext.Provider>
-//   );
-// }
+$effect(() => {
+    setContext('siwe', 
+          {
+            ...contextState,
+            prepareLogin,
+            isPreparingLogin: contextState.prepareLoginStatus === "preparing",
+            isPrepareLoginError: contextState.prepareLoginStatus === "error",
+            isPrepareLoginSuccess: contextState.prepareLoginStatus === "success",
+            isPrepareLoginIdle: contextState.prepareLoginStatus === "idle",
+            login,
+            isLoggingIn: contextState.loginStatus === "logging-in",
+            isLoginError: contextState.loginStatus === "error",
+            isLoginSuccess: contextState.loginStatus === "success",
+            isLoginIdle: contextState.loginStatus === "idle",
+            signMessageStatus: "todo",
+            signMessageError: "todo",
+            clear,
+          }
+    );
+});
+</script>
+
+
+{@render children?.()}
