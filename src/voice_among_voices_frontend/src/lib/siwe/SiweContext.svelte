@@ -23,9 +23,9 @@ import type { SignMessageErrorType } from "@wagmi/core";
 import { createDelegationChain } from "./delegation";
 import { normalizeError } from "./error";
 
-import { connected, signerAddress, wagmiConfig } from "svelte-wagmi";
 import { writable, get } from "svelte/store";
 import { setContext } from "svelte";
+import { onMount } from "svelte";
 
 let { children, idlFactory, canisterId, httpAgentOptions, actorOptions }: { children: any, idlFactory: IDL.InterfaceFactory, canisterId: string, httpAgentOptions: HttpAgentOptions, actorOptions: ActorConfig} = $props();
 
@@ -356,7 +356,7 @@ function clear() {
 //   }
 // }, [updateState]);
 
-$effect(() => {
+onMount(() => {
   try {
     const [a, i, d] = loadIdentity();
     updateState({
@@ -387,9 +387,10 @@ $effect(() => {
 // }, [connectedEthAddress]);
 
 $effect(() => {
-  $signerAddress;
-  if (contextState.isInitializing) return;
-  clear();
+  if($signerAddress) {
+    if (contextState.isInitializing) return;
+    clear();
+  }
 });
 
 /**
@@ -409,7 +410,7 @@ $effect(() => {
 //   });
 // }, [idlFactory, canisterId, httpAgentOptions, actorOptions, updateState]);
 
-$effect(() => {
+onMount(() => {
   const a = createAnonymousActor({
     idlFactory,
     canisterId,

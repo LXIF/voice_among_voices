@@ -18,5 +18,11 @@
   ],
   "devDependencies": {
     "@types/node": "^22.10.1"
+  },
+  "dependencies": {
+    "@reown/appkit": "^1.5.3",
+    "@reown/appkit-adapter-wagmi": "^1.5.3",
+    "viem": "^2.21.54",
+    "wagmi": "^2.13.5"
   }
 }

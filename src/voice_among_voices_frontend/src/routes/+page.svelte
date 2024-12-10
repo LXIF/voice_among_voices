@@ -15,8 +15,8 @@
         handleBackendAudioData,
     } from '$lib/utils/convUtils';
     import AngleFileBox from '$lib/components/AngleFileBox.svelte';
-    import LoginButton from '$lib/components/LoginButton.svelte';
     import ZeroFileBox from '$lib/components/ZeroFileBox.svelte';
+    import ConnectWalletButton from '$lib/components/ConnectWalletButton.svelte';
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
@@ -78,17 +78,19 @@
     };
 
     const handleRecordingLength = (e: CustomEvent) => {
-        sampleLength = e.detail;
-
-        const nodeWidths = calculateNodeWidth(
-            sampleLength,
-            usableCanvasWidth,
-            audioParameters.total_length_ms,
-            simulationParameters.logical_radius * 2
-        );
-
-        nodeWidthPx = nodeWidths.nodeWidthPx;
-        nodeWidthLogical = nodeWidths.nodeWidthLogical;
+            sampleLength = e.detail;
+            
+            if(sampleLength > 0) {
+                const nodeWidths = calculateNodeWidth(
+                    sampleLength,
+                    usableCanvasWidth,
+                    audioParameters.total_length_ms,
+                    simulationParameters.logical_radius * 2
+                );
+        
+                nodeWidthPx = nodeWidths.nodeWidthPx;
+                nodeWidthLogical = nodeWidths.nodeWidthLogical;
+            }
     };
 
     const handleVoiceRecorded = (e: CustomEvent) => {
@@ -116,7 +118,7 @@
 </script>
 
 <main class="flex justify-center items-center flex-col h-[100vh]">
-    <LoginButton />
+    <ConnectWalletButton />
     <button on:click={handleGetPrincipal}>get principal</button>
     {#if myPrincipal}
         <div>{myPrincipal}</div>

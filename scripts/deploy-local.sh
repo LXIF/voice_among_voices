@@ -20,3 +20,5 @@ dfx deploy ic_siwe_provider --argument $'(
         };
     }
 )'
+
+dfx deploy
