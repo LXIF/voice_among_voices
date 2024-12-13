@@ -40,7 +40,7 @@ static STREAMING_CALLBACK: Lazy<CallbackFunc> =
     Lazy::new(|| CallbackFunc::new(ic_cdk::id(), "http_request_streaming_callback".to_string()));
 
 const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
-    total_length_ms: 60 * 1000,
+    total_length_ms: 50 * 60 * 1000,
     max_sample_length_ms: 10000,
     sample_rate: 44100,
     chunk_size: 1024 * 1024,

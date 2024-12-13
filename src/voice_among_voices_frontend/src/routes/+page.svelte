@@ -1,6 +1,6 @@
 <script lang="ts">
     import {backend} from '$lib/canisters';
-    import {onMount} from 'svelte';
+    import {getContext, onMount} from 'svelte';
     import DroppableNode from '$lib/components/DroppableNode.svelte';
     import NodeMapPhysics from '$lib/components/NodeMapPhysics.svelte';
     import VoiceRecorder from '$lib/components/VoiceRecorder.svelte';
@@ -17,6 +17,9 @@
     import AngleFileBox from '$lib/components/AngleFileBox.svelte';
     import ZeroFileBox from '$lib/components/ZeroFileBox.svelte';
     import ConnectWalletButton from '$lib/components/ConnectWalletButton.svelte';
+    import SiweLoginButton from '$lib/components/SiweLoginButton.svelte';
+    import SiweContext from '$lib/siwe/SiweContext.svelte';
+    import { canisterId, idlFactory } from "../../../declarations/ic_siwe_provider";
 
     let voiceNodes: VoiceNodeEgress[] = [];
     let backendSimulationResult: VoiceNodeEgress[] = [];
@@ -117,50 +120,53 @@
     };
 </script>
 
-<main class="flex justify-center items-center flex-col h-[100vh]">
-    <ConnectWalletButton />
-    <button on:click={handleGetPrincipal}>get principal</button>
-    {#if myPrincipal}
-        <div>{myPrincipal}</div>
-    {/if}
-    <NodeMapPhysics
-        nodes={voiceNodes}
-        backendNodes={backendSimulationResult}
-        on:dropNewNode={handleDropNewNode}
-        {dragging}
-        showPlayHead={fileLoaded}
-        playHeadAngle={angle}
-        playHeadPosition={playheadPosition}
-        on:movePlayHead={(e) => {
-            externalPlaybackPosition = e.detail;
-        }}
-    />
-    <DroppableNode
-        {nodeWidthPx}
-        {nodeWidthLogical}
-        on:dragstart={() => (dragging = true)}
-        on:dragend={() => (dragging = false)}
-    />
-    <VoiceRecorder
-        on:recordingLength={handleRecordingLength}
-        on:voiceRecorded={handleVoiceRecorded}
-        {audioParameters}
-    />
-    <h1>Current own voice:</h1>
-    <audio
-        controls
-        bind:this={myCurrentSampleAudioElement}
-    ></audio>
-    <AngleFileBox
-        {externalPlaybackPosition}
-        on:playbackPosition={(e) => (playheadPosition = e.detail)}
-        on:fileAngle={(e) => (angle = e.detail)}
-        on:fileLoaded={(e) => (fileLoaded = e.detail)}
-    />
-    <ZeroFileBox
-        {externalPlaybackPosition}
-        on:playbackPosition={(e) => (playheadPosition = e.detail)}
-        on:fileAngle={(e) => (angle = e.detail)}
-        on:fileLoaded={(e) => (fileLoaded = e.detail)}
-    />
-</main>
+<SiweContext {canisterId} {idlFactory}>
+    <main class="flex justify-center items-center flex-col h-[100vh] pt-4">
+        <ConnectWalletButton />
+        <SiweLoginButton />
+        <button on:click={handleGetPrincipal}>get principal</button>
+        {#if myPrincipal}
+            <div>{myPrincipal}</div>
+        {/if}
+        <NodeMapPhysics
+            nodes={voiceNodes}
+            backendNodes={backendSimulationResult}
+            on:dropNewNode={handleDropNewNode}
+            {dragging}
+            showPlayHead={fileLoaded}
+            playHeadAngle={angle}
+            playHeadPosition={playheadPosition}
+            on:movePlayHead={(e) => {
+                externalPlaybackPosition = e.detail;
+            }}
+        />
+        <DroppableNode
+            {nodeWidthPx}
+            {nodeWidthLogical}
+            on:dragstart={() => (dragging = true)}
+            on:dragend={() => (dragging = false)}
+        />
+        <VoiceRecorder
+            on:recordingLength={handleRecordingLength}
+            on:voiceRecorded={handleVoiceRecorded}
+            {audioParameters}
+        />
+        <h1>Current own voice:</h1>
+        <audio
+            controls
+            bind:this={myCurrentSampleAudioElement}
+        ></audio>
+        <AngleFileBox
+            {externalPlaybackPosition}
+            on:playbackPosition={(e) => (playheadPosition = e.detail)}
+            on:fileAngle={(e) => (angle = e.detail)}
+            on:fileLoaded={(e) => (fileLoaded = e.detail)}
+        />
+        <ZeroFileBox
+            {externalPlaybackPosition}
+            on:playbackPosition={(e) => (playheadPosition = e.detail)}
+            on:fileAngle={(e) => (angle = e.detail)}
+            on:fileLoaded={(e) => (fileLoaded = e.detail)}
+        />
+    </main>
+</SiweContext>

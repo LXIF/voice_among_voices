@@ -71,7 +71,8 @@
     onMount(() => {
         if (canvas) {
             context = canvas.getContext('2d');
-            canvasRatio = window.devicePixelRatio || 1;
+            canvasRatio = 1; // TODO
+            // canvasRatio = window.devicePixelRatio || 1;
         }
     });
 

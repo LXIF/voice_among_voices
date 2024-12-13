@@ -1,9 +1,12 @@
 <script lang="ts">
-    // TODO
+    import { appkitModal } from "$lib/appKit.svelte";
+
+// $appkitModal.subscribeWalletInfo((newState) => console.log(newState));
+// $appkitModal.subscribeAccount((newState) => console.log(newState));
 </script>
 
-{#if $web3Modal}
-    <button on:click={$web3Modal.open()}>Connect Wallet</button>
-{:else}
-    <p>login not yet available</p>
-{/if}
+<button onclick={() => {
+    $appkitModal.open();
+}}>
+    Connect Wallet
+</button>

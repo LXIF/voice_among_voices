@@ -19,15 +19,15 @@ import {
 } from "./siwe-provider";
 import type { State } from "./state.type";
 // import type { SignMessageErrorType } from "wagmi/actions";
-import type { SignMessageErrorType } from "@wagmi/core";
+import { type SignMessageErrorType } from "@wagmi/core";
 import { createDelegationChain } from "./delegation";
 import { normalizeError } from "./error";
 
-import { writable, get } from "svelte/store";
 import { setContext } from "svelte";
 import { onMount } from "svelte";
-
-let { children, idlFactory, canisterId, httpAgentOptions, actorOptions }: { children: any, idlFactory: IDL.InterfaceFactory, canisterId: string, httpAgentOptions: HttpAgentOptions, actorOptions: ActorConfig} = $props();
+// import { wagmiConfig } from "$lib/wagmi/wagmiStores";
+import { appkitModal, wagmiConfig } from "$lib/appKit.svelte";
+let { children, idlFactory, canisterId, httpAgentOptions, actorOptions }: { children: any, idlFactory: IDL.InterfaceFactory, canisterId: string, httpAgentOptions?: HttpAgentOptions, actorOptions?: ActorConfig} = $props();
 
 //   /** Configuration options for the HTTP agent used to communicate with the Internet Computer network. */
 //   httpAgentOptions?: HttpAgentOptions;
@@ -98,7 +98,7 @@ let loginPromiseHandlers = $state<{
       "Hook not initialized properly. Make sure to supply all required props to the SiweIdentityProvider."
     );
   }
-  if (!get(signerAddress)) {
+  if (!$appkitModal.getAddress()) {
     throw new Error(
       "No Ethereum address available. Call prepareLogin after the user has connected their wallet."
     );
@@ -112,7 +112,7 @@ let loginPromiseHandlers = $state<{
   try {
     const response = await callPrepareLogin(
       contextState.anonymousActor,
-      get(signerAddress) ? (get(signerAddress) as `0x${string}`) : undefined
+      $appkitModal.getAddress() ? ($appkitModal.getAddress() as `0x${string}`) : undefined
     );
     updateState({
       prepareLoginOkResponse: response,
@@ -170,7 +170,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
   const sessionIdentity = Ed25519KeyIdentity.generate();
   const sessionPublicKey = sessionIdentity.getPublicKey().toDer();
 
-  if (!contextState.anonymousActor || !get(signerAddress)) {
+  if (!contextState.anonymousActor || !$appkitModal.getAddress()) {
     rejectLoginWithError(new Error("Invalid actor or address."));
     return;
   }
@@ -188,7 +188,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
     loginOkResponse = await callLogin(
       contextState.anonymousActor,
       loginSignature,
-      get(signerAddress) ? (get(signerAddress) as `0x${string}`) : undefined,
+      $appkitModal.getAddress() ? ($appkitModal.getAddress() as `0x${string}`) : undefined,
       sessionPublicKey,
       prepareLoginOkResponse.nonce
     );
@@ -202,7 +202,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
   try {
     signedDelegation = await callGetDelegation(
       contextState.anonymousActor,
-      get(signerAddress) ? (get(signerAddress) as `0x${string}`) : undefined,
+      $appkitModal.getAddress() ? ($appkitModal.getAddress() as `0x${string}`) : undefined,
       sessionPublicKey,
       loginOkResponse.expiration
     );
@@ -226,7 +226,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
 
   // Save the identity to local storage.
   saveIdentity(
-    get(signerAddress) as `0x${string}`,
+    $appkitModal.getAddress() as `0x${string}`,
     sessionIdentity,
     delegationChain
   );
@@ -234,7 +234,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
   // Set the identity in state.
   updateState({
     loginStatus: "success",
-    identityAddress: get(signerAddress) as `0x${string}`,
+    identityAddress: $appkitModal.getAddress() as `0x${string}`,
     identity,
     delegationChain,
   });
@@ -243,7 +243,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
 
   // The signMessage hook is reset so that it can be used again.
   //TODO: figure this out
-  //reset();
+  // reset();
 }
 
 
@@ -269,7 +269,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
     );
     return promise;
   }
-  if (!get(signerAddress)) {
+  if (!$appkitModal.getAddress()) {
     rejectLoginWithError(
       new Error(
         "No Ethereum address available. Call login after the user has connected their wallet."
@@ -299,10 +299,13 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
       }
     }
 
+    console.log($wagmiConfig);
+
     const signature = await signMessage( // TODO: maybe handle user error better
         $wagmiConfig,
         {
             message: prepareLoginOkResponse.siwe_message,
+            connector: $wagmiConfig.connectors[0] //TODO
         }
     );
     onLoginSignatureSettled(signature, null);
@@ -387,7 +390,7 @@ onMount(() => {
 // }, [connectedEthAddress]);
 
 $effect(() => {
-  if($signerAddress) {
+  if($appkitModal.getAddress()) {
     if (contextState.isInitializing) return;
     clear();
   }
@@ -422,26 +425,39 @@ onMount(() => {
   });
 });
 
-$effect(() => {
-    setContext('siwe', 
+let isPreparingLogin = $derived(contextState.prepareLoginStatus === "preparing");
+let isPrepareLoginError = $derived(contextState.prepareLoginStatus === "error");
+let isPrepareLoginSuccess = $derived(contextState.prepareLoginStatus === "success");
+let isPrepareLoginIdle = $derived(contextState.prepareLoginStatus === "idle");
+
+let isLoggingIn = $derived(contextState.loginStatus === "logging-in");
+let isLoginError = $derived(contextState.loginStatus === "error");
+let isLoginSuccess = $derived(contextState.loginStatus === "success");
+let isLoginIdle = $derived(contextState.loginStatus === "idle");
+
+
+function setSiweContext() {
+  setContext('siwe', 
           {
             ...contextState,
             prepareLogin,
-            isPreparingLogin: contextState.prepareLoginStatus === "preparing",
-            isPrepareLoginError: contextState.prepareLoginStatus === "error",
-            isPrepareLoginSuccess: contextState.prepareLoginStatus === "success",
-            isPrepareLoginIdle: contextState.prepareLoginStatus === "idle",
+            isPreparingLogin,
+            isPrepareLoginError,
+            isPrepareLoginSuccess,
+            isPrepareLoginIdle,
             login,
-            isLoggingIn: contextState.loginStatus === "logging-in",
-            isLoginError: contextState.loginStatus === "error",
-            isLoginSuccess: contextState.loginStatus === "success",
-            isLoginIdle: contextState.loginStatus === "idle",
-            signMessageStatus: "todo",
+            isLoggingIn,
+            isLoginError,
+            isLoginSuccess,
+            isLoginIdle,
+            signMessageStatus: "todo", //TODO
             signMessageError: "todo",
             clear,
           }
     );
-});
+}
+
+setSiweContext();
 </script>
 
 
