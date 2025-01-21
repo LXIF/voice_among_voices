@@ -5,9 +5,10 @@ pub mod test_functions;
 mod utils;
 
 use audio::*;
+use candid::Principal;
 use ic_cdk::{
     api::{caller, performance_counter},
-    init, post_upgrade, query, update,
+    call, export_candid, init, post_upgrade, query, update,
 };
 use ic_cdk_timers::set_timer;
 use ic_stable_structures::{
@@ -393,6 +394,14 @@ fn get_audio_parameters() -> AudioParameters {
     AUDIO_PARAMETERS.clone()
 }
 
+#[query]
+async fn get_wallet_address(principal: Principal) -> Result<String, String> {
+    let (address,) = call(principal, "get_address", (principal,))
+        .await
+        .map_err(|(code, msg)| format!("Error code: {:?}, message: {}", code, msg))?;
+    Ok(address)
+}
+
 #[cfg(test)]
 mod tests {
     use super::test_functions::*;
@@ -541,3 +550,5 @@ mod tests {
         });
     }
 }
+
+export_candid!();

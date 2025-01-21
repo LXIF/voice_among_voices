@@ -1,93 +1,81 @@
-type VoiceNodeIngress = record {
-    id : nat64;
-    x : float64;
-    y : float64;
-    sample : vec nat8;
+type AddVoiceNodeError = variant {
+  NotValidAudioFileError : text;
+  NotWithinCircleError : text;
 };
-
-type VoiceNodeEgress = record {
-    id : nat64;
-    x : float64;
-    y : float64;
-    radius : float64;
-};
-
-type AudioSample = record {
-    id : nat64;
-    sample : vec nat8;
-    sample_length_ms : float64;
-    sample_length_samples : nat32;
-};
-
-type SimulationParameters = record {
-    velocity_cutoff : float64;
-    force_cutoff : float64;
-    max_distance : float64;
-    force_strength : float64;
-    linear_damping : float64;
-    logical_radius : float64;
-    n_collider_vertices : nat64;
-    friction : float64;
-};
-
 type AudioParameters = record {
-    total_length_ms : nat32;
-    max_sample_length_ms : nat32;
-    sample_rate : nat32;
-    chunk_size : nat64;
+  fade_ms : nat32;
+  sample_rate : nat32;
+  max_sample_length_ms : nat32;
+  total_length_ms : nat32;
+  chunk_size : nat64;
 };
-
-type ColliderCoordinate = record {
-    x : float64;
-    y : float64;
+type AudioSample = record {
+  id : nat64;
+  sample : blob;
+  sample_length_samples : nat32;
+  sample_length_ms : float64;
 };
-
-type VoiceNodeStoreEgress = vec VoiceNodeEgress;
-
-type AddVoiceNodeResult = variant {
-    Ok : VoiceNodeStoreEgress;
-    Err : variant {
-        NotWithinCircleError;
-        NotValidAudioFileError : text;
-    };
-};
-
-type StreamingCallbackToken = record {
-    angle : nat32;
-    chunk_index : nat32;
-    chunks : nat32;
-    auth_token : opt vec nat8;
-};
-
-type StreamingCallbackHttpResponse = record {
-    body : vec nat8;
-    token : opt StreamingCallbackToken;
-};
-
-type StreamingStrategy = variant {
-    Callback : record {
-        token : StreamingCallbackToken;
-        callback : func(StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query;
-    };
-};
-
+type ColliderCoordinate = record { x : float64; y : float64 };
 type HttpStreamingResponse = record {
-    status_code : nat16;
-    headers : vec record { text; text };
-    body : vec nat8;
-    upgrade : opt bool;
-    streaming_strategy : opt StreamingStrategy;
+  body : blob;
+  headers : vec record { text; text };
+  upgrade : opt bool;
+  streaming_strategy : opt StreamingStrategy;
+  status_code : nat16;
 };
-
-service : {
-    "update_voice_node" : (VoiceNodeIngress) -> (AddVoiceNodeResult);
-    "get_voice_nodes" : () -> (VoiceNodeStoreEgress) query;
-    "get_simulation_parameters" : () -> (SimulationParameters) query;
-    "get_audio_parameters" : () -> (AudioParameters) query;
-    "get_collider_coordinates" : () -> (vec ColliderCoordinate) query;
-    "get_my_voice" : () -> (opt AudioSample) query;
-    "get_angle_file" : (float64) -> (HttpStreamingResponse);
-    "http_request_streaming_callback" : (StreamingCallbackToken) -> (StreamingCallbackHttpResponse) query;
-    "get_my_principal" : () -> (text) query;
-    "get_zero_file" : () -> (HttpStreamingResponse) query;
+type Result = variant { Ok : text; Err : text };
+type Result_1 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
+type SimulationParameters = record {
+  logical_radius : float64;
+  density : float64;
+  velocity_cutoff : float64;
+  n_collider_vertices : nat64;
+  force_cutoff : float64;
+  friction : float64;
+  force_strength : float64;
+  max_distance : float64;
+  linear_damping : float64;
 };
+type StreamingCallbackHttpResponse = record {
+  token : opt StreamingCallbackToken;
+  body : blob;
+  headers : vec record { text; text };
+};
+type StreamingCallbackToken = record {
+  chunk_index : nat32;
+  angle : nat32;
+  auth_token : opt blob;
+  chunks : nat32;
+};
+type StreamingStrategy = variant {
+  Callback : record {
+    token : StreamingCallbackToken;
+    callback : func (StreamingCallbackToken) -> (
+        StreamingCallbackHttpResponse,
+      ) query;
+  };
+};
+type VoiceNodeEgress = record {
+  x : float64;
+  y : float64;
+  id : nat64;
+  radius : float64;
+};
+type VoiceNodeIngress = record {
+  x : float64;
+  y : float64;
+  id : nat64;
+  sample : blob;
+};
+service : () -> {
+  get_angle_file : (float64) -> (HttpStreamingResponse);
+  get_audio_parameters : () -> (AudioParameters) query;
+  get_collider_coordinates : () -> (vec ColliderCoordinate) query;
+  get_my_principal : () -> (text) query;
+  get_my_voice : () -> (opt AudioSample) query;
+  get_simulation_parameters : () -> (SimulationParameters) query;
+  get_voice_nodes : () -> (vec VoiceNodeEgress) query;
+  get_wallet_address : (principal) -> (Result) query;
+  get_zero_file : () -> (HttpStreamingResponse) query;
+  update_voice_node : (VoiceNodeIngress) -> (Result_1);
+}

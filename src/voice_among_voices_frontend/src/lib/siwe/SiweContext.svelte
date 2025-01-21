@@ -183,6 +183,8 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
   // Logging in is a two-step process. First, the signed SIWE message is sent to the backend.
   // Then, the backend's siwe_get_delegation method is called to get the delegation.
 
+  // TODO: backend throws error because signature too long
+
   let loginOkResponse: LoginOkResponse;
   try {
     loginOkResponse = await callLogin(
@@ -292,6 +294,7 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
   try {
     // The SIWE message can be prepared in advance, or it can be generated as part of the login process.
     let prepareLoginOkResponse = contextState.prepareLoginOkResponse;
+
     if (!prepareLoginOkResponse) {
       prepareLoginOkResponse = await prepareLogin();
       if (!prepareLoginOkResponse) {
@@ -299,13 +302,10 @@ async function rejectLoginWithError(error: Error | unknown, message?: string) {
       }
     }
 
-    console.log($wagmiConfig);
-
     const signature = await signMessage( // TODO: maybe handle user error better
         $wagmiConfig,
         {
-            message: prepareLoginOkResponse.siwe_message,
-            connector: $wagmiConfig.connectors[0] //TODO
+            message: prepareLoginOkResponse.siwe_message, //TODO there must be some siwe-specific config here because our signature is too long
         }
     );
     onLoginSignatureSettled(signature, null);

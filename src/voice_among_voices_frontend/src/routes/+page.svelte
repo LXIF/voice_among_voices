@@ -20,27 +20,30 @@
     import SiweLoginButton from '$lib/components/SiweLoginButton.svelte';
     import SiweContext from '$lib/siwe/SiweContext.svelte';
     import { canisterId, idlFactory } from "../../../declarations/ic_siwe_provider";
+  import type { Principal } from '@dfinity/principal';
 
-    let voiceNodes: VoiceNodeEgress[] = [];
-    let backendSimulationResult: VoiceNodeEgress[] = [];
-    let simulationParameters: SimulationParameters;
-    let audioParameters: AudioParameters;
-    let sampleLength = 0;
-    let nodeWidthPx = 0;
-    let nodeWidthLogical = 0;
+    let voiceNodes: VoiceNodeEgress[] = $state([]);
+    let backendSimulationResult: VoiceNodeEgress[] = $state([]);
+    let simulationParameters: SimulationParameters | undefined = $state();
+    let audioParameters: AudioParameters | undefined = $state();
+    let sampleLength = $state(0);
+    let nodeWidthPx = $state(0);
+    let nodeWidthLogical = $state(0);
     let currentVoiceBlob: Blob;
     let myVoice;
 
-    let myCurrentSampleAudioElement: HTMLAudioElement;
+    let myCurrentSampleAudioElement: HTMLAudioElement | undefined = $state();
 
-    let dragging = false;
+    let dragging = $state(false);
 
-    let playheadPosition = 0;
-    let externalPlaybackPosition = 0;
-    let angle = 0;
-    let fileLoaded = false;
+    let playheadPosition = $state(0);
+    let externalPlaybackPosition = $state(0);
+    let angle = $state(0);
+    let fileLoaded = $state(false);
 
-    let myPrincipal: string | undefined = undefined;
+    let myAddress = $state("");
+
+    let myPrincipal: string | undefined = $state();
 
     onMount(async () => {
         voiceNodes = await backend.get_voice_nodes();
@@ -48,7 +51,7 @@
         audioParameters = await backend.get_audio_parameters();
         myVoice = await backend.get_my_voice();
 
-        if (myVoice.length > 0) {
+        if (myVoice.length > 0 && myCurrentSampleAudioElement) {
             const sample = myVoice[angle].sample;
             const audioURL = await handleBackendAudioData(
                 sample instanceof Uint8Array ? sample : new Uint8Array(sample)
@@ -81,6 +84,8 @@
     };
 
     const handleRecordingLength = (e: CustomEvent) => {
+        if(audioParameters === undefined || simulationParameters === undefined) throw "invalid params";
+
             sampleLength = e.detail;
             
             if(sampleLength > 0) {
@@ -118,15 +123,27 @@
     const handleGetPrincipal = async () => {
         myPrincipal = await backend.get_my_principal();
     };
+
+    const handleGetAddress = async () => {
+        if(myPrincipal === undefined) throw "Principal is undefined";
+        const addressResult = await backend.get_wallet_address(myPrincipal as unknown as Principal);
+        if('Ok' in addressResult) {
+            myAddress = addressResult.Ok
+        }
+    };
 </script>
 
 <SiweContext {canisterId} {idlFactory}>
     <main class="flex justify-center items-center flex-col h-[100vh] pt-4">
         <ConnectWalletButton />
         <SiweLoginButton />
-        <button on:click={handleGetPrincipal}>get principal</button>
+        <button onclick={handleGetPrincipal}>get principal</button>
         {#if myPrincipal}
             <div>{myPrincipal}</div>
+        {/if}
+        <button onclick={handleGetAddress}>get address</button>
+        {#if myAddress}
+            <div>{myAddress}</div>
         {/if}
         <NodeMapPhysics
             nodes={voiceNodes}

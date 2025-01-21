@@ -2,18 +2,18 @@ import { createAppKit } from "@reown/appkit";
 import { mainnet, polygonAmoy, polygon } from "@reown/appkit/networks";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { derived, get, readable } from "svelte/store";
+import { type Config } from "wagmi";
 
-// TODO: turn into store
+// TODO: turn into store?
 
 // 1. Get a project ID at https://cloud.reown.com
 // const projectId = process.env.PUBLIC_REOWN_ID!;
-const projectId = "da65f4e00cada14e87d84160b45060f5";
-console.log(projectId);
+const projectId = "da65f4e00cada14e87d84160b45060f5"; //TODO: store in env
 
 export const networks = [mainnet, polygon, polygonAmoy];
 
 // 2. Set up Wagmi adapter
-const wagmiAdapter = readable(
+const wagmiAdapter = readable<WagmiAdapter>(
   new WagmiAdapter({
     projectId,
     networks,
@@ -32,7 +32,7 @@ const metadata = {
 export const appkitModal = readable(
   createAppKit({
     adapters: [get(wagmiAdapter)],
-    networks: [mainnet, polygon, polygonAmoy],
+    networks: [mainnet],
     metadata,
     projectId,
     features: {
@@ -41,7 +41,7 @@ export const appkitModal = readable(
   })
 );
 
-export const wagmiConfig = derived(
+export const wagmiConfig = derived<typeof wagmiAdapter, Config>(
   wagmiAdapter,
   (adapter) => adapter.wagmiConfig
 );

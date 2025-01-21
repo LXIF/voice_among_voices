@@ -18,7 +18,7 @@
     let connect: any;
     let recordingTimeout: ReturnType<typeof setTimeout>;
 
-    export let audioParameters: AudioParameters;
+    export let audioParameters: AudioParameters | undefined;
 
     onMount(async () => {
         if (browser) {
@@ -55,7 +55,7 @@
             }
 
             async function setupMediaRecorder() {
-                if (!browser) return;
+                if (!browser || !audioParameters) return;
 
                 await register(await connect());
 
@@ -182,6 +182,7 @@
     let recordingInterval: ReturnType<typeof setInterval>;
 
     function handleRecordDown() {
+        if(!audioParameters) throw "no parameters";
         recording = true;
         window.addEventListener('pointerup', handleRecordUp);
         mediaRecorder?.start();
