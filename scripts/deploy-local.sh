@@ -1,6 +1,12 @@
+npm run extract-candid
+
 dfx canister create --all
 
-dfx deploy voice_among_voices_backend
+dfx deploy voice_among_voices_backend --argument $'(
+    opt record {
+        siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider)'";
+    }
+)'
 
 dfx deploy voice_among_voices_frontend
 
@@ -16,6 +22,7 @@ dfx deploy ic_siwe_provider --argument $'(
         session_expires_in = opt 604800000000000;
         targets = opt vec {
             "'$(dfx canister id ic_siwe_provider)'";
+            "'$(dfx canister id voice_among_voices_backend)'";
             "'$(dfx canister id voice_among_voices_frontend)'";
         };
     }

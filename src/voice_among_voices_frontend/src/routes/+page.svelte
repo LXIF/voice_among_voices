@@ -6,8 +6,10 @@
     import VoiceRecorder from '$lib/components/VoiceRecorder.svelte';
     import type {
         VoiceNodeEgress,
+        VoiceNodeIngress,
         SimulationParameters,
         AudioParameters,
+        AudioSample,
     } from '../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
     import {usableCanvasWidth} from '$lib/config/nodeMap';
     import {
@@ -29,8 +31,8 @@
     let sampleLength = $state(0);
     let nodeWidthPx = $state(0);
     let nodeWidthLogical = $state(0);
-    let currentVoiceBlob: Blob;
-    let myVoice;
+    let currentVoiceBlob: Blob | undefined = $state();
+    let myVoice: [AudioSample] | [] = $state([]);
 
     let myCurrentSampleAudioElement: HTMLAudioElement | undefined = $state();
 
@@ -60,9 +62,9 @@
         }
     });
 
-    const handleDropNewNode = async (event: CustomEvent) => {
-        const sample = await blobToUint8Array(currentVoiceBlob);
-        const {x, y, id} = event.detail;
+    const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
+        const sample = await blobToUint8Array(currentVoiceBlob!);
+        const {x, y, id} = voiceNode;
 
         let backend_simulation_result = await backend.update_voice_node({
             id,
@@ -83,14 +85,14 @@
         voiceNodes = await backend.get_voice_nodes();
     };
 
-    const handleRecordingLength = (e: CustomEvent) => {
+    const handleRecordingLength = (length: number) => {
         if(audioParameters === undefined || simulationParameters === undefined) throw "invalid params";
 
-            sampleLength = e.detail;
-            
+            sampleLength = length;
+
             if(sampleLength > 0) {
                 const nodeWidths = calculateNodeWidth(
-                    sampleLength,
+                    length,
                     usableCanvasWidth,
                     audioParameters.total_length_ms,
                     simulationParameters.logical_radius * 2
@@ -101,8 +103,8 @@
             }
     };
 
-    const handleVoiceRecorded = (e: CustomEvent) => {
-        currentVoiceBlob = e.detail;
+    const handleVoiceRecorded = (blob: Blob) => {
+        currentVoiceBlob = blob;
     };
 
     const calculateNodeWidth = (
@@ -126,11 +128,13 @@
 
     const handleGetAddress = async () => {
         if(myPrincipal === undefined) throw "Principal is undefined";
-        const addressResult = await backend.get_wallet_address(myPrincipal as unknown as Principal);
+        const addressResult = await backend.get_wallet_address();
+        console.log(addressResult);
         if('Ok' in addressResult) {
             myAddress = addressResult.Ok
         }
     };
+
 </script>
 
 <SiweContext {canisterId} {idlFactory}>
@@ -148,24 +152,24 @@
         <NodeMapPhysics
             nodes={voiceNodes}
             backendNodes={backendSimulationResult}
-            on:dropNewNode={handleDropNewNode}
+            dropNewNode={handleDropNewNode}
             {dragging}
             showPlayHead={fileLoaded}
             playHeadAngle={angle}
             playHeadPosition={playheadPosition}
-            on:movePlayHead={(e) => {
-                externalPlaybackPosition = e.detail;
+            movePlayHead={(normalizedPosition) => {
+                externalPlaybackPosition = normalizedPosition;
             }}
         />
         <DroppableNode
             {nodeWidthPx}
             {nodeWidthLogical}
-            on:dragstart={() => (dragging = true)}
-            on:dragend={() => (dragging = false)}
+            ondragstart={() => (dragging = true)}
+            ondragend={() => (dragging = false)}
         />
         <VoiceRecorder
-            on:recordingLength={handleRecordingLength}
-            on:voiceRecorded={handleVoiceRecorded}
+            recordingLength={handleRecordingLength}
+            voiceRecorded={handleVoiceRecorded}
             {audioParameters}
         />
         <h1>Current own voice:</h1>
@@ -175,15 +179,15 @@
         ></audio>
         <AngleFileBox
             {externalPlaybackPosition}
-            on:playbackPosition={(e) => (playheadPosition = e.detail)}
-            on:fileAngle={(e) => (angle = e.detail)}
-            on:fileLoaded={(e) => (fileLoaded = e.detail)}
+            onPlaybackPosition={(position) => (playheadPosition = position)}
+            onFileAngle={(newAngle) => (angle = newAngle)}
+            onFileLoaded={(loaded) => (fileLoaded = loaded)}
         />
         <ZeroFileBox
             {externalPlaybackPosition}
-            on:playbackPosition={(e) => (playheadPosition = e.detail)}
-            on:fileAngle={(e) => (angle = e.detail)}
-            on:fileLoaded={(e) => (fileLoaded = e.detail)}
+            onPlaybackPosition={(position) => (playheadPosition = position)}
+            onFileAngle={(newAngle) => (angle = newAngle)}
+            onFileLoaded={(loaded) => (fileLoaded = loaded)}
         />
     </main>
 </SiweContext>

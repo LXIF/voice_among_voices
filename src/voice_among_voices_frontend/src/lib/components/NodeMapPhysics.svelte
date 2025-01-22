@@ -26,39 +26,40 @@
         worldStepInterval,
     } from '$lib/config/nodeMap';
 
-    export let nodes: VoiceNodeEgress[] = [];
-    export let backendNodes: VoiceNodeEgress[] = [];
-    export let dragging: boolean;
-
-    export let showPlayHead = true; // TODO: turn false
-    export let playHeadPosition = 0.2; // normalized
-    export let playHeadAngle = 0;
+    let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0.2, playHeadAngle = 0, dropNewNode, movePlayHead }: {
+        nodes: VoiceNodeEgress[];
+        backendNodes: VoiceNodeEgress[];
+        dragging: boolean;
+        showPlayHead: boolean;
+        playHeadPosition: number;
+        playHeadAngle: number;
+        dropNewNode: (voiceNode: VoiceNodeIngress) => void;
+        movePlayHead: (normalizedPosition: number) => void;
+    } = $props();
 
     let localNodes: VoiceNodeEgress[] = [];
 
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D | null;
 
-    let simulationParameters: SimulationParameters | null;
-    let colliderCoordinates: ColliderCoordinate[] = [];
+    let simulationParameters: SimulationParameters | null = $state(null);
+    let colliderCoordinates: ColliderCoordinate[] = $state([]);
 
-    let max_distance: number,
-        force_strength: number,
-        force_cutoff: number,
-        linear_damping: number,
-        logical_radius: number,
-        friction: number;
+    let max_distance: number = $state(0);
+    let force_strength: number = $state(0);
+    let force_cutoff: number = $state(0);
+    let linear_damping: number = $state(0);
+    let logical_radius: number = $state(0);
+    let friction: number = $state(0);
 
-    let physicsActive = false;
-    let rendering = false;
-    let resetting = false;
-    let moving = false;
-    let scaled = false;
-    let fastForward = false;
+    let physicsActive = $state(false);
+    let rendering = $state(false);
+    let resetting = $state(false);
+    let moving = $state(false);
+    let scaled = $state(false);
+    let fastForward = $state(false);
 
-    let nodeId = 0;
-
-    const dispatch = createEventDispatcher();
+    let nodeId = $state(0);
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -66,7 +67,7 @@
         voiceNode: VoiceNodeEgress;
     };
 
-    let canvasRatio: number = 1;
+    let canvasRatio: number = $state(1);
 
     onMount(() => {
         if (canvas) {
@@ -76,7 +77,7 @@
         }
     });
 
-    $: {
+    $effect(() => {
         if (!scaled && context && logical_radius && canvasRatio) {
             scaled = true;
 
@@ -89,7 +90,7 @@
                 -canvasRatio * (usableCanvasHeight / (2 * logical_radius))
             );
         }
-    }
+    });
 
     onMount(async () => {
         simulationParameters = await backend.get_simulation_parameters();
@@ -106,7 +107,7 @@
         friction = simulationParameters?.friction;
     });
 
-    $: if (
+    $effect(() => {if (
         browser &&
         context &&
         localNodes.length >= 1 &&
@@ -116,19 +117,19 @@
     ) {
         rendering = true;
         setupAndRender();
-    }
+    }});
 
-    $: if (browser && !!localNodes && simulationParameters) {
+    $effect(() => {if (browser && !!localNodes && simulationParameters) {
         resetPhysics();
-    }
+    }});
 
-    $: if (localNodes.length === 0 && nodes.length > 0) {
+    $effect(() => {if (localNodes.length === 0 && nodes.length > 0) {
         resetNodes();
-    }
+    }});
 
-    $: if (dragging) {
+    $effect(() => {if (dragging) {
         resetNodes();
-    }
+    }});
 
     function resetNodes() {
         localNodes = [...nodes];
@@ -504,7 +505,7 @@
             const normalizedPosition = clamp(dotProduct / lineLength, 0, 1);
 
             // Dispatch the movePlayHead event with the normalized position
-            dispatch('movePlayHead', normalizedPosition);
+            movePlayHead(normalizedPosition);
         }
     }
 
@@ -565,7 +566,7 @@
             y: logicalY,
             sample: [],
         };
-        dispatch('dropNewNode', voiceNode);
+        dropNewNode(voiceNode);
         let updatableNode = localNodes.find(
             (node) => node.id === BigInt(nodeId)
         );
@@ -594,9 +595,9 @@
         bind:this={canvas}
         width={canvasWidth * (canvasRatio || 1)}
         height={canvasHeight * (canvasRatio || 1)}
-        on:click={handleClick}
-        on:dragover={handleDragOver}
-        on:drop={handleDrop}
+        onclick={handleClick}
+        ondragover={handleDragOver}
+        ondrop={handleDrop}
         class={`w-[${canvasWidth}px] h-[${canvasHeight}px]`}
     ></canvas>
     <label for="node-id">node id</label>
@@ -610,7 +611,7 @@
     {#if physicsActive && backendNodes.length > 0}
         <button
             class="hover:shadow-lg rounded-full bg-slate-500 px-5"
-            on:pointerdown={handleFastForward}
+            onpointerdown={handleFastForward}
         >
             >>
         </button>

@@ -10,12 +10,9 @@
         worldStepInterval,
     } from '$lib/config/nodeMap';
 
-    const dispatch = createEventDispatcher();
+    let { availableAngles, nodes }: { availableAngles: number[], nodes: VoiceNodeEgress[] } = $props();
 
-    export let availableAngles: number[];
-    export let nodes: VoiceNodeEgress[];
-
-    let hoveredAngle: number | null = null;
+    let hoveredAngle: number | null = $state(null);
 
     const handleSelectAngle = (angle: number) => {
         console.log(angle);
@@ -64,12 +61,12 @@
             x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius}
             y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius}
             class={hoveredAngle === angle ? 'highlight' : ''}
-            on:mouseover={() => (hoveredAngle = angle)}
-            on:mouseleave={() => (hoveredAngle = null)}
-            on:click={() => handleSelectAngle(angle)}
-            on:focus={() => (hoveredAngle = angle)}
-            on:blur={() => (hoveredAngle = null)}
-            on:keydown={(e) => {
+            onmouseover={() => (hoveredAngle = angle)}
+            onmouseleave={() => (hoveredAngle = null)}
+            onclick={() => handleSelectAngle(angle)}
+            onfocus={() => (hoveredAngle = angle)}
+            onblur={() => (hoveredAngle = null)}
+            onkeydown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     handleSelectAngle(angle);
                 }

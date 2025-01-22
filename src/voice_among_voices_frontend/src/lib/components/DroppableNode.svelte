@@ -1,14 +1,11 @@
 <script lang="ts">
-    import {createEventDispatcher} from 'svelte';
 
-    export let nodeWidthPx = 0;
-    export let nodeWidthLogical = 0;
+    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number } = $props();
 
-    const dispatch = createEventDispatcher();
-    let dragging = false;
+    let dragging = $state(false);
 
     function handleDragStart(e: DragEvent) {
-        dispatch('dragstart');
+        ondragstart();
         // clone and move offscreen
         let dragImageElement = (e.target as HTMLDivElement).cloneNode(
             true
@@ -31,7 +28,7 @@
 
     function handleDragEnd() {
         dragging = false;
-        dispatch('dragend');
+        ondragend();
     }
 </script>
 
@@ -41,8 +38,8 @@
         role="button"
         tabindex="0"
         aria-roledescription="drag this onto the map to place your node"
-        on:dragstart={handleDragStart}
-        on:dragend={handleDragEnd}
+        ondragstart={handleDragStart}
+        ondragend={handleDragEnd}
         class="flex justify-center items-center rounded-full cursor-pointer bg-red-600"
         class:opacity-0={dragging}
         style={`height: ${nodeWidthPx}px; width: ${nodeWidthPx}px;`}

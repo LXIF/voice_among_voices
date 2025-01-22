@@ -55,6 +55,7 @@ type StreamingStrategy = variant {
       ) query;
   };
 };
+type VoiceAmongVoicesInit = record { siwe_canister_principal : opt principal };
 type VoiceNodeEgress = record {
   x : float64;
   y : float64;
@@ -67,15 +68,19 @@ type VoiceNodeIngress = record {
   id : nat64;
   sample : blob;
 };
-service : () -> {
+service : (opt VoiceAmongVoicesInit) -> {
   get_angle_file : (float64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;
   get_my_principal : () -> (text) query;
   get_my_voice : () -> (opt AudioSample) query;
   get_simulation_parameters : () -> (SimulationParameters) query;
+  get_siwe_principal : () -> (principal) query;
   get_voice_nodes : () -> (vec VoiceNodeEgress) query;
-  get_wallet_address : (principal) -> (Result) query;
+  get_wallet_address : () -> (Result) composite_query;
   get_zero_file : () -> (HttpStreamingResponse) query;
+  http_request_streaming_callback : (StreamingCallbackToken) -> (
+      StreamingCallbackHttpResponse,
+    ) query;
   update_voice_node : (VoiceNodeIngress) -> (Result_1);
 }

@@ -5,18 +5,20 @@ pub mod test_functions;
 mod utils;
 
 use audio::*;
-use candid::Principal;
+use candid::{CandidType, Principal};
 use ic_cdk::{
     api::{caller, performance_counter},
     call, export_candid, init, post_upgrade, query, update,
 };
 use ic_cdk_timers::set_timer;
 use ic_stable_structures::{
+    cell::ValueError,
     memory_manager::{MemoryId, MemoryManager},
-    DefaultMemoryImpl, StableVec,
+    DefaultMemoryImpl, StableCell, StableVec,
 };
 use once_cell::sync::Lazy;
 use physics::*;
+use serde::Deserialize;
 use serde_bytes::ByteBuf;
 use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
 use structs::*;
@@ -32,6 +34,9 @@ thread_local! {
     static SAMPLES_MEMORY: RefCell<AudioSampleMemory> = RefCell::new(
         StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(1)))).expect("Failed to initialize samples map")
     );
+    static SIWE_PRINCIPAL: RefCell<StableCell<Principal, Memory>> = RefCell::new(
+        StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(2))), Principal::anonymous()).expect("Failed to initialize siwe principal storage")
+    );
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
     static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
@@ -41,7 +46,7 @@ static STREAMING_CALLBACK: Lazy<CallbackFunc> =
     Lazy::new(|| CallbackFunc::new(ic_cdk::id(), "http_request_streaming_callback".to_string()));
 
 const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
-    total_length_ms: 50 * 60 * 1000,
+    total_length_ms: 4 * 60 * 1000,
     max_sample_length_ms: 10000,
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
@@ -130,12 +135,37 @@ fn zero_cache_update() {
     });
 }
 
+fn store_siwe_principal(principal: Principal) -> Result<Principal, ValueError> {
+    SIWE_PRINCIPAL.with_borrow_mut(|siwe_principal| siwe_principal.set(principal))
+}
+
+fn siwe_principal() -> Principal {
+    SIWE_PRINCIPAL.with_borrow(|principal| principal.get().clone())
+}
+
+//TODO: put somewhere smart
+#[derive(Clone, Debug, CandidType, Deserialize, Default, Eq, PartialEq)]
+pub struct VoiceAmongVoicesInit {
+    pub siwe_canister_principal: Option<Principal>,
+}
+
 #[init]
-fn init() {
+fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
     collider_init();
     nodes_init();
     samples_init();
     zero_cache_init();
+
+    if let Some(args) = maybe_arg {
+        if let Some(siwe_principal) = args.siwe_canister_principal {
+            let _ = store_siwe_principal(siwe_principal);
+        }
+    }
+}
+
+#[query]
+fn get_siwe_principal() -> Principal {
+    siwe_principal()
 }
 
 #[post_upgrade]
@@ -333,7 +363,7 @@ fn get_zero_file() -> HttpStreamingResponse {
     })
 }
 
-#[query(hidden = true)]
+#[query]
 fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
     let chunks: Vec<Vec<u8>>;
 
@@ -394,11 +424,15 @@ fn get_audio_parameters() -> AudioParameters {
     AUDIO_PARAMETERS.clone()
 }
 
-#[query]
-async fn get_wallet_address(principal: Principal) -> Result<String, String> {
-    let (address,) = call(principal, "get_address", (principal,))
-        .await
-        .map_err(|(code, msg)| format!("Error code: {:?}, message: {}", code, msg))?;
+#[query(composite = true)]
+async fn get_wallet_address() -> Result<String, String> {
+    let (address,): (String,) = call(
+        siwe_principal(),
+        "get_address",
+        (ByteBuf::from(caller().as_slice().to_vec()),),
+    )
+    .await
+    .map_err(|(code, msg)| format!("Error code: {:?}, message: {}", code, msg))?;
     Ok(address)
 }
 
@@ -505,7 +539,7 @@ mod tests {
 
     #[test]
     fn init_creates_coordinates() {
-        init();
+        init(None);
         COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
             let n = SIMULATION_PARAMETERS.n_collider_vertices;
             let len = collider_coordinates.len();
@@ -516,7 +550,7 @@ mod tests {
 
     #[test]
     fn init_creates_nodes() {
-        init();
+        init(None);
 
         VOICE_NODES_MEMORY.with_borrow(|nodes| {
             assert_eq!(nodes.len(), 360);
@@ -528,7 +562,7 @@ mod tests {
 
     #[test]
     fn init_creates_samples() {
-        init();
+        init(None);
 
         SAMPLES_MEMORY.with_borrow(|samples| {
             assert_eq!(samples.len(), 360);
@@ -543,7 +577,7 @@ mod tests {
 
     #[test]
     fn init_creates_zero_cache() {
-        init();
+        init(None);
 
         ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| {
             assert!(cache.len() > 0);
