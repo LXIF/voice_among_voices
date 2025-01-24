@@ -1,4 +1,5 @@
 pub mod audio;
+mod evm;
 mod physics;
 mod structs;
 pub mod test_functions;
@@ -24,6 +25,8 @@ use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
 use structs::*;
 use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
+
+use evm::get_caller_wallet_address;
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
@@ -139,7 +142,7 @@ fn store_siwe_principal(principal: Principal) -> Result<Principal, ValueError> {
     SIWE_PRINCIPAL.with_borrow_mut(|siwe_principal| siwe_principal.set(principal))
 }
 
-fn siwe_principal() -> Principal {
+pub fn siwe_principal() -> Principal {
     SIWE_PRINCIPAL.with_borrow(|principal| principal.get().clone())
 }
 
@@ -426,14 +429,7 @@ fn get_audio_parameters() -> AudioParameters {
 
 #[query(composite = true)]
 async fn get_wallet_address() -> Result<String, String> {
-    let (address,): (String,) = call(
-        siwe_principal(),
-        "get_address",
-        (ByteBuf::from(caller().as_slice().to_vec()),),
-    )
-    .await
-    .map_err(|(code, msg)| format!("Error code: {:?}, message: {}", code, msg))?;
-    Ok(address)
+    get_caller_wallet_address().await
 }
 
 #[cfg(test)]

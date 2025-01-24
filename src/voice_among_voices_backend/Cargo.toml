@@ -21,6 +21,13 @@ ic-http-certification = "2.6.0"
 once_cell = "1.20.2"
 ic-stable-structures = "0.6.5"
 
+alloy = { git = "https://github.com/ic-alloy/ic-alloy.git", tag = "v0.3.5-icp.1", default-features = true, features = [
+  "icp",
+  "sol-types",
+  "json",
+  "contract",
+] }
+
 [dev-dependencies]
 pocket-ic = "6.0.0"
 rand = "0.8.5"
