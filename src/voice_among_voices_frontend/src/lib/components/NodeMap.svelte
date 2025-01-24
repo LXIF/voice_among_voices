@@ -2,19 +2,19 @@
     import {onMount} from 'svelte';
     import type {VoiceNodeEgress} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
-    export let nodes: VoiceNodeEgress[] = [];
+    let { nodes }: { nodes: VoiceNodeEgress[] } = $props();
 
-    let canvas: HTMLCanvasElement;
-    let context: CanvasRenderingContext2D | null;
+    let canvas: HTMLCanvasElement | undefined = $state();
+    let context: CanvasRenderingContext2D | null = $state(null);
 
     /////////RENDERING///////////
     // Canvas dimensions
-    const canvasWidth = 500;
-    const canvasHeight = 500;
+    const canvasWidth = $state(500);
+    const canvasHeight = $state(500);
 
     // Logical coordinates for internal mapping
-    const logicalWidth = 100;
-    const logicalHeight = 100;
+    const logicalWidth = $state(100);
+    const logicalHeight = $state(100);
 
     function mapToCanvasX(logicalX: number) {
         return (logicalX / logicalWidth) * canvasWidth;
@@ -47,7 +47,7 @@
 
     // Handle the click event and map it back to logical coordinates
     function handleClick(event: MouseEvent) {
-        const rect = canvas.getBoundingClientRect();
+        const rect = canvas!.getBoundingClientRect();
         const canvasX = event.clientX - rect.left;
         const canvasY = event.clientY - rect.top;
 
@@ -65,9 +65,11 @@
         }
     });
 
-    $: if (context && nodes) {
-        drawNodes();
-    }
+    $effect(() => {
+        if (context && nodes) {
+            drawNodes();
+        }
+    });
 </script>
 
 <main>
@@ -75,7 +77,7 @@
         bind:this={canvas}
         width={canvasWidth}
         height={canvasHeight}
-        on:click={handleClick}
+        onclick={handleClick}
         style="border: 1px solid black;"
     ></canvas>
 </main>

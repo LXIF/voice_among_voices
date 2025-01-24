@@ -92,7 +92,8 @@ fn generate_audio_vectors(
     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
 
     // create vectors with length, fill them with neutral => half of i16::MAX
-    let total_length_samples = audio_params.total_length_ms * audio_params.sample_rate / 1000;
+    let total_length_samples: u64 =
+        audio_params.total_length_ms as u64 * audio_params.sample_rate as u64 / 1000;
 
     let mut left_channel = vec![0i16; total_length_samples as usize];
     let mut right_channel = vec![0i16; total_length_samples as usize];

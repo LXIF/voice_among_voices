@@ -1,24 +1,22 @@
 <script lang="ts">
     import {onDestroy, onMount} from 'svelte';
-    import {createEventDispatcher} from 'svelte';
 
     import {browser} from '$app/environment';
     import {encodeWav} from '$lib/utils/convUtils';
     import type {AudioParameters} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
-    const dispatch = createEventDispatcher();
+    let localStream: MediaStream | undefined = $state();
+    let audioElement: HTMLAudioElement | undefined = $state();
+    let mediaRecorder: any = $state();
+    let recording = $state(false);
+    let chunks: Blob[] = $state([]);
+    let audioBlob: Blob | undefined = $state();
+    let register: any = $state();
+    let connect: any = $state();
+    let recordingTimeout: ReturnType<typeof setTimeout> | undefined = $state();
 
-    let localStream: MediaStream;
-    let audioElement: HTMLAudioElement;
-    let mediaRecorder: any;
-    let recording = false;
-    let chunks: Blob[] = [];
-    let audioBlob: Blob;
-    let register: any;
-    let connect: any;
-    let recordingTimeout: ReturnType<typeof setTimeout>;
 
-    export let audioParameters: AudioParameters;
+    let { audioParameters, voiceRecorded, recordingLength }: { audioParameters: AudioParameters | undefined, voiceRecorded: (blob: Blob) => void, recordingLength: (length: number) => void } = $props();
 
     onMount(async () => {
         if (browser) {
@@ -55,7 +53,7 @@
             }
 
             async function setupMediaRecorder() {
-                if (!browser) return;
+                if (!browser || !audioParameters || !localStream) return;
 
                 await register(await connect());
 
@@ -140,17 +138,18 @@
                 trimmedBlob = encodeWav(trimmedBuffer);
                 // checkAudioLength(trimmedBlob);
 
+                if(!audioElement) throw "no audio element";
                 const audioURL = window.URL.createObjectURL(trimmedBlob);
                 audioElement.src = audioURL;
 
-                dispatch('voiceRecorded', trimmedBlob);
+                voiceRecorded(trimmedBlob);
             });
         };
     }
 
     let audioDuration: number = 0;
 
-    $: dispatch('recordingLength', audioDuration);
+    $effect(() => recordingLength(audioDuration));
 
     function checkAudioLength(blob: Blob) {
         const fileReader = new FileReader();
@@ -182,6 +181,7 @@
     let recordingInterval: ReturnType<typeof setInterval>;
 
     function handleRecordDown() {
+        if(!audioParameters) throw "no parameters";
         recording = true;
         window.addEventListener('pointerup', handleRecordUp);
         mediaRecorder?.start();
@@ -189,7 +189,7 @@
         recordingStart = Date.now();
         recordingInterval = setInterval(() => {
             const elapsed = Date.now() - recordingStart;
-            dispatch('recordingLength', elapsed);
+            recordingLength(elapsed);
         }, 16);
 
         clearTimeout(recordingTimeout);
@@ -213,10 +213,10 @@
 ></audio>
 <!-- <button
     class="px-4 py-2 bg-slate-500 rounded-full"
-    on:click={handleActivateMicrophone}>activate microphone</button
+    onclick={handleActivateMicrophone}>activate microphone</button
 > -->
 <button
-    on:pointerdown={handleRecordDown}
+    onpointerdown={handleRecordDown}
     class="bg-red-600 rounded-full w-20 h-20"
     class:recording>record</button
 >

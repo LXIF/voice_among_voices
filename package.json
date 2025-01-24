@@ -6,17 +6,15 @@
   "name": "voice_among_voices",
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "prebuild": "npm run prebuild --workspaces --if-present",
+    "prebuild": "npm run extract-candid && npm run prebuild --workspaces --if-present",
     "pretest": "npm run prebuild --workspaces --if-present",
     "start": "npm start --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
-    "dev": "npm run dev --workspaces --if-present"
+    "dev": "npm run dev --workspaces --if-present",
+    "extract-candid": "candid-extractor target/wasm32-unknown-unknown/release/voice_among_voices_backend.wasm > src/voice_among_voices_backend/voice_among_voices_backend.did"
   },
   "type": "module",
   "workspaces": [
     "src/voice_among_voices_frontend"
-  ],
-  "devDependencies": {
-    "@types/node": "^22.10.1"
-  }
+  ]
 }

@@ -3,7 +3,7 @@ import {
   canisterId,
 } from "../../../declarations/voice_among_voices_backend";
 import { canisterId as IIcanisterId } from "../../../declarations/internet_identity";
-import { HttpAgent } from "@dfinity/agent";
+import { HttpAgent, SignIdentity } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
 import { building } from "$app/environment";
 
@@ -40,27 +40,6 @@ identityAgent.subscribe((agent) => {
 
 export { backend };
 
-export const loginWithInternetIdentity = async () => {
-  let iiUrl;
-  if (process.env.DFX_NETWORK === "local") {
-    iiUrl = `http://${IIcanisterId}.localhost:4943/`;
-  } else if (process.env.DFX_NETWORK === "ic") {
-    iiUrl = `https://${IIcanisterId}.ic0.app`;
-  } else {
-    iiUrl = `https://${IIcanisterId}.dfinity.network`;
-  }
-
-  const authClient = await AuthClient.create();
-
-  await new Promise((resolve) => {
-    authClient.login({
-      identityProvider: iiUrl,
-      onSuccess: resolve,
-      onError: (e) => console.log(e),
-    });
-  });
-
-  const identity = authClient.getIdentity();
-
-  identityAgent.set(await HttpAgent.create({ identity }));
+export const setIdentityAgent = async (newIdentity: SignIdentity) => {
+  identityAgent.set(await HttpAgent.create({ identity: newIdentity }));
 };

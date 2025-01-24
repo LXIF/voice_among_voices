@@ -7,16 +7,16 @@
         StreamingCallbackHttpResponse,
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
-    let angle: number = 0;
-    let audioURL: string = '';
-    let error: string = '';
-    let isPlaying = false; // To track play/pause state
-    export let externalPlaybackPosition = 0; // Receive external playback position (normalized)
 
-    let audioElement: HTMLAudioElement;
-    let downloadLink: HTMLAnchorElement;
+    let { externalPlaybackPosition, onPlaybackPosition, onFileAngle, onFileLoaded }: { externalPlaybackPosition: number, onPlaybackPosition: (normalizedPosition: number) => void, onFileAngle: (angle: number) => void, onFileLoaded: (loaded: boolean) => void } = $props();
 
-    const dispatch = createEventDispatcher();
+    let angle: number = $state(0);
+    let audioURL: string = $state('');
+    let error: string = $state('');
+    let isPlaying = $state(false); // To track play/pause state
+
+    let audioElement: HTMLAudioElement | undefined = $state();
+    let downloadLink: HTMLAnchorElement | undefined = $state();
 
     // Fetch audio file based on angle
     async function fetchAudioFile() {
@@ -61,10 +61,10 @@
 
             audioURL = await handleBackendAudioData(audioData);
             await tick();
-            downloadLink.href = audioURL;
-            downloadLink.download = `audio_angle_${angle}.wav`;
-            dispatch('fileAngle', angle);
-            dispatch('fileLoaded', true);
+            downloadLink!.href = audioURL;
+            downloadLink!.download = `audio_angle_${angle}.wav`;
+            onFileAngle(angle);
+            onFileLoaded(true);
         } catch (e) {
             error = 'Error fetching the audio file.';
             console.error(e);
@@ -74,10 +74,10 @@
     // Toggle play/pause
     function togglePlayPause() {
         if (isPlaying) {
-            audioElement.pause();
+            audioElement!.pause();
             isPlaying = false;
         } else {
-            audioElement.play();
+            audioElement!.play();
             isPlaying = true;
         }
     }
@@ -85,12 +85,12 @@
     // Dispatch the current playback position (normalized)
     function onTimeUpdate() {
         const playbackPosition =
-            audioElement.currentTime / audioElement.duration;
-        dispatch('playbackPosition', playbackPosition);
+            audioElement!.currentTime / audioElement!.duration;
+        onPlaybackPosition(playbackPosition);
     }
 
     // Set playback position externally (in response to incoming props)
-    $: if (
+    $effect(() => { if (
         audioElement &&
         audioElement.duration &&
         externalPlaybackPosition >= 0 &&
@@ -98,7 +98,7 @@
     ) {
         audioElement.currentTime =
             externalPlaybackPosition * audioElement.duration;
-    }
+    }});
 
     // Listen for playback end
     function onEnded() {
@@ -122,7 +122,7 @@
         />
     </div>
 
-    <button on:click={fetchAudioFile}>Request Audio File</button>
+    <button onclick={fetchAudioFile}>Request Audio File</button>
 
     {#if error}
         <p class="error">{error}</p>
@@ -131,15 +131,15 @@
     {#if audioURL}
         <div>
             <!-- Custom Play/Pause Button -->
-            <button on:click={togglePlayPause}>
+            <button onclick={togglePlayPause}>
                 {isPlaying ? 'Pause' : 'Play'}
             </button>
 
             <!-- Hidden audio element (no controls) -->
             <audio
                 bind:this={audioElement}
-                on:timeupdate={onTimeUpdate}
-                on:ended={onEnded}
+                ontimeupdate={onTimeUpdate}
+                onended={onEnded}
             >
                 <source
                     src={audioURL}
