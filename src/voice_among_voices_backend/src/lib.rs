@@ -9,7 +9,7 @@ use audio::*;
 use candid::{CandidType, Principal};
 use ic_cdk::{
     api::{caller, performance_counter},
-    call, export_candid, init, post_upgrade, query, update,
+    export_candid, init, post_upgrade, query, update,
 };
 use ic_cdk_timers::set_timer;
 use ic_stable_structures::{
@@ -430,6 +430,13 @@ fn get_audio_parameters() -> AudioParameters {
 #[query(composite = true)]
 async fn get_wallet_address() -> Result<String, String> {
     get_caller_wallet_address().await
+}
+
+#[query(composite = true)]
+async fn get_owned_tokens() -> Result<Vec<u32>, String> {
+    let caller_address = get_caller_wallet_address().await?;
+
+    todo!();
 }
 
 #[cfg(test)]
