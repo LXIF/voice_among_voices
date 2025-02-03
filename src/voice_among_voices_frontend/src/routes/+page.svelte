@@ -22,7 +22,7 @@
     import SiweLoginButton from '$lib/components/SiweLoginButton.svelte';
     import SiweContext from '$lib/siwe/SiweContext.svelte';
     import { canisterId, idlFactory } from "../../../declarations/ic_siwe_provider";
-  import type { Principal } from '@dfinity/principal';
+  import { appkitModal } from '$lib/appKit.svelte';
 
     let voiceNodes: VoiceNodeEgress[] = $state([]);
     let backendSimulationResult: VoiceNodeEgress[] = $state([]);
@@ -135,6 +135,24 @@
         }
     };
 
+    const handleGetTokens = async () => {
+        if(myAddress === undefined) throw "Address is undefined";
+        const tokensResult = await backend.get_owned_tokens();
+        console.log(tokensResult);
+    }
+
+    const handleGetBalance = async () => {
+        if(myAddress === undefined) throw "Address is undefined";
+        const balanceResult = await backend.get_balance();
+        console.log(balanceResult);
+    }
+
+    const handleIsOwnerOf = async () => {
+        if(myAddress === undefined) throw "Address is undefined";
+        const isOwnerResult = await backend.is_owner_of(BigInt(1));
+        console.log(isOwnerResult);
+    }
+
 </script>
 
 <SiweContext {canisterId} {idlFactory}>
@@ -149,6 +167,9 @@
         {#if myAddress}
             <div>{myAddress}</div>
         {/if}
+        <button onclick={handleGetTokens}>get tokens</button>
+        <button onclick={handleGetBalance}>get balance</button>
+        <button onclick={handleIsOwnerOf}>get is Owner Of 1</button>
         <NodeMapPhysics
             nodes={voiceNodes}
             backendNodes={backendSimulationResult}

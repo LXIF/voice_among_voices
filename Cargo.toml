@@ -3,3 +3,9 @@ members = [
     "src/voice_among_voices_backend"
 ]
 resolver = "2"
+
+[profile.dev.package.rapier3d]
+opt-level = 3
+
+[profile.release]
+codegen-units = 1
