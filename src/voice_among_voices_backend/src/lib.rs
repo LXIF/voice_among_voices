@@ -5,6 +5,7 @@ mod structs;
 pub mod test_functions;
 mod utils;
 
+use alloy::primitives::{Address, Uint};
 use audio::*;
 use candid::{CandidType, Principal};
 use ic_cdk::{
@@ -21,12 +22,15 @@ use once_cell::sync::Lazy;
 use physics::*;
 use serde::Deserialize;
 use serde_bytes::ByteBuf;
-use std::{cell::RefCell, collections::HashMap, time::Duration, u64};
+use std::{cell::RefCell, collections::HashMap, str::FromStr, time::Duration, u64};
 use structs::*;
 use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
 
-use evm::get_caller_wallet_address;
+use evm::{
+    caller_is_owner_of, get_caller_balance, get_caller_owned_tokens, get_caller_wallet_address,
+    StorableAddress,
+};
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
@@ -39,6 +43,9 @@ thread_local! {
     );
     static SIWE_PRINCIPAL: RefCell<StableCell<Principal, Memory>> = RefCell::new(
         StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(2))), Principal::anonymous()).expect("Failed to initialize siwe principal storage")
+    );
+    static TOKEN_ADDRESS: RefCell<StableCell<StorableAddress, Memory>> = RefCell::new(
+        StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(3))), StorableAddress(Address::ZERO)).expect("Failed to initialize token address storage")
     );
     static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
@@ -146,10 +153,18 @@ pub fn siwe_principal() -> Principal {
     SIWE_PRINCIPAL.with_borrow(|principal| principal.get().clone())
 }
 
-//TODO: put somewhere smart
+fn store_token_address(address: Address) -> Result<StorableAddress, ValueError> {
+    TOKEN_ADDRESS.with_borrow_mut(|token_address| token_address.set(StorableAddress(address)))
+}
+
+pub fn token_address() -> Address {
+    TOKEN_ADDRESS.with_borrow(|token_address| token_address.get().0)
+}
+
 #[derive(Clone, Debug, CandidType, Deserialize, Default, Eq, PartialEq)]
 pub struct VoiceAmongVoicesInit {
     pub siwe_canister_principal: Option<Principal>,
+    pub token_address: Option<String>,
 }
 
 #[init]
@@ -162,6 +177,11 @@ fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
     if let Some(args) = maybe_arg {
         if let Some(siwe_principal) = args.siwe_canister_principal {
             let _ = store_siwe_principal(siwe_principal);
+        }
+        if let Some(token_address) = args.token_address {
+            let parsed_address =
+                Address::from_str(&token_address).expect("Could not parse token address");
+            let _ = store_token_address(parsed_address);
         }
     }
 }
@@ -427,16 +447,27 @@ fn get_audio_parameters() -> AudioParameters {
     AUDIO_PARAMETERS.clone()
 }
 
+// EVM
 #[query(composite = true)]
 async fn get_wallet_address() -> Result<String, String> {
     get_caller_wallet_address().await
 }
 
-#[query(composite = true)]
-async fn get_owned_tokens() -> Result<Vec<u32>, String> {
-    let caller_address = get_caller_wallet_address().await?;
+#[update]
+async fn get_owned_tokens() -> Result<Vec<String>, String> {
+    get_caller_owned_tokens()
+        .await
+        .map(|tokens| tokens.into_iter().map(|t| t.to_string()).collect())
+}
 
-    todo!();
+#[update]
+async fn get_balance() -> Result<String, String> {
+    get_caller_balance().await.map(|bal| bal.to_string())
+}
+
+#[update]
+async fn is_owner_of(token_id: u64) -> Result<bool, String> {
+    caller_is_owner_of(token_id).await
 }
 
 #[cfg(test)]
