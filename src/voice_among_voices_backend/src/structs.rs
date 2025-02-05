@@ -1,4 +1,4 @@
-use candid::{define_function, CandidType, Decode, Encode};
+use candid::{define_function, CandidType, Decode, Encode, Principal};
 use ic_http_certification::HeaderField;
 use ic_stable_structures::{
     memory_manager::VirtualMemory, storable::Bound, DefaultMemoryImpl, StableVec, Storable,
@@ -116,6 +116,8 @@ pub struct AudioParameters {
 pub enum AddVoiceNodeError {
     NotWithinCircleError(String),
     NotValidAudioFileError(String),
+    NotAuthorizedError,
+    EvmError(String),
 }
 
 #[derive(CandidType, Deserialize, Clone, Default)]
@@ -165,4 +167,10 @@ pub struct StreamingCallbackHttpResponse {
     pub headers: Vec<HeaderField>,
     pub body: ByteBuf,
     pub token: Option<StreamingCallbackToken>,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize, Default, Eq, PartialEq)]
+pub struct VoiceAmongVoicesInit {
+    pub siwe_canister_principal: Option<Principal>,
+    pub token_address: Option<String>,
 }
