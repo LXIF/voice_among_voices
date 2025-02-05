@@ -1,11 +1,12 @@
 pub mod audio;
 mod evm;
 mod physics;
+pub mod storage;
 mod structs;
 pub mod test_functions;
 mod utils;
 
-use alloy::primitives::{Address, Uint};
+use alloy::primitives::Address;
 use audio::*;
 use candid::{CandidType, Principal};
 use ic_cdk::{
@@ -23,167 +24,27 @@ use physics::*;
 use serde::Deserialize;
 use serde_bytes::ByteBuf;
 use std::{cell::RefCell, collections::HashMap, str::FromStr, time::Duration, u64};
+use storage::{
+    files_and_voices::{
+        get_caller_voices, get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk,
+    },
+    init::*,
+    voice_nodes::update_stored_voice_node,
+    *,
+};
 use structs::*;
 use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
+use voice_nodes::get_stored_voice_nodes;
 
 use evm::{
-    caller_is_owner_of, get_caller_balance, get_caller_owned_tokens, get_caller_wallet_address,
-    StorableAddress,
+    caller_is_owner_of, check_auth_for_single_node_id, get_caller_balance, get_caller_owned_tokens,
+    get_caller_wallet_address, StorableAddress,
 };
-
-thread_local! {
-    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
-
-    static VOICE_NODES_MEMORY: RefCell<VoiceNodeLocalMemory> = RefCell::new(
-        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(0)))).expect("Failed to initialize voice nodes map")
-    );
-    static SAMPLES_MEMORY: RefCell<AudioSampleMemory> = RefCell::new(
-        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(1)))).expect("Failed to initialize samples map")
-    );
-    static SIWE_PRINCIPAL: RefCell<StableCell<Principal, Memory>> = RefCell::new(
-        StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(2))), Principal::anonymous()).expect("Failed to initialize siwe principal storage")
-    );
-    static TOKEN_ADDRESS: RefCell<StableCell<StorableAddress, Memory>> = RefCell::new(
-        StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(3))), StorableAddress(Address::ZERO)).expect("Failed to initialize token address storage")
-    );
-    static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
-    static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
-    static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
-}
-
-static STREAMING_CALLBACK: Lazy<CallbackFunc> =
-    Lazy::new(|| CallbackFunc::new(ic_cdk::id(), "http_request_streaming_callback".to_string()));
-
-const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
-    total_length_ms: 4 * 60 * 1000,
-    max_sample_length_ms: 10000,
-    sample_rate: 44100,
-    chunk_size: 1024 * 1024,
-    fade_ms: 30,
-};
-const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
-    velocity_cutoff: 0.2,
-    force_cutoff: 100.,
-    max_distance: 20.,
-    force_strength: 3000.,
-    linear_damping: 10.,
-    logical_radius: 50.,
-    n_collider_vertices: 360,
-    friction: 0.5,
-    density: 2.,
-};
-
-// abstracting this because during dev things change and i don't want to restart dfx all the time
-fn collider_init() {
-    COLLIDER_COORDINATES.with_borrow_mut(|collider_coordinates| {
-        let fresh_vertices = create_circular_collider_coordinates(
-            SIMULATION_PARAMETERS.n_collider_vertices,
-            SIMULATION_PARAMETERS.logical_radius,
-        );
-
-        collider_coordinates.extend(fresh_vertices);
-    });
-}
-
-fn nodes_init() {
-    VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
-        for i in 0..360 {
-            nodes
-                .push(&VoiceNodeLocal {
-                    id: i,
-                    x: 0.,
-                    y: 0.,
-                    sample_id: u64::MAX,
-                    radius: f64::MAX,
-                    sample_length_samples: u32::MAX,
-                })
-                .expect("Failed to initialize voice nodes");
-        }
-    });
-}
-
-fn samples_init() {
-    SAMPLES_MEMORY.with_borrow_mut(|samples| {
-        let sample_length_ms = AUDIO_PARAMETERS.max_sample_length_ms;
-        let sample_rate = AUDIO_PARAMETERS.sample_rate;
-        let start_sample = generate_test_wav(sample_length_ms, sample_rate);
-        for i in 0..360 {
-            samples
-                .push(&AudioSample {
-                    id: i,
-                    sample: start_sample.clone(),
-                    sample_length_ms: sample_length_ms as f64,
-                    sample_length_samples: sample_length_ms * sample_rate / 1000,
-                })
-                .expect("Failed to initialize samples");
-        }
-    });
-}
-
-fn zero_cache_init() {
-    zero_cache_update();
-}
-
-fn zero_cache_update() {
-    ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
-        SAMPLES_MEMORY.with_borrow(|samples| {
-            VOICE_NODES_MEMORY.with_borrow(|nodes| {
-                let new_file = generate_angle_file(
-                    0 as f64,
-                    nodes,
-                    samples,
-                    &AUDIO_PARAMETERS,
-                    &SIMULATION_PARAMETERS,
-                )
-                .expect("failed to init zero cache");
-                let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
-                cache.clear();
-                cache.extend(chunks.clone());
-            })
-        });
-    });
-}
-
-fn store_siwe_principal(principal: Principal) -> Result<Principal, ValueError> {
-    SIWE_PRINCIPAL.with_borrow_mut(|siwe_principal| siwe_principal.set(principal))
-}
-
-pub fn siwe_principal() -> Principal {
-    SIWE_PRINCIPAL.with_borrow(|principal| principal.get().clone())
-}
-
-fn store_token_address(address: Address) -> Result<StorableAddress, ValueError> {
-    TOKEN_ADDRESS.with_borrow_mut(|token_address| token_address.set(StorableAddress(address)))
-}
-
-pub fn token_address() -> Address {
-    TOKEN_ADDRESS.with_borrow(|token_address| token_address.get().0)
-}
-
-#[derive(Clone, Debug, CandidType, Deserialize, Default, Eq, PartialEq)]
-pub struct VoiceAmongVoicesInit {
-    pub siwe_canister_principal: Option<Principal>,
-    pub token_address: Option<String>,
-}
 
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
-    collider_init();
-    nodes_init();
-    samples_init();
-    zero_cache_init();
-
-    if let Some(args) = maybe_arg {
-        if let Some(siwe_principal) = args.siwe_canister_principal {
-            let _ = store_siwe_principal(siwe_principal);
-        }
-        if let Some(token_address) = args.token_address {
-            let parsed_address =
-                Address::from_str(&token_address).expect("Could not parse token address");
-            let _ = store_token_address(parsed_address);
-        }
-    }
+    initialize_storage(maybe_arg);
 }
 
 #[query]
@@ -197,239 +58,45 @@ fn post_upgrade() {
 }
 
 #[update]
-fn update_voice_node(node: VoiceNodeIngress) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
-    // first check radius
-    let (sample_length_samples, sample_length_ms) = get_sample_length(&node.sample)?;
-    let max_sample_length = AUDIO_PARAMETERS.max_sample_length_ms;
-
-    if sample_length_ms > max_sample_length as f64 {
-        return Err(AddVoiceNodeError::NotValidAudioFileError(
-            "Audio file too long".to_string(),
-        ));
-    }
-
-    let node_radius = {
-        let logical_per_ms =
-            2. * SIMULATION_PARAMETERS.logical_radius / AUDIO_PARAMETERS.total_length_ms as f64;
-
-        sample_length_ms * logical_per_ms / 2.
-    };
-
-    // check if we can accept le circle
-    let within_circle = node_within_circle(&node, &SIMULATION_PARAMETERS, node_radius);
-
-    if !within_circle {
-        return Err(AddVoiceNodeError::NotWithinCircleError(
-            "Node out of bounds".to_string(),
-        ));
-    };
-
-    SAMPLES_MEMORY.with_borrow_mut(|samples_map| {
-        let new_sample = AudioSample {
-            id: node.id as u64,
-            sample: node.sample,
-            sample_length_samples,
-            sample_length_ms,
-        };
-        samples_map.set(node.id as u64, &new_sample);
-    });
-
-    let mut returnable_nodes: VoiceNodeEgressStore = vec![];
-
-    COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
-        VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
-            let id = node.id;
-            let new_node = VoiceNodeLocal {
-                id,
-                x: node.x,
-                y: node.y,
-                sample_id: node.id as u64,
-                radius: node_radius,
-                sample_length_samples,
-            };
-
-            nodes.set(id as u64, &new_node);
-
-            simulate_until_stopped(nodes, &SIMULATION_PARAMETERS, &collider_coordinates);
-
-            returnable_nodes = nodes
-                .iter()
-                .filter_map(|node| {
-                    if node.sample_id == u64::MAX {
-                        return None;
-                    }
-                    Some(node.into())
-                })
-                .collect();
-        });
-    });
-
-    zero_cache_update();
-    Ok(returnable_nodes)
+async fn update_voice_node(
+    node: VoiceNodeIngress,
+) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
+    check_auth_for_single_node_id(node.id).await; // traps if not authorized
+    update_stored_voice_node(node)
 }
 
 #[query]
 fn get_voice_nodes() -> VoiceNodeEgressStore {
-    VOICE_NODES_MEMORY.with_borrow(|nodes| {
-        nodes
-            .iter()
-            .filter_map(|node| {
-                if node.sample_id == u64::MAX {
-                    return None;
-                }
-                Some(node.into())
-            })
-            .collect()
-    })
+    get_stored_voice_nodes()
 }
 
 #[query]
-fn get_my_voice() -> Option<AudioSample> {
-    //TODO: guard and return 'owned' sample
-    let mut result: Option<AudioSample> = None;
-    let index = 0;
-
-    VOICE_NODES_MEMORY.with_borrow(|nodes| {
-        SAMPLES_MEMORY.with_borrow(|samples| {
-            if let Some(node) = nodes.get(index) {
-                if node.sample_id != u64::MAX {
-                    if let Some(sample) = samples.get(node.sample_id) {
-                        result = Some(sample);
-                    }
-                }
-            }
-        });
-    });
-
-    result
+async fn get_my_voices() -> Result<Option<Vec<AudioSample>>, String> {
+    get_caller_voices().await
 }
 
 #[update]
-fn get_angle_file(angle: f64) -> HttpStreamingResponse {
-    // TODO: guard to user, restrict angle
-    let beginning_cost = performance_counter(0);
-
-    let mut result: Vec<u8> = vec![];
-
-    VOICE_NODES_MEMORY.with_borrow(|nodes| {
-        SAMPLES_MEMORY.with_borrow(|samples_map| {
-            result = generate_angle_file(
-                angle,
-                nodes,
-                samples_map,
-                &AUDIO_PARAMETERS,
-                &SIMULATION_PARAMETERS,
-            )
-            .unwrap(); // TODO: error handling
-        });
-    });
-
-    // split into chunks
-    let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
-
-    ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
-        cache.insert(angle as u32, chunks.clone());
-    });
-
-    set_timer(Duration::from_secs(60), move || {
-        // invalidate after 60s for now
-        ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
-            cache.remove(&(angle as u32));
-        });
-    }); //invalidate after 60 seconds
-
-    let total_chunks = chunks.len() as u32;
-
-    let first_chunk = chunks.get(0).cloned().unwrap_or_default();
-    let token = StreamingCallbackToken {
-        angle: angle as u32,
-        chunk_index: 0,
-        chunks: total_chunks,
-        auth_token: None, // TODO: maybe implement this for security purposes
+async fn get_angle_file(angle: u64) -> HttpStreamingResponse {
+    if angle > 360 || angle < 1 {
+        ic_cdk::trap("invalid angle")
     };
-
-    let end_cost = performance_counter(0);
-
-    HttpStreamingResponse {
-        status_code: 200,
-        headers: vec![
-            ("content-type".to_string(), "audio/wav".to_string()),
-            ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
-            ("x-end-cost".to_string(), end_cost.to_string()),             // Profiling header
-        ],
-        body: ByteBuf::from(first_chunk),
-        upgrade: None,
-        streaming_strategy: create_strategy(token),
-    }
+    check_auth_for_single_node_id(angle as usize).await;
+    get_file_for_angle(angle)
 }
 
 #[query]
 fn get_zero_file() -> HttpStreamingResponse {
-    ZERO_DEGREE_FILE_CACHE.with_borrow(|chunks| {
-        let total_chunks = chunks.len() as u32;
-
-        let first_chunk = chunks.get(0).cloned().unwrap_or_default();
-        let token = StreamingCallbackToken {
-            angle: 0 as u32,
-            chunk_index: 0,
-            chunks: total_chunks,
-            auth_token: None, // TODO: maybe implement this for security purposes
-        };
-
-        HttpStreamingResponse {
-            status_code: 200,
-            headers: vec![("content-type".to_string(), "audio/wav".to_string())],
-            body: ByteBuf::from(first_chunk),
-            upgrade: None,
-            streaming_strategy: create_strategy(token),
-        }
-    })
+    get_file_for_zero_angle()
 }
 
 #[query]
 fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
-    let chunks: Vec<Vec<u8>>;
-
-    match token.angle {
-        0 => {
-            chunks = ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| cache.clone());
-        }
-        _ => {
-            chunks = match ANGLE_FILE_CACHE.with_borrow(|cache| cache.get(&token.angle).cloned()) {
-                Some(file_chunks) => file_chunks,
-                None => ic_cdk::trap("Cache out of date, connection too slow"),
-            };
-        }
-    }
-
-    if let Some(token) = token.next() {
-        if let Some(chunk) = chunks.get((token.chunk_index) as usize) {
-            StreamingCallbackHttpResponse {
-                headers: vec![],
-                body: ByteBuf::from(chunk.clone()),
-                token: Some(token),
-            }
-        } else {
-            ic_cdk::trap("Chunk not found");
-        }
-    } else {
-        StreamingCallbackHttpResponse {
-            headers: vec![],
-            body: ByteBuf::new(),
-            token: None,
-        }
-    }
+    get_streaming_chunk(token)
 }
 
 #[query]
 fn get_my_principal() -> String {
     format!("{}", caller())
-}
-
-fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {
-    let callback = STREAMING_CALLBACK.clone();
-
-    Some(StreamingStrategy::Callback { token, callback })
 }
 
 #[query]
@@ -444,7 +111,7 @@ fn get_collider_coordinates() -> Vec<ColliderCoordinate> {
 
 #[query]
 fn get_audio_parameters() -> AudioParameters {
-    AUDIO_PARAMETERS.clone()
+    get_stored_audio_parameters()
 }
 
 // EVM
@@ -468,155 +135,6 @@ async fn get_balance() -> Result<String, String> {
 #[update]
 async fn is_owner_of(token_id: u64) -> Result<bool, String> {
     caller_is_owner_of(token_id).await
-}
-
-#[cfg(test)]
-mod tests {
-    use super::test_functions::*;
-    use super::*;
-
-    #[test]
-    fn voice_nodes_get_added_correctly() {
-        collider_init();
-        nodes_init();
-        samples_init();
-
-        let voice_node = VoiceNodeIngress {
-            x: 0.,
-            y: 40.,
-            sample: generate_test_wav(1000, 44100),
-            id: 0,
-        };
-
-        let another_voice_node = VoiceNodeIngress {
-            x: -45.,
-            y: 0.,
-            sample: generate_test_wav(1000, 44100),
-            id: 1,
-        };
-
-        let result_a = update_voice_node(voice_node);
-        println!("{:#?}", result_a.unwrap());
-        let _ = update_voice_node(another_voice_node);
-
-        SAMPLES_MEMORY.with_borrow(|samples_map| {
-            let id = samples_map.get(0).expect("No sample!").id;
-            let another_id = samples_map.get(1).expect("No another_sample!").id;
-
-            assert_eq!(id, 0);
-            assert_eq!(another_id, 1);
-        });
-    }
-
-    #[test]
-    fn get_correct_audio_params() {
-        let audio_params = get_audio_parameters();
-
-        assert!(audio_params.max_sample_length_ms > 0);
-    }
-
-    #[test]
-    fn out_of_bounds_voice_nodes_get_rejected_correctly() {
-        collider_init();
-
-        let voice_node = VoiceNodeIngress {
-            x: -50.,
-            y: -50.,
-            sample: generate_test_wav(1000, 44100),
-            id: 0,
-        };
-
-        let another_voice_node = VoiceNodeIngress {
-            x: 99.,
-            y: 50.,
-            sample: generate_test_wav(10000, 44100),
-            id: 1,
-        };
-
-        let _ = update_voice_node(voice_node);
-        let _ = update_voice_node(another_voice_node);
-
-        SAMPLES_MEMORY.with_borrow(|samples_map| {
-            println!("{}", samples_map.len());
-            assert!(samples_map.len() == 0);
-        });
-    }
-
-    #[test]
-    fn too_long_voice_nodes_get_rejected_correctly() {
-        collider_init();
-
-        let max_length = AUDIO_PARAMETERS.max_sample_length_ms;
-
-        let voice_node = VoiceNodeIngress {
-            x: 50.,
-            y: 50.,
-            sample: generate_test_wav(max_length + 10, 44100),
-            id: 0,
-        };
-
-        let another_voice_node = VoiceNodeIngress {
-            x: 60.,
-            y: 60.,
-            sample: generate_test_wav(max_length + 20, 44100),
-            id: 1,
-        };
-
-        let _ = update_voice_node(voice_node);
-        let _ = update_voice_node(another_voice_node);
-
-        SAMPLES_MEMORY.with_borrow(|samples_map| {
-            println!("{}", samples_map.len());
-            assert!(samples_map.len() == 0);
-        });
-    }
-
-    #[test]
-    fn init_creates_coordinates() {
-        init(None);
-        COLLIDER_COORDINATES.with_borrow(|collider_coordinates| {
-            let n = SIMULATION_PARAMETERS.n_collider_vertices;
-            let len = collider_coordinates.len();
-
-            assert_eq!(n, len as u64);
-        });
-    }
-
-    #[test]
-    fn init_creates_nodes() {
-        init(None);
-
-        VOICE_NODES_MEMORY.with_borrow(|nodes| {
-            assert_eq!(nodes.len(), 360);
-            for node in nodes.iter() {
-                assert_eq!(node.sample_id, u64::MAX);
-            }
-        });
-    }
-
-    #[test]
-    fn init_creates_samples() {
-        init(None);
-
-        SAMPLES_MEMORY.with_borrow(|samples| {
-            assert_eq!(samples.len(), 360);
-            for sample in samples.iter() {
-                assert_eq!(
-                    sample.sample_length_ms as u32,
-                    AUDIO_PARAMETERS.max_sample_length_ms
-                );
-            }
-        });
-    }
-
-    #[test]
-    fn init_creates_zero_cache() {
-        init(None);
-
-        ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| {
-            assert!(cache.len() > 0);
-        });
-    }
 }
 
 export_candid!();

@@ -1,6 +1,7 @@
-use std::str::FromStr;
+use std::{fmt::format, str::FromStr};
 
 use crate::siwe_principal;
+use crate::structs::VoiceNodeIngress;
 use crate::token_address;
 use alloy::{
     primitives::{Address, Uint},
@@ -13,7 +14,6 @@ use futures::{
     Future,
 };
 use ic_cdk::{call, caller};
-use ic_cdk_timers::set_timer;
 use ic_stable_structures::{storable::Bound, Storable};
 use serde_bytes::ByteBuf;
 use IERC721::IERC721Instance;
@@ -59,6 +59,60 @@ where
     }
 }
 
+// TODO: try to fix this async version (got compiler errored)
+// pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
+//     let CallObjects {
+//         owner,
+//         token_contract,
+//     } = setup_call_objects().await?;
+
+//     // First get the balance with retry
+//     let balance = retry(
+//         || async {
+//             token_contract
+//                 .balanceOf(owner)
+//                 .call()
+//                 .await
+//                 .map_err(|e| format!("Failed to call balanceOf: {}", e))
+//         },
+//         3, // max retries
+//     )
+//     .await?;
+
+//     let mut calls: Vec<BoxFuture<Result<Uint<256, 4>, String>>> = Vec::new();
+
+//     let balance_i32 = balance
+//         ._0
+//         .try_into()
+//         .map_err(|_| format!("Failed to parse token number"))?;
+
+//     for i in 0..balance_i32 {
+//         let token_contract = token_contract.clone();
+//         calls.push(Box::pin(async move {
+//             retry(
+//                 || async {
+//                     token_contract
+//                         .tokenOfOwnerByIndex(owner, Uint::from(i))
+//                         .call()
+//                         .await
+//                         .map(|res| res._0)
+//                         .map_err(|e| format!("Failed to get token at index {}: {}", i, e))
+//                 },
+//                 3, // max retries
+//             )
+//             .await
+//         }));
+//     }
+
+//     let results = future::join_all(calls).await;
+//     let mut tokens = Vec::new();
+//     for result in results {
+//         tokens.push(result?);
+//     }
+
+//     Ok(tokens)
+// }
+
 pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
     let CallObjects {
         owner,
@@ -74,38 +128,33 @@ pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
                 .await
                 .map_err(|e| format!("Failed to call balanceOf: {}", e))
         },
-        3, // max retries
+        3,
     )
     .await?;
 
-    let mut calls: Vec<BoxFuture<Result<Uint<256, 4>, String>>> = Vec::new();
-
-    for i in 0..balance
+    let balance_u64 = balance
         ._0
         .try_into()
-        .map_err(|_| format!("Failed to parse token number"))?
-    {
-        let token_contract = token_contract.clone();
-        calls.push(Box::pin(async move {
-            retry(
-                || async {
-                    token_contract
-                        .tokenOfOwnerByIndex(owner, Uint::from(i))
-                        .call()
-                        .await
-                        .map(|res| res._0)
-                        .map_err(|e| format!("Failed to get token at index {}: {}", i, e))
-                },
-                3, // max retries
-            )
-            .await
-        }));
-    }
+        .map_err(|_| format!("Failed to parse token number"))?;
 
-    let results = future::join_all(calls).await;
     let mut tokens = Vec::new();
-    for result in results {
-        tokens.push(result?);
+
+    // Do sequential calls with retry instead of parallel
+    for i in 0..balance_u64 {
+        let token_id = retry(
+            || async {
+                token_contract
+                    .tokenOfOwnerByIndex(owner, Uint::from(i))
+                    .call()
+                    .await
+                    .map(|res| res._0)
+                    .map_err(|e| format!("Failed to get token at index {}: {}", i, e))
+            },
+            3,
+        )
+        .await?;
+
+        tokens.push(token_id);
     }
 
     Ok(tokens)
@@ -151,6 +200,16 @@ pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
     .await?;
 
     Ok(call_response._0 == owner)
+}
+
+pub async fn check_auth_for_single_node_id(node_id: usize) {
+    match caller_is_owner_of(node_id as u64).await {
+        Ok(res) => match res {
+            true => (),
+            false => ic_cdk::trap("Unauthorized"),
+        },
+        Err(err) => ic_cdk::trap(&format!("Failed to check authorization: {}", err)),
+    }
 }
 
 struct CallObjects {
