@@ -202,8 +202,8 @@ pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
     Ok(call_response._0 == owner)
 }
 
-pub async fn check_auth_for_single_node(node: &VoiceNodeIngress) {
-    match caller_is_owner_of(node.id as u64).await {
+pub async fn check_auth_for_single_node_id(node_id: usize) {
+    match caller_is_owner_of(node_id as u64).await {
         Ok(res) => match res {
             true => (),
             false => ic_cdk::trap("Unauthorized"),

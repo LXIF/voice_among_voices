@@ -21,6 +21,7 @@ use serde::Deserialize;
 use serde_bytes::ByteBuf;
 use std::{cell::RefCell, collections::HashMap, str::FromStr, time::Duration, u64};
 
+pub mod files_and_voices;
 pub mod init;
 pub mod voice_nodes;
 
