@@ -1,4 +1,4 @@
-use candid::{define_function, CandidType, Decode, Deserialize, Principal};
+use candid::{define_function, encode_one, CandidType, Decode, Deserialize, Principal};
 use hound::{WavSpec, WavWriter};
 use ic_http_certification::HeaderField;
 use pocket_ic::{PocketIc, WasmResult};
@@ -27,6 +27,12 @@ const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     density: 2.,
 };
 
+const INIT_ARGS: VoiceAmongVoicesInit = VoiceAmongVoicesInit {
+    siwe_canister_principal: None,
+    token_address: None,
+    dev_mode: Some(true),
+};
+
 fn pic_initialize_canister(pic: &PocketIc) -> Principal {
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 2_000_000_000_000);
@@ -41,7 +47,9 @@ fn pic_initialize_canister(pic: &PocketIc) -> Principal {
 
     let wasm_bytes = read(wasm_path).expect("failed to read wasm");
 
-    pic.install_canister(canister_id, wasm_bytes, vec![], None);
+    let encoded_args = encode_one(INIT_ARGS).unwrap();
+
+    pic.install_canister(canister_id, wasm_bytes, encoded_args, None);
 
     canister_id
 }
@@ -919,4 +927,11 @@ struct VoiceNodeIngress {
     x: f64,
     y: f64,
     sample: Vec<u8>, // here it's still a blob
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize, Default, Eq, PartialEq)]
+pub struct VoiceAmongVoicesInit {
+    pub siwe_canister_principal: Option<Principal>,
+    pub token_address: Option<String>,
+    pub dev_mode: Option<bool>,
 }

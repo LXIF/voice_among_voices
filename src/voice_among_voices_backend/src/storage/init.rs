@@ -7,6 +7,8 @@ use crate::{
 use alloy::primitives::Address;
 use std::str::FromStr;
 
+use super::store_dev_mode;
+
 // abstracting this because during dev things change and i don't want to restart dfx all the time
 pub fn collider_init() {
     COLLIDER_COORDINATES.with_borrow_mut(|collider_coordinates| {
@@ -72,6 +74,9 @@ pub fn initialize_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
             let parsed_address =
                 Address::from_str(&token_address).expect("Could not parse token address");
             let _ = store_token_address(parsed_address);
+        }
+        if let Some(dev_mode) = args.dev_mode {
+            let _ = store_dev_mode(dev_mode);
         }
     }
 }

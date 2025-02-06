@@ -1,8 +1,8 @@
 use std::{fmt::format, str::FromStr};
 
-use crate::siwe_principal;
 use crate::structs::VoiceNodeIngress;
 use crate::token_address;
+use crate::{siwe_principal, storage::dev_mode};
 use alloy::{
     primitives::{Address, Uint},
     providers::{ProviderBuilder, RootProvider},
@@ -203,6 +203,9 @@ pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
 }
 
 pub async fn check_auth_for_single_node_id(node_id: usize) {
+    if dev_mode() {
+        return ();
+    };
     match caller_is_owner_of(node_id as u64).await {
         Ok(res) => match res {
             true => (),

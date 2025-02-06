@@ -6,6 +6,7 @@ dfx deploy voice_among_voices_backend --argument $'(
     opt record {
         siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider)'";
         token_address = opt "0x431352373f5d99b8d388bce95d995fab762554e1";
+        dev_mode = opt true;
     }
 )'
 

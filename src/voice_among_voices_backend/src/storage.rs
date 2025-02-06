@@ -1,25 +1,18 @@
 use crate::audio::*;
 use crate::physics::*;
 use crate::structs::*;
-use crate::utils::{node_within_circle, split_into_chunks};
+use crate::utils::split_into_chunks;
 use crate::StorableAddress;
 use alloy::primitives::Address;
-use candid::{CandidType, Principal};
-use ic_cdk::{
-    api::{caller, performance_counter},
-    export_candid, init, post_upgrade, query, update,
-};
-use ic_cdk_timers::set_timer;
+use candid::Principal;
+
 use ic_stable_structures::{
     cell::ValueError,
     memory_manager::{MemoryId, MemoryManager},
     DefaultMemoryImpl, StableCell, StableVec,
 };
-use init::*;
 use once_cell::sync::Lazy;
-use serde::Deserialize;
-use serde_bytes::ByteBuf;
-use std::{cell::RefCell, collections::HashMap, str::FromStr, time::Duration, u64};
+use std::{cell::RefCell, collections::HashMap};
 
 pub mod files_and_voices;
 pub mod init;
@@ -39,6 +32,9 @@ thread_local! {
     );
     pub static TOKEN_ADDRESS: RefCell<StableCell<StorableAddress, Memory>> = RefCell::new(
         StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(3))), StorableAddress(Address::ZERO)).expect("Failed to initialize token address storage")
+    );
+    pub static CONFIG: RefCell<StableCell<StorableConfig, Memory>> = RefCell::new(
+        StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(4))), StorableConfig::default()).expect("Failed to initialize config storage")
     );
     pub static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     pub static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
@@ -105,6 +101,18 @@ pub fn store_token_address(address: Address) -> Result<StorableAddress, ValueErr
 
 pub fn token_address() -> Address {
     TOKEN_ADDRESS.with_borrow(|token_address| token_address.get().0)
+}
+
+pub fn store_dev_mode(dev_mode: bool) -> Result<StorableConfig, ValueError> {
+    CONFIG.with_borrow_mut(|config| {
+        let mut current = config.get().clone();
+        current.dev_mode = dev_mode;
+        config.set(current)
+    })
+}
+
+pub fn dev_mode() -> bool {
+    CONFIG.with_borrow(|config| config.get().dev_mode)
 }
 
 #[cfg(test)]
