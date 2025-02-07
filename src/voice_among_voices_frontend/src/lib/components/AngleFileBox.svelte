@@ -30,7 +30,7 @@
             audioURL = '';
 
             const response: HttpStreamingResponse =
-                await backend.get_angle_file(Math.round(angle));
+                await backend.get_angle_file(BigInt(Math.round(angle)));
 
             if (!response.streaming_strategy) {
                 throw new Error('No streaming strategy provided.');

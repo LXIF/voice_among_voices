@@ -18,7 +18,9 @@
             console.log(loginResponse);
             setIdentityAgent(loginResponse);
         }
-    
+
+        //TODO: add connect wallet functionality into here
+        //TODO: Login button should reflect logged-in state with address
 </script>
 
-<button onclick={handleLogin}>login with siwe</button>
+<button class="text-xl font-bold" onclick={handleLogin}>Login</button>
