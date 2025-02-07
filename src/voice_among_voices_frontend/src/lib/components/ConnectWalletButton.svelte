@@ -5,7 +5,7 @@
 // $appkitModal.subscribeAccount((newState) => console.log(newState));
 </script>
 
-<button onclick={() => {
+<button class="font-display" onclick={() => {
     $appkitModal.open();
 }}>
     Connect Wallet

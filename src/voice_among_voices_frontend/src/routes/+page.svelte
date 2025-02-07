@@ -32,9 +32,6 @@
     let nodeWidthPx = $state(0);
     let nodeWidthLogical = $state(0);
     let currentVoiceBlob: Blob | undefined = $state();
-    let myVoice: [AudioSample] | [] = $state([]);
-
-    let myCurrentSampleAudioElement: HTMLAudioElement | undefined = $state();
 
     let dragging = $state(false);
 
@@ -184,11 +181,6 @@
             voiceRecorded={handleVoiceRecorded}
             {audioParameters}
         />
-        <h1>Current own voice:</h1>
-        <audio
-            controls
-            bind:this={myCurrentSampleAudioElement}
-        ></audio>
         <AngleFileBox
             {externalPlaybackPosition}
             onPlaybackPosition={(position) => (playheadPosition = position)}
