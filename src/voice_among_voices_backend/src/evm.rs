@@ -1,18 +1,14 @@
-use std::{fmt::format, str::FromStr};
+use std::str::FromStr;
 
-use crate::siwe_principal;
-use crate::structs::VoiceNodeIngress;
 use crate::token_address;
+use crate::{siwe_principal, storage::dev_mode};
 use alloy::{
     primitives::{Address, Uint},
     providers::{ProviderBuilder, RootProvider},
     sol,
     transports::icp::{EthSepoliaService, IcpConfig, IcpTransport, RpcService},
 };
-use futures::{
-    future::{self, BoxFuture},
-    Future,
-};
+use futures::Future;
 use ic_cdk::{call, caller};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde_bytes::ByteBuf;
@@ -203,6 +199,9 @@ pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
 }
 
 pub async fn check_auth_for_single_node_id(node_id: usize) {
+    if dev_mode() {
+        return ();
+    };
     match caller_is_owner_of(node_id as u64).await {
         Ok(res) => match res {
             true => (),

@@ -26,9 +26,10 @@ type HttpStreamingResponse = record {
   status_code : nat16;
 };
 type Result = variant { Ok : text; Err : text };
-type Result_1 = variant { Ok : vec text; Err : text };
-type Result_2 = variant { Ok : bool; Err : text };
-type Result_3 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
+type Result_1 = variant { Ok : opt vec AudioSample; Err : text };
+type Result_2 = variant { Ok : vec text; Err : text };
+type Result_3 = variant { Ok : bool; Err : text };
+type Result_4 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
 type SimulationParameters = record {
   logical_radius : float64;
   density : float64;
@@ -62,6 +63,7 @@ type StreamingStrategy = variant {
 type VoiceAmongVoicesInit = record {
   siwe_canister_principal : opt principal;
   token_address : opt text;
+  dev_mode : opt bool;
 };
 type VoiceNodeEgress = record {
   x : float64;
@@ -76,13 +78,13 @@ type VoiceNodeIngress = record {
   sample : blob;
 };
 service : (opt VoiceAmongVoicesInit) -> {
-  get_angle_file : (float64) -> (HttpStreamingResponse);
+  get_angle_file : (nat64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
   get_balance : () -> (Result);
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;
   get_my_principal : () -> (text) query;
-  get_my_voice : () -> (opt AudioSample) query;
-  get_owned_tokens : () -> (Result_1);
+  get_my_voices : () -> (Result_1) query;
+  get_owned_tokens : () -> (Result_2);
   get_simulation_parameters : () -> (SimulationParameters) query;
   get_siwe_principal : () -> (principal) query;
   get_voice_nodes : () -> (vec VoiceNodeEgress) query;
@@ -91,6 +93,6 @@ service : (opt VoiceAmongVoicesInit) -> {
   http_request_streaming_callback : (StreamingCallbackToken) -> (
       StreamingCallbackHttpResponse,
     ) query;
-  is_owner_of : (nat64) -> (Result_2);
-  update_voice_node : (VoiceNodeIngress) -> (Result_3);
+  is_owner_of : (nat64) -> (Result_3);
+  update_voice_node : (VoiceNodeIngress) -> (Result_4);
 }

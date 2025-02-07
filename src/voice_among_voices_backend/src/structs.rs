@@ -173,4 +173,28 @@ pub struct StreamingCallbackHttpResponse {
 pub struct VoiceAmongVoicesInit {
     pub siwe_canister_principal: Option<Principal>,
     pub token_address: Option<String>,
+    pub dev_mode: Option<bool>,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, CandidType, Serialize, Deserialize,
+)]
+pub struct StorableConfig {
+    pub dev_mode: bool,
+}
+
+impl StorableConfig {
+    pub fn default() -> Self {
+        StorableConfig { dev_mode: false }
+    }
+}
+
+impl Storable for StorableConfig {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
+    }
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+    const BOUND: Bound = Bound::Unbounded;
 }
