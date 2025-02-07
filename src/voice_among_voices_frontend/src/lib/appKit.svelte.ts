@@ -24,7 +24,7 @@ const wagmiAdapter = readable<WagmiAdapter>(
 const metadata = {
   name: "Voice among Voices",
   description: "Big Cool Sound Map Wee",
-  url: "localhost", // origin must match your domain & subdomain
+  url: "localhost", // origin must match your domain & subdomain //TODO
   icons: ["https://avatars.githubusercontent.com/u/179229932"],
 };
 

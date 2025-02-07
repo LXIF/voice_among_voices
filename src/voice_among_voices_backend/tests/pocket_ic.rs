@@ -141,7 +141,7 @@ fn pocket_ic_sample_to_angle_file_single() {
 
     // Create a sample voice node
     let voice_node = VoiceNodeIngress {
-        id: 0,
+        id: 1,
         x: 0.0,
         y: 0.0,
         sample: test_wav,
@@ -168,7 +168,7 @@ fn pocket_ic_sample_to_angle_file_single() {
     }
 
     // Generate an angle file by querying the canister
-    let angle = 0.0; // Using angle 0.0 for this test
+    let angle = 1u64; // Using angle 0.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -247,7 +247,7 @@ fn pocket_ic_smoke_test_50_files_1ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180.0; // Using angle 180.0 for this test
+    let test_angle = 180u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -326,7 +326,7 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180.0; // Using angle 180.0 for this test
+    let test_angle = 180u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -405,7 +405,7 @@ fn pocket_ic_smoke_test_100_files_1ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180.0; // Using angle 180.0 for this test
+    let test_angle = 180u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -484,7 +484,7 @@ fn pocket_ic_smoke_test_360_files_1ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180.0; // Using angle 180.0 for this test
+    let test_angle = 180u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -563,7 +563,7 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180.0; // Using angle 180.0 for this test
+    let test_angle = 180u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -642,7 +642,7 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180.0; // Using angle 180.0 for this test
+    let test_angle = 180u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -725,7 +725,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180.0; // Using angle 180.0 for this test
+    let test_angle = 180u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic
         .update_call(
             canister_id,
@@ -804,7 +804,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
 //     }
 
 //     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-//     let test_angle = 180.0; // Using angle 180.0 for this test
+//     let test_angle = 180u64; // Using angle 180.0 for this test
 //     let get_angle_file_result = pic
 //         .query_call(
 //             canister_id,

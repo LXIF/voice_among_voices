@@ -1,6 +1,5 @@
-use std::{fmt::format, str::FromStr};
+use std::str::FromStr;
 
-use crate::structs::VoiceNodeIngress;
 use crate::token_address;
 use crate::{siwe_principal, storage::dev_mode};
 use alloy::{
@@ -9,10 +8,7 @@ use alloy::{
     sol,
     transports::icp::{EthSepoliaService, IcpConfig, IcpTransport, RpcService},
 };
-use futures::{
-    future::{self, BoxFuture},
-    Future,
-};
+use futures::Future;
 use ic_cdk::{call, caller};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde_bytes::ByteBuf;

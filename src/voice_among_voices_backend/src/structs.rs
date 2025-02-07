@@ -7,8 +7,6 @@ use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::{borrow::Cow, collections::HashMap};
 
-use crate::physics::ColliderCoordinate;
-
 // LIB ////////////////////
 
 pub type Memory = VirtualMemory<DefaultMemoryImpl>;

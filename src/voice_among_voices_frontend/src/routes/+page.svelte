@@ -51,15 +51,6 @@
         voiceNodes = await backend.get_voice_nodes();
         simulationParameters = await backend.get_simulation_parameters();
         audioParameters = await backend.get_audio_parameters();
-        myVoice = await backend.get_my_voice();
-
-        if (myVoice.length > 0 && myCurrentSampleAudioElement) {
-            const sample = myVoice[angle].sample;
-            const audioURL = await handleBackendAudioData(
-                sample instanceof Uint8Array ? sample : new Uint8Array(sample)
-            );
-            myCurrentSampleAudioElement.src = audioURL;
-        }
     });
 
     const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
