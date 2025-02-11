@@ -22,7 +22,6 @@
     import SiweLoginButton from '$lib/components/SiweLoginButton.svelte';
     import SiweContext from '$lib/siwe/SiweContext.svelte';
     import { canisterId, idlFactory } from "../../../../declarations/ic_siwe_provider";
-  import { appkitModal } from '$lib/appKit.svelte';
 
     let voiceNodes: VoiceNodeEgress[] = $state([]);
     let backendSimulationResult: VoiceNodeEgress[] = $state([]);
