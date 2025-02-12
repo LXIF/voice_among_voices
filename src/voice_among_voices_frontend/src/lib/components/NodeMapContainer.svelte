@@ -89,7 +89,7 @@
             externalPlaybackPosition = normalizedPosition;
         }}
     />
-    <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="fixed top-0 right-0" />
+    <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="absolute top-0" />
     <DroppableNode
         {nodeWidthPx}
         {nodeWidthLogical}
