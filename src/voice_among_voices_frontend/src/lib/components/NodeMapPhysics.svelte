@@ -26,7 +26,7 @@
         worldStepInterval,
     } from '$lib/config/nodeMap';
 
-    let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0.2, playHeadAngle = 0, dropNewNode, movePlayHead }: {
+    let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0.2, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
         backendNodes: VoiceNodeEgress[];
         dragging: boolean;
@@ -35,12 +35,19 @@
         playHeadAngle: number;
         dropNewNode: (voiceNode: VoiceNodeIngress) => void;
         movePlayHead: (normalizedPosition: number) => void;
+        class?: string;
     } = $props();
+    
 
     let localNodes: VoiceNodeEgress[] = [];
 
-    let canvas: HTMLCanvasElement;
-    let context: CanvasRenderingContext2D | null;
+    let container: HTMLDivElement | null = null;
+    let canvas: HTMLCanvasElement | null = null;
+    let context: CanvasRenderingContext2D | null = null;
+
+    // Track container size
+    let containerWidth = $state(0);
+    let containerHeight = $state(0);
 
     let simulationParameters: SimulationParameters | null = $state(null);
     let colliderCoordinates: ColliderCoordinate[] = $state([]);
@@ -376,21 +383,28 @@
                 if (context) {
                     // Clear the canvas
                     context.clearRect(
-                        -canvasWidth / 2,
-                        -canvasHeight / 2,
-                        canvasWidth,
-                        canvasHeight
+                        -containerWidth / 2,
+                        -containerHeight / 2,
+                        containerWidth,
+                        containerHeight
                     );
+
+                    context!.rect(-5, -5, 10, 10); //TODO remove this
+                        context!.fillStyle = `hsl(0 100% 50%)`;
+                        context!.fill();
 
                     // Draw the collider
                     if (colliderCoords?.length > 0) {
                         context.beginPath();
                         context.moveTo(
-                            colliderCoords[0].x,
-                            colliderCoords[0].y
+                            colliderCoords[0].x * (containerWidth / canvasWidth), //TODO: these are not quite right
+                            colliderCoords[0].y * (containerHeight / canvasHeight)
                         );
                         colliderCoords.forEach((coordinate) => {
-                            context?.lineTo(coordinate.x, coordinate.y);
+                            context?.lineTo(
+                                coordinate.x * (containerWidth / canvasWidth),
+                                coordinate.y * (containerHeight / canvasHeight)
+                            );
                         });
                         // context.strokeStyle = 'black';
                         // context.lineWidth = 0.5;
@@ -466,17 +480,15 @@
     }
 
     function handleClick(e: MouseEvent) {
-        const rect = canvas.getBoundingClientRect();
-        const canvasX =
-            (e.clientX - rect.left) - (canvasWidth - usableCanvasWidth) / 2 * canvasRatio;
-        const canvasY =
-            (e.clientY - rect.top) - (canvasHeight - usableCanvasHeight) / 2 * canvasRatio;
+        const rect = canvas!.getBoundingClientRect();
+        const canvasX = (e.clientX - rect.left) * canvasRatio;
+        const canvasY = (e.clientY - rect.top) * canvasRatio;
 
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            usableCanvasWidth * canvasRatio,
-            usableCanvasHeight * canvasRatio,
+            usableCanvasWidth * (containerWidth / canvasWidth),
+            usableCanvasHeight * (containerHeight / canvasHeight),
             logical_radius
         );
 
@@ -534,17 +546,15 @@
 
     async function handleDrop(e: DragEvent) {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const canvasX =
-            e.clientX - rect.left - (canvasWidth - usableCanvasWidth) / 2 * canvasRatio;
-        const canvasY =
-            e.clientY - rect.top - (canvasHeight - usableCanvasHeight) / 2 * canvasRatio;
+        const rect = canvas!.getBoundingClientRect();
+        const canvasX = (e.clientX - rect.left) * canvasRatio;
+        const canvasY = (e.clientY - rect.top) * canvasRatio;
 
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            usableCanvasWidth * canvasRatio,
-            usableCanvasHeight * canvasRatio,
+            containerWidth * canvasRatio,
+            containerHeight * canvasRatio,
             logical_radius
         );
 
@@ -588,32 +598,87 @@
         physicsActive = true;
         rendering = false;
     }
+
+        // Update canvas size when container size changes
+        function updateCanvasSize() {
+            if (!container) return;
+            
+            const rect = container.getBoundingClientRect();
+            const size = Math.min(rect.width, rect.height);
+            containerWidth = size;
+            containerHeight = size;
+            
+            if (canvas) {
+                canvas.width = containerWidth * canvasRatio;
+                canvas.height = containerHeight * canvasRatio;
+                
+                // Reset context and scaling when size changes
+                if (context && canvasRatio && logical_radius) {
+                    context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+                    const translateX = canvasRatio * containerWidth / 2;
+                    const translateY = canvasRatio * containerHeight / 2;
+                    context.translate(translateX, translateY);
+
+                    console.log(canvasRatio, containerWidth, logical_radius) //TODO
+                    
+                    context.scale(
+                        canvasRatio * (containerWidth / (2 * logical_radius) * 0.5),
+                        -canvasRatio * (containerHeight / (2 * logical_radius) * 0.5)
+                    );
+                }
+            }
+        }
+
+        onMount(() => {
+            if (canvas) {
+                context = canvas.getContext('2d');
+                canvasRatio = 1;
+                
+                // Set up resize observer
+                const resizeObserver = new ResizeObserver(() => {
+                    updateCanvasSize();
+                });
+                
+                resizeObserver.observe(container!);
+                updateCanvasSize(); // Initial size
+                
+                return () => resizeObserver.disconnect();
+            }
+        });
+
+        $effect(() => {
+            if(logical_radius) updateCanvasSize();
+        });
 </script>
 
-<main>
+<div
+    bind:this={container} 
+    class={`relative ${classes} w-full flex items-center justify-center`}
+>
     <canvas
         bind:this={canvas}
-        width={canvasWidth * (canvasRatio || 1)}
-        height={canvasHeight * (canvasRatio || 1)}
+        width={containerWidth * canvasRatio}
+        height={containerHeight * canvasRatio}
         onclick={handleClick}
         ondragover={handleDragOver}
         ondrop={handleDrop}
-        class={`w-[${canvasWidth}px] h-[${canvasHeight}px]`}
+        class={`w-[${containerWidth}px] h-[${containerHeight}px]`}
     ></canvas>
-    <label for="node-id">node id</label>
-    <input
-        id="node-id"
-        type="number"
-        min="0"
-        max="359"
-        bind:value={nodeId}
-    />
-    {#if physicsActive && backendNodes.length > 0}
-        <button
-            class="hover:shadow-lg rounded-full bg-slate-500 px-5"
-            onpointerdown={handleFastForward}
-        >
-            >>
-        </button>
-    {/if}
-</main>
+</div>
+<!-- TODO handle these -->
+<!-- <label for="node-id">node id</label>
+<input
+    id="node-id"
+    type="number"
+    min="0"
+    max="359"
+    bind:value={nodeId}
+/>
+{#if physicsActive && backendNodes.length > 0}
+    <button
+        class="hover:shadow-lg rounded-full bg-slate-500 px-5"
+        onpointerdown={handleFastForward}
+    >
+        >>
+    </button>
+{/if} -->

@@ -76,7 +76,7 @@
     };
 </script>
 
-<div class="relative">
+<div class="absolute w-full h-full">
     <NodeMapPhysics
         nodes={voiceNodes}
         backendNodes={backendSimulationResult}
@@ -88,12 +88,13 @@
         movePlayHead={(normalizedPosition) => {
             externalPlaybackPosition = normalizedPosition;
         }}
+        class="w-full h-full"
     />
-    <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="absolute top-0" />
-    <DroppableNode
+    <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="absolute top-0 w-full h-full" />
+    <!-- <DroppableNode
         {nodeWidthPx}
         {nodeWidthLogical}
         ondragstart={() => (dragging = true)}
         ondragend={() => (dragging = false)}
-    />
+    /> -->
 </div>

@@ -71,16 +71,16 @@
     height={usableCanvasHeight}
     viewBox="0 0 200 200"
     xmlns="http://www.w3.org/2000/svg"
-    class={`${classes}`}
+    class={`${classes} pointer-events-none`}
 >
     <!-- Draw circle -->
-    <circle
+    <!-- <circle
         cx={centerX}
         cy={centerY}
         r={radius}
         stroke="black"
         fill="none"
-    />
+    /> -->
 
     <!-- Draw lines for all angles -->
     {#each Array.from({length: 360}, (_, i) => i + 1) as angle}
@@ -91,7 +91,7 @@
             y1={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1)}
             x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.125)}
             y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.125)}
-            class="transition-all duration-200 ease-in-out"
+            class="transition-all duration-200 ease-in-out pointer-events-auto outline-none"
             onmouseover={() => isAngleAvailable(angle) && (hoveredAngle = angle)}
             onmouseleave={() => (hoveredAngle = null)}
             onclick={() => isAngleAvailable(angle) && handleSelectAngle(angle)}
