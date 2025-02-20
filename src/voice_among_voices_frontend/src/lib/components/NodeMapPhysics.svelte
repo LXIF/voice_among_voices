@@ -389,21 +389,23 @@
                         containerHeight
                     );
 
-                    context!.rect(-5, -5, 10, 10); //TODO remove this
-                        context!.fillStyle = `hsl(0 100% 50%)`;
-                        context!.fill();
+                    // context!.rect(-5, -5, 10, 10); //TODO remove this
+                    //     context!.fillStyle = `hsl(0 100% 50%)`;
+                    //     context!.fill();
+
+
 
                     // Draw the collider
                     if (colliderCoords?.length > 0) {
                         context.beginPath();
                         context.moveTo(
-                            colliderCoords[0].x * (containerWidth / canvasWidth), //TODO: these are not quite right
-                            colliderCoords[0].y * (containerHeight / canvasHeight)
+                            colliderCoords[0].x,
+                            colliderCoords[0].y
                         );
                         colliderCoords.forEach((coordinate) => {
                             context?.lineTo(
-                                coordinate.x * (containerWidth / canvasWidth),
-                                coordinate.y * (containerHeight / canvasHeight)
+                                coordinate.x,
+                                coordinate.y
                             );
                         });
                         // context.strokeStyle = 'black';
@@ -487,8 +489,8 @@
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            usableCanvasWidth * (containerWidth / canvasWidth),
-            usableCanvasHeight * (containerHeight / canvasHeight),
+            canvasWidth,
+            canvasHeight,
             logical_radius
         );
 
@@ -619,11 +621,10 @@
                     const translateY = canvasRatio * containerHeight / 2;
                     context.translate(translateX, translateY);
 
-                    console.log(canvasRatio, containerWidth, logical_radius) //TODO
-                    
+
                     context.scale(
-                        canvasRatio * (containerWidth / (2 * logical_radius) * 0.5),
-                        -canvasRatio * (containerHeight / (2 * logical_radius) * 0.5)
+                        canvasRatio * containerWidth / (usableCanvasWidth/4) * 1.125, //TODO: figure out why this coefficient
+                        -canvasRatio * containerWidth / (usableCanvasHeight/4) * 1.125
                     );
                 }
             }
