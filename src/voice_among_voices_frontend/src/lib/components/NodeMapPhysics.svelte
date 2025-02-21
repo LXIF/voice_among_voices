@@ -19,10 +19,10 @@
         canvasToLogical,
     } from '$lib/utils/convUtils';
     import {
-        canvasWidth,
-        canvasHeight,
-        usableCanvasWidth,
-        usableCanvasHeight,
+        canvasWidth as standardCanvasWidth,
+        canvasHeight as standardCanvasHeight,
+        usableCanvasWidth as standardUsableCanvasWidth,
+        usableCanvasHeight as standardUsableCanvasHeight,
         worldStepInterval,
     } from '$lib/config/nodeMap';
 
@@ -44,6 +44,11 @@
     let container: HTMLDivElement | null = null;
     let canvas: HTMLCanvasElement | null = null;
     let context: CanvasRenderingContext2D | null = null;
+
+    let canvasDiameter = $state(600);
+    let marginDivisor = 12; // total margin is 50 per default
+    let canvasMargin = $derived(canvasDiameter / marginDivisor);
+    let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
     // Track container size
     let containerWidth = $state(0);
@@ -88,16 +93,20 @@
         if (!scaled && context && logical_radius && canvasRatio) {
             scaled = true;
 
-            const translateX = canvasRatio * canvasWidth / 2;
-            const translateY = canvasRatio * canvasHeight / 2;
-            context?.translate(translateX, translateY);
-
-            context?.scale(
-                canvasRatio * (usableCanvasWidth / (2 * logical_radius)),
-                -canvasRatio * (usableCanvasHeight / (2 * logical_radius))
-            );
+            setupContext();
         }
     });
+
+    function setupContext() {
+        const translateX = canvasRatio * canvasDiameter / 2;
+        const translateY = canvasRatio * canvasDiameter / 2;
+        context?.translate(translateX, translateY);
+
+        context?.scale(
+            canvasRatio * (usableCanvasDiameter / (2 * logical_radius)),
+            -canvasRatio * (usableCanvasDiameter / (2 * logical_radius))
+        );
+    }
 
     onMount(async () => {
         simulationParameters = await backend.get_simulation_parameters();
@@ -486,11 +495,14 @@
         const canvasX = (e.clientX - rect.left) * canvasRatio;
         const canvasY = (e.clientY - rect.top) * canvasRatio;
 
+
+        //canvasX needs to add canvaswidth-usablecanvaswitdh/2
+
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            canvasWidth,
-            canvasHeight,
+            usableCanvasDiameter,
+            canvasMargin,
             logical_radius
         );
 
@@ -606,13 +618,11 @@
             if (!container) return;
             
             const rect = container.getBoundingClientRect();
-            const size = Math.min(rect.width, rect.height);
-            containerWidth = size;
-            containerHeight = size;
+            canvasDiameter = Math.min(rect.width, rect.height);
             
             if (canvas) {
-                canvas.width = containerWidth * canvasRatio;
-                canvas.height = containerHeight * canvasRatio;
+                canvas.width = canvasDiameter * canvasRatio;
+                canvas.height = canvasDiameter * canvasRatio;
                 
                 // Reset context and scaling when size changes
                 if (context && canvasRatio && logical_radius) {
@@ -623,8 +633,8 @@
 
 
                     context.scale(
-                        canvasRatio * containerWidth / (usableCanvasWidth/4) * 1.125, //TODO: figure out why this coefficient
-                        -canvasRatio * containerWidth / (usableCanvasHeight/4) * 1.125
+                        canvasRatio * containerWidth / (usableCanvasDiameter/4) * 1.125, //TODO: figure out why this coefficient
+                        -canvasRatio * containerWidth / (usableCanvasDiameter/4) * 1.125
                     );
                 }
             }
