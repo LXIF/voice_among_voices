@@ -24,7 +24,7 @@ function dummyActor(): ActorType {
 
 const buildingOrTesting = building || process.env.NODE_ENV === "test";
 
-const identityAgent: Writable<HttpAgent | undefined> = writable();
+export const identityAgent: Writable<HttpAgent | undefined> = writable();
 
 let backend: ActorType = dummyActor();
 

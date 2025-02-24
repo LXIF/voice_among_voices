@@ -31,6 +31,8 @@
 
     let myPrincipal: string | undefined = $state();
 
+    let { class: classes } : { class?: string } = $props();
+
     onMount(async () => {
         voiceNodes = await backend.get_voice_nodes();
         simulationParameters = await backend.get_simulation_parameters();
@@ -76,7 +78,7 @@
     };
 </script>
 
-<div class="absolute w-full h-full">
+<div class="absolute w-full h-full flex justify-center items-center">
     <NodeMapPhysics
         nodes={voiceNodes}
         backendNodes={backendSimulationResult}
@@ -88,9 +90,9 @@
         movePlayHead={(normalizedPosition) => {
             externalPlaybackPosition = normalizedPosition;
         }}
-        class="w-full h-full"
+        class="w-full h-full lg:max-w-[600px]"
     />
-    <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="absolute top-0 w-full h-full" />
+    <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="absolute top-0 w-full h-full lg:max-w-[600px]" />
     <!-- <DroppableNode
         {nodeWidthPx}
         {nodeWidthLogical}

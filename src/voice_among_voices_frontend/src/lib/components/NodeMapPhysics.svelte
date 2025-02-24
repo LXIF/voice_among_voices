@@ -50,10 +50,6 @@
     let canvasMargin = $derived(canvasDiameter / marginDivisor);
     let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
-    // Track container size
-    let containerWidth = $state(0);
-    let containerHeight = $state(0);
-
     let simulationParameters: SimulationParameters | null = $state(null);
     let colliderCoordinates: ColliderCoordinate[] = $state([]);
 
@@ -370,7 +366,6 @@
         // const nodesToDraw = bodies.map((body) => {
         //     return body.voiceNode;
         // });
-
         requestAnimationFrame((timestamp) => {
             if (then === undefined) {
                 then = timestamp;
@@ -392,13 +387,13 @@
                 if (context) {
                     // Clear the canvas
                     context.clearRect(
-                        -containerWidth / 2,
-                        -containerHeight / 2,
-                        containerWidth,
-                        containerHeight
+                        -canvasDiameter / 2,
+                        -canvasDiameter / 2,
+                        canvasDiameter,
+                        canvasDiameter
                     );
 
-                    // context!.rect(-5, -5, 10, 10); //TODO remove this
+                    // context!.rect(-500, -500, 1000, 1000); //TODO remove this
                     //     context!.fillStyle = `hsl(0 100% 50%)`;
                     //     context!.fill();
 
@@ -567,8 +562,8 @@
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            containerWidth * canvasRatio,
-            containerHeight * canvasRatio,
+            canvasDiameter * canvasRatio,
+            canvasDiameter * canvasRatio,
             logical_radius
         );
 
@@ -625,17 +620,23 @@
                 canvas.height = canvasDiameter * canvasRatio;
                 
                 // Reset context and scaling when size changes
-                if (context && canvasRatio && logical_radius) {
+                if (context && canvasRatio && logical_radius && canvasDiameter > 0 && canvasDiameter > 0) {
                     context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-                    const translateX = canvasRatio * containerWidth / 2;
-                    const translateY = canvasRatio * containerHeight / 2;
+                    const translateX = canvasRatio * canvasDiameter / 2;
+                    const translateY = canvasRatio * canvasDiameter / 2;
                     context.translate(translateX, translateY);
 
-
+                    // context.scale(
+                    //     canvasRatio * canvasDiameter / (usableCanvasDiameter/4) * 1.125, //TODO: figure out why this coefficient
+                    //     -canvasRatio * canvasDiameter / (usableCanvasDiameter/4) * 1.125
+                    // );
+                    console.log(logical_radius)
                     context.scale(
-                        canvasRatio * containerWidth / (usableCanvasDiameter/4) * 1.125, //TODO: figure out why this coefficient
-                        -canvasRatio * containerWidth / (usableCanvasDiameter/4) * 1.125
+                        canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter), //TODO: figure out why this coefficient
+                        -canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter)
                     );
+                } else {
+                    setTimeout(updateCanvasSize, 10);
                 }
             }
         }
@@ -668,12 +669,12 @@
 >
     <canvas
         bind:this={canvas}
-        width={containerWidth * canvasRatio}
-        height={containerHeight * canvasRatio}
+        width={canvasDiameter * canvasRatio}
+        height={canvasDiameter * canvasRatio}
         onclick={handleClick}
         ondragover={handleDragOver}
         ondrop={handleDrop}
-        class={`w-[${containerWidth}px] h-[${containerHeight}px]`}
+        class={`w-[${canvasDiameter}px] h-[${canvasDiameter}px]`}
     ></canvas>
 </div>
 <!-- TODO handle these -->

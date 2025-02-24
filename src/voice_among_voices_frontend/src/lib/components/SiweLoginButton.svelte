@@ -16,7 +16,6 @@
 
     async function handleLogin() {
             const loginResponse = await context.login();
-            console.log(loginResponse);
             setIdentityAgent(loginResponse);
         }
 
