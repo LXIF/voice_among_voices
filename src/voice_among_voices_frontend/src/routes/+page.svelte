@@ -7,7 +7,7 @@
 </script>
 
 <SiweContext {canisterId} {idlFactory}>
-    <Header />
-    <NodeMapContainer />
-    <Footer />
+        <Header />
+        <NodeMapContainer />
+        <Footer />
 </SiweContext>

@@ -30,7 +30,7 @@
     // Adjusted scaling parameters for SVG
     const centerX = 100;
     const centerY = 100;
-    const radius = 90; // Radius of the outer circle
+    const radius = 84; // Radius of the outer circle
     const lineStopFactor = 0.875; // Factor to stop lines closer to the center (7/8th of the way)
 
     // Function to adjust angles: 0 is north, and positive angles go clockwise
@@ -89,8 +89,8 @@
             role="button"
             x1={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1)}
             y1={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1)}
-            x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.125)}
-            y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.125)}
+            x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1)}
+            y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1)}
             class="transition-all duration-200 ease-in-out pointer-events-auto outline-none"
             onmouseover={() => isAngleAvailable(angle) && (hoveredAngle = angle)}
             onmouseleave={() => (hoveredAngle = null)}
@@ -121,9 +121,9 @@
     {/if}
 </svg>
 
-{#if hoveredAngle}
+<!-- {#if hoveredAngle}
     <h1>{hoveredAngle}</h1>
-{/if}
+{/if} -->
 
 <style>
     .highlight {
