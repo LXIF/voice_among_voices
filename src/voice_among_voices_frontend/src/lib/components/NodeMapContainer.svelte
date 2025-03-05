@@ -5,9 +5,9 @@
 
     import { onMount } from "svelte";
 
-    import { backend } from "$lib/canisters";
+    import { backend, identityAgent } from "$lib/canisters";
     import type { VoiceNodeEgress, SimulationParameters, AudioParameters, VoiceNodeIngress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-
+    import { appkitModal } from "$lib/appKit.svelte";
     import { blobToUint8Array } from "$lib/utils/convUtils";
     import {usableCanvasWidth} from '$lib/config/nodeMap';
 
@@ -28,6 +28,9 @@
     let fileLoaded = $state(false);
 
     let myAddress = $state("");
+    let myTokens: number[] = $state([])
+
+    let loadingTokens = $state(false);
 
     let myPrincipal: string | undefined = $state();
 
@@ -38,6 +41,28 @@
         simulationParameters = await backend.get_simulation_parameters();
         audioParameters = await backend.get_audio_parameters();
     });
+
+    $effect(() => {if($identityAgent) {
+        myAddress = $appkitModal.getAddress()!
+    }});
+
+    $effect(() => {
+        if(myAddress !== "") {
+            fetchOwnedTokens()
+        }
+    });
+
+    async function fetchOwnedTokens() {
+        if(myTokens.length > 0) {
+            loadingTokens = true;
+        }
+        const ownedTokensResponse = await backend.get_owned_tokens();
+        
+        if('Ok' in ownedTokensResponse) {
+            myTokens = ownedTokensResponse.Ok.map((token) => Number(token));
+        }
+
+    }
 
     const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
         const sample = await blobToUint8Array(currentVoiceBlob!);
@@ -93,10 +118,10 @@
         class="w-full h-full lg:max-w-[600px]"
     />
     <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="absolute top-0 w-full h-full lg:max-w-[600px]" />
-    <!-- <DroppableNode
-        {nodeWidthPx}
-        {nodeWidthLogical}
-        ondragstart={() => (dragging = true)}
-        ondragend={() => (dragging = false)}
-    /> -->
 </div>
+<DroppableNode
+    {nodeWidthPx}
+    {nodeWidthLogical}
+    ondragstart={() => (dragging = true)}
+    ondragend={() => (dragging = false)}
+/>

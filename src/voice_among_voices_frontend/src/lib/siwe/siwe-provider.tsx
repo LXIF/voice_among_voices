@@ -73,9 +73,6 @@ import {
     if (!anonymousActor || !data || !address) {
       throw new Error("Invalid actor, data or address");
     }
-
-    console.log(data);
-    console.log(data.length);
   
     const loginReponse = await anonymousActor.siwe_login(
       data,
