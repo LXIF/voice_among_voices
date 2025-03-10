@@ -8,9 +8,20 @@
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
 
 
-    let { externalPlaybackPosition, onPlaybackPosition, onFileAngle, onFileLoaded }: { externalPlaybackPosition: number, onPlaybackPosition: (normalizedPosition: number) => void, onFileAngle: (angle: number) => void, onFileLoaded: (loaded: boolean) => void } = $props();
+    let {
+        externalPlaybackPosition,
+        onPlaybackPosition,
+        onFileAngle,
+        onFileLoaded,
+        angle
+    }: {
+        externalPlaybackPosition: number,
+        onPlaybackPosition: (normalizedPosition: number) => void,
+        onFileAngle: (angle: number) => void,
+        onFileLoaded: (loaded: boolean) => void,
+        angle: number
+    } = $props();
 
-    let angle: number = $state(0);
     let audioURL: string = $state('');
     let error: string = $state('');
     let isPlaying = $state(false); // To track play/pause state
@@ -110,17 +121,7 @@
 </script>
 
 <div class="container">
-    <div>
-        <label for="angle-input">Enter an angle (0 - 359):</label>
-        <input
-            type="number"
-            id="angle-input"
-            bind:value={angle}
-            min="0"
-            max="359"
-            class="angle-input"
-        />
-    </div>
+
 
     <button onclick={fetchAudioFile}>Request Audio File</button>
 

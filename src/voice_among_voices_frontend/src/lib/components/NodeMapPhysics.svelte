@@ -25,7 +25,7 @@
         usableCanvasHeight as standardUsableCanvasHeight,
         worldStepInterval,
     } from '$lib/config/nodeMap';
-
+    import { untrack } from 'svelte';
     let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0.2, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
         backendNodes: VoiceNodeEgress[];
@@ -37,6 +37,8 @@
         movePlayHead: (normalizedPosition: number) => void;
         class?: string;
     } = $props();
+
+    import { simulationParameters } from '$lib/state/uxState.svelte';
     
 
     let localNodes: VoiceNodeEgress[] = [];
@@ -50,7 +52,6 @@
     let canvasMargin = $derived(canvasDiameter / marginDivisor);
     let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
-    let simulationParameters: SimulationParameters | null = $state(null);
     let colliderCoordinates: ColliderCoordinate[] = $state([]);
 
     let max_distance: number = $state(0);
@@ -105,18 +106,18 @@
     }
 
     onMount(async () => {
-        simulationParameters = await backend.get_simulation_parameters();
+        $simulationParameters = await backend.get_simulation_parameters();
         colliderCoordinates = await backend.get_collider_coordinates();
-
-        if (!simulationParameters) return;
+        console.log($simulationParameters);
+        if (!$simulationParameters) return;
         if (colliderCoordinates.length === 0) return;
 
-        max_distance = simulationParameters?.max_distance;
-        force_strength = simulationParameters?.force_strength;
-        force_cutoff = simulationParameters?.force_cutoff;
-        linear_damping = simulationParameters?.linear_damping;
-        logical_radius = simulationParameters?.logical_radius;
-        friction = simulationParameters?.friction;
+        max_distance = $simulationParameters!.max_distance;
+        force_strength = $simulationParameters!.force_strength;
+        force_cutoff = $simulationParameters!.force_cutoff;
+        linear_damping = $simulationParameters!.linear_damping;
+        logical_radius = $simulationParameters!.logical_radius;
+        friction = $simulationParameters!.friction;
     });
 
     $effect(() => {if (
@@ -125,13 +126,14 @@
         localNodes.length >= 1 &&
         !rendering &&
         !resetting &&
-        simulationParameters
+        $simulationParameters
     ) {
         rendering = true;
         setupAndRender();
     }});
 
-    $effect(() => {if (browser && !!localNodes && simulationParameters) {
+
+    $effect(() => {if (browser && !!localNodes && $simulationParameters) {
         resetPhysics();
     }});
 
@@ -151,7 +153,7 @@
 
     const setupAndRender = () => {
         RAPIER.init().then(() => {
-            if (!simulationParameters) return;
+            if (!$simulationParameters) return;
             let world: RAPIER.World;
             let physicsBodies: PhysicsBody[] = [];
             let gravity = {x: 0, y: 0};

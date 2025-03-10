@@ -185,6 +185,7 @@
             onPlaybackPosition={(position) => (playheadPosition = position)}
             onFileAngle={(newAngle) => (angle = newAngle)}
             onFileLoaded={(loaded) => (fileLoaded = loaded)}
+            angle= {7}
         />
         <ZeroFileBox
             {externalPlaybackPosition}
