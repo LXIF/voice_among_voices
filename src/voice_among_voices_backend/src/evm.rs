@@ -56,7 +56,6 @@ where
     }
 }
 
-// TODO: try to fix this async version (got compiler errored)
 pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
     let CallObjects {
         owner,
@@ -70,7 +69,7 @@ pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
                 .balanceOf(owner)
                 .call()
                 .await
-                .map_err(|e| format!("Failed to call balanceOf: {}", e))
+                .map_err(|e| format!("Failed to call balanceOf: {} for owner {}", e, owner))
         },
         7, // max retries
     )
@@ -93,7 +92,12 @@ pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
                         .call()
                         .await
                         .map(|res| res._0)
-                        .map_err(|e| format!("Failed to get token at index {}: {}", i, e))
+                        .map_err(|e| {
+                            format!(
+                                "Failed to get token at index {}: {} for owner: {}",
+                                i, e, owner
+                            )
+                        })
                 },
                 7, // max retries
             )
@@ -234,7 +238,7 @@ async fn setup_call_objects() -> Result<CallObjects, String> {
 
 fn setup_evm_provider() -> RootProvider<IcpTransport> {
     //TODO: change for mainnet (or put in config)
-    let rpc_service = RpcService::EthSepolia(EthSepoliaService::Alchemy);
+    let rpc_service = RpcService::EthSepolia(EthSepoliaService::PublicNode);
     let config = IcpConfig::new(rpc_service);
     ProviderBuilder::new().on_icp(config)
 }

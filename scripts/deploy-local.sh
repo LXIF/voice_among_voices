@@ -19,7 +19,7 @@ dfx deps deploy
 
 dfx deploy ic_siwe_provider --argument $'(
     record {
-        domain = "127.0.0.1";
+        domain = "localhost";
         uri = "http://127.0.0.1:5173";
         salt = "my-secret-salt";
         chain_id = opt 1;

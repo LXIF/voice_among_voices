@@ -15,17 +15,31 @@
         availableAngles, 
         nodes,
         class: classes = '',
+        loading,
+        onSelectAngle,
+        onHoverAngle
     }: { 
         availableAngles: number[], 
         nodes: VoiceNodeEgress[],
-        class?: string 
+        class?: string,
+        loading: boolean,
+        onSelectAngle: (angle: number) => void,
+        onHoverAngle: (angle: number | null) => void
     } = $props();
 
     let hoveredAngle: number | null = $state(null);
 
+    $effect(() => {
+        onHoverAngle(hoveredAngle);
+    });
+
     const handleSelectAngle = (angle: number) => {
-        console.log(angle);
+        onSelectAngle(angle);
     };
+
+    const handleHoverAngle = (angle: number | null) => {
+        onHoverAngle(angle);
+    }
 
     // Adjusted scaling parameters for SVG
     const centerX = 100;
@@ -64,6 +78,61 @@
     function isAngleAvailable(angle: number): boolean {
         return availableAngles.includes(angle);
     }
+
+    // Add a rotating offset for the loading animation
+    let rotatingOffset = $state(0);
+    let animationFrameId: number;
+
+    // Add state for pulsing animation
+    let pulseOffset = $state(0);
+
+    // Update the animation
+    $effect(() => {
+        if (loading) {
+            let lastTime = performance.now();
+            
+            function animate(currentTime: number) {
+                const deltaTime = currentTime - lastTime;
+                // Rotate the colors
+                rotatingOffset = (rotatingOffset + (deltaTime * 0.167)) % 360;
+                // Pulse the radius (slower than the rotation)
+                pulseOffset = (pulseOffset + (deltaTime * 0.004)) % (Math.PI * 2);
+                lastTime = currentTime;
+                animationFrameId = requestAnimationFrame(animate);
+            }
+            
+            animationFrameId = requestAnimationFrame(animate);
+            
+            return () => {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+            };
+        }
+    });
+
+    // Helper function to get the current pulse scale
+    function getPulseScale(): number {
+        if (!loading) return 1;
+        // Create a heartbeat-like effect with two quick pulses
+        const t = pulseOffset;
+        const pulse = Math.sin(t) * 0.5 + Math.sin(2 * t) * 0.25;
+        return 1 + pulse * 0.05; // Scale the pulse effect (15% variation)
+    }
+
+    function getLineColor(angle: number, isAvailable: boolean): string {
+        if (loading) {
+            // During loading, rotate the hue and create a wave effect for saturation
+            const adjustedAngle = (angle + rotatingOffset) % 360;
+            // Create a wave effect based on the angle's position relative to the rotating offset
+            const angleDiff = ((angle - rotatingOffset + 360) % 360) / 360;
+            const pulsingSaturation = 50 + Math.cos(angleDiff * 2 * Math.PI) * 50;
+            const pulsingBrightness = 60 + Math.sin(angleDiff * 2 * Math.PI) * 40;
+            return hsvToRgb(adjustedAngle, pulsingSaturation, pulsingBrightness);
+        }
+        // Normal state
+        return isAvailable ? hsvToRgb(angle, 100, 100) : hsvToRgb(angle, 50, 100);
+    }
 </script>
 
 <svg
@@ -87,10 +156,10 @@
         <line
             tabindex={isAngleAvailable(angle) ? 0 : -1}
             role="button"
-            x1={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1)}
-            y1={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1)}
-            x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1)}
-            y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1)}
+            x1={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1) * getPulseScale()}
+            y1={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1) * getPulseScale()}
+            x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1) * getPulseScale()}
+            y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1) * getPulseScale()}
             class="transition-all duration-200 ease-in-out pointer-events-auto outline-none"
             onmouseover={() => isAngleAvailable(angle) && (hoveredAngle = angle)}
             onmouseleave={() => (hoveredAngle = null)}
@@ -102,7 +171,7 @@
                     handleSelectAngle(angle);
                 }
             }}
-            stroke={isAngleAvailable(angle) ? hsvToRgb(angle, 100, 100) : hsvToRgb(angle, 50, 100)}
+            stroke={getLineColor(angle, isAngleAvailable(angle))}
             stroke-width="0.5"
             pointer-events={isAngleAvailable(angle) ? 'auto' : 'none'}
         />

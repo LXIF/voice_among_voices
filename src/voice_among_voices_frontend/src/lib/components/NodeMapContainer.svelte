@@ -34,6 +34,9 @@
 
     let myPrincipal: string | undefined = $state();
 
+    let selectedAngle: number | null = $state(null);
+    let hoveredAngle: number | null = $state(null);
+
     let { class: classes } : { class?: string } = $props();
 
     onMount(async () => {
@@ -52,16 +55,31 @@
         }
     });
 
-    async function fetchOwnedTokens() {
-        if(myTokens.length > 0) {
-            loadingTokens = true;
-        }
-        const ownedTokensResponse = await backend.get_owned_tokens();
+    async function getOwnedTokensWithRetry(attempt = 1, maxRetries = 3): Promise<number[]> {
+        const response = await backend.get_owned_tokens();
         
-        if('Ok' in ownedTokensResponse) {
-            myTokens = ownedTokensResponse.Ok.map((token) => Number(token));
+        if ('Ok' in response) {
+            return response.Ok.map((token) => Number(token));
         }
 
+        console.log("error loading tokens, retrying: ", response.Err);
+        
+        if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return getOwnedTokensWithRetry(attempt + 1, maxRetries);
+        }
+        
+        console.error('Failed to fetch owned tokens after', maxRetries, 'attempts');
+        return [];
+    }
+
+    async function fetchOwnedTokens() {
+        if(myTokens.length === 0) {
+            loadingTokens = true;
+        }
+
+        myTokens = await getOwnedTokensWithRetry();
+        loadingTokens = false;
     }
 
     const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
@@ -117,11 +135,25 @@
         }}
         class="w-full h-full lg:max-w-[600px]"
     />
-    <NewAngleSelector availableAngles={[10]} nodes={voiceNodes} class="absolute top-0 w-full h-full lg:max-w-[600px]" />
+    <NewAngleSelector
+        availableAngles={myTokens}
+        nodes={voiceNodes}
+        loading={loadingTokens}
+        class="absolute top-0 w-full h-full lg:max-w-[600px]"
+        onSelectAngle={(angle) => selectedAngle = angle}
+        onHoverAngle={(angle) => hoveredAngle = angle}
+    />
 </div>
-<DroppableNode
-    {nodeWidthPx}
-    {nodeWidthLogical}
-    ondragstart={() => (dragging = true)}
-    ondragend={() => (dragging = false)}
-/>
+<div>
+    {#if hoveredAngle || selectedAngle}
+    <p>{hoveredAngle ? hoveredAngle : selectedAngle}</p>
+    {/if}
+    {#if selectedAngle}
+    <DroppableNode
+        {nodeWidthPx}
+        {nodeWidthLogical}
+        ondragstart={() => (dragging = true)}
+        ondragend={() => (dragging = false)}
+    />
+    {/if}
+</div>
