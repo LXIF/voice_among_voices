@@ -25,7 +25,6 @@
         usableCanvasHeight as standardUsableCanvasHeight,
         worldStepInterval,
     } from '$lib/config/nodeMap';
-    import { untrack } from 'svelte';
     let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0.2, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
         backendNodes: VoiceNodeEgress[];
@@ -38,7 +37,7 @@
         class?: string;
     } = $props();
 
-    import { simulationParameters } from '$lib/state/uxState.svelte';
+    import { simulationParameters, selectedAngle } from '$lib/state/uxState.svelte';
     
 
     let localNodes: VoiceNodeEgress[] = [];
@@ -67,8 +66,6 @@
     let moving = $state(false);
     let scaled = $state(false);
     let fastForward = $state(false);
-
-    let nodeId = $state(0);
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -561,11 +558,12 @@
         const canvasX = (e.clientX - rect.left) * canvasRatio;
         const canvasY = (e.clientY - rect.top) * canvasRatio;
 
+
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
             canvasY,
-            canvasDiameter * canvasRatio,
-            canvasDiameter * canvasRatio,
+            usableCanvasDiameter,
+            canvasMargin,
             logical_radius
         );
 
@@ -582,14 +580,14 @@
         }
 
         const voiceNode: VoiceNodeIngress = {
-            id: BigInt(nodeId),
+            id: BigInt($selectedAngle!),
             x: logicalX,
             y: logicalY,
             sample: [],
         };
         dropNewNode(voiceNode);
         let updatableNode = localNodes.find(
-            (node) => node.id === BigInt(nodeId)
+            (node) => node.id === BigInt($selectedAngle!)
         );
 
         if (updatableNode) {
@@ -601,7 +599,7 @@
                 x: logicalX,
                 y: logicalY,
                 radius: nodeRadius,
-                id: BigInt(nodeId),
+                id: BigInt($selectedAngle!),
             });
         }
 

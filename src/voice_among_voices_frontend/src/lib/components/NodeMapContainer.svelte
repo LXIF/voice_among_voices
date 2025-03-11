@@ -83,7 +83,7 @@
 
 </script>
 
-<div class="absolute w-full h-full flex justify-center items-center">
+<div class="w-full h-full flex justify-center items-center scale-100">
     <NodeMapPhysics
         nodes={$voiceNodes}
         backendNodes={$backendSimulationResult}
