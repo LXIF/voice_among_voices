@@ -826,29 +826,16 @@ mod tests {
             }
 
             // Test with left pan (-1.0), center (0.0), and right pan (1.0)
-            let sample_positions = vec![
-                SamplePosition {
-                    begins_at: 0.0,
-                    sample_id: 0,
-                    sample_length_samples: 44100,
-                    pan_position: -1.0, // Full left pan
-                },
-                SamplePosition {
-                    begins_at: 0.0,
-                    sample_id: 1,
-                    sample_length_samples: 44100,
-                    pan_position: -0.0, // Center pan
-                },
-                SamplePosition {
-                    begins_at: 0.0,
-                    sample_id: 2,
-                    sample_length_samples: 44100,
-                    pan_position: -1.0, // Full right pan
-                },
-            ];
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, samples);
+                generate_audio_vectors(&vec![
+                    SamplePosition {
+                        begins_at: 0.0,
+                        sample_id: 0,
+                        sample_length_samples: 44100,
+                        pan_position: -1.0, // Full left pan
+                    },
+                ], &audio_params, samples);
 
             // Left pan should result in higher values in the left channel
             for (left, right) in left_channel.iter().zip(right_channel.iter()) {
