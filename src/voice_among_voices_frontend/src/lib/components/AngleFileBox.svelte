@@ -133,15 +133,19 @@
     }
 
     // Set playback position externally (in response to incoming props)
-    $effect(() => { if (
-        audioElement &&
-        audioElement.duration &&
-        externalPlaybackPosition >= 0 &&
-        externalPlaybackPosition <= 1
-    ) {
-        audioElement.currentTime =
-            externalPlaybackPosition * audioElement.duration;
-    }});
+    $effect(() => {
+        console.log(externalPlaybackPosition);
+        console.log(audioElement);
+        if (
+            audioElement &&
+            audioElement.duration &&
+            externalPlaybackPosition >= 0 &&
+            externalPlaybackPosition <= 1
+        ) {
+            audioElement.currentTime =
+                externalPlaybackPosition * audioElement.duration;
+        }
+    });
 
     // Listen for playback end
     function onEnded() {
