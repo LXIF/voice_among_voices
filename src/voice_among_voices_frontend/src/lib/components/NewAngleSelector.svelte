@@ -253,6 +253,8 @@
                         }
                     }
                     
+                    hoveredAngle = nearestAngle;
+
                     // Rotate to the nearest available angle and wait for animation to complete
                     const rotationPromise = rotateTo(nearestAngle);
                     rotationPromise.then(() => {
