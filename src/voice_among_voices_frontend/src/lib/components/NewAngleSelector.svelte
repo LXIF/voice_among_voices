@@ -3,13 +3,9 @@
     import {angleToRadians} from '$lib/utils/convUtils';
     import type {VoiceNodeEgress} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
     import {
-        canvasWidth,
-        canvasHeight,
         usableCanvasWidth,
         usableCanvasHeight,
-        worldStepInterval,
     } from '$lib/config/nodeMap';
-    import { onMount } from 'svelte';
 
     let { 
         availableAngles, 
@@ -17,14 +13,16 @@
         class: classes = '',
         loading,
         onSelectAngle,
-        onHoverAngle
+        onHoverAngle,
+        loggedIn
     }: { 
         availableAngles: number[], 
         nodes: VoiceNodeEgress[],
         class?: string,
         loading: boolean,
         onSelectAngle: (angle: number) => void,
-        onHoverAngle: (angle: number | null) => void
+        onHoverAngle: (angle: number | null) => void,
+        loggedIn: boolean
     } = $props();
 
     let hoveredAngle: number | null = $state(null);
@@ -121,7 +119,9 @@
     }
 
     function getLineColor(angle: number, isAvailable: boolean): string {
-        if (loading) {
+        if(!loggedIn) {
+            return hsvToRgb(angle, 100, 100);
+        } else if (loading) {
             // During loading, rotate the hue and create a wave effect for saturation
             const adjustedAngle = (angle + rotatingOffset) % 360;
             // Create a wave effect based on the angle's position relative to the rotating offset
@@ -142,24 +142,16 @@
     xmlns="http://www.w3.org/2000/svg"
     class={`${classes} pointer-events-none`}
 >
-    <!-- Draw circle -->
-    <!-- <circle
-        cx={centerX}
-        cy={centerY}
-        r={radius}
-        stroke="black"
-        fill="none"
-    /> -->
-
+   
     <!-- Draw lines for all angles -->
     {#each Array.from({length: 360}, (_, i) => i + 1) as angle}
         <line
             tabindex={isAngleAvailable(angle) ? 0 : -1}
             role="button"
-            x1={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1) * getPulseScale()}
-            y1={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.875 : 1) * getPulseScale()}
-            x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1) * getPulseScale()}
-            y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.25 : 1.1) * getPulseScale()}
+            x1={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.92 : 1) * getPulseScale()}
+            y1={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.92 : 1) * getPulseScale()}
+            x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.18 : 1.1) * getPulseScale()}
+            y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.18 : 1.1) * getPulseScale()}
             class="transition-all duration-200 ease-in-out pointer-events-auto outline-none"
             onmouseover={() => isAngleAvailable(angle) && (hoveredAngle = angle)}
             onmouseleave={() => (hoveredAngle = null)}
@@ -172,15 +164,11 @@
                 }
             }}
             stroke={getLineColor(angle, isAngleAvailable(angle))}
-            stroke-width="0.5"
+            stroke-width={hoveredAngle === angle ? 2.2 : 0.5}
             pointer-events={isAngleAvailable(angle) ? 'auto' : 'none'}
         />
     {/each}
 </svg>
-
-<!-- {#if hoveredAngle}
-    <h1>{hoveredAngle}</h1>
-{/if} -->
 
 <style>
     .highlight {

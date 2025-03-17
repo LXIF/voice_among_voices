@@ -1,7 +1,6 @@
 <script lang="ts">
     import {onMount} from 'svelte';
     import {mapRange, clamp} from '$lib/utils/mathUtils';
-    import {createEventDispatcher} from 'svelte';
     import RAPIER from '@dimforge/rapier2d-compat';
 
     import {browser} from '$app/environment';
@@ -14,8 +13,6 @@
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
     import {
         convertColliderCoordinatesToFloat32Array,
-        mapToCanvasX,
-        mapToCanvasY,
         canvasToLogical,
     } from '$lib/utils/convUtils';
     import {
@@ -25,7 +22,9 @@
         usableCanvasHeight as standardUsableCanvasHeight,
         worldStepInterval,
     } from '$lib/config/nodeMap';
-    let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0.2, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
+    import { simulationParameters, selectedAngle, hoveredAngle } from '$lib/state/uxState.svelte';
+    import { isDarkMode } from "$lib/utils/uxUtils";
+    let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
         backendNodes: VoiceNodeEgress[];
         dragging: boolean;
@@ -36,8 +35,6 @@
         movePlayHead: (normalizedPosition: number) => void;
         class?: string;
     } = $props();
-
-    import { simulationParameters, selectedAngle } from '$lib/state/uxState.svelte';
     
 
     let localNodes: VoiceNodeEgress[] = [];
@@ -342,17 +339,28 @@
         const lineLength = 2 * logical_radius; // Adjust if needed.
 
         // Calculate the points for the perpendicular line (centered at playHeadX, playHeadY)
-        const lineStartX = playHeadX + normalizedTangentX * (lineLength / 2);
-        const lineStartY = playHeadY + normalizedTangentY * (lineLength / 2);
-        const lineEndX = playHeadX - normalizedTangentX * (lineLength / 2);
-        const lineEndY = playHeadY - normalizedTangentY * (lineLength / 2);
+        // Find the intersection points of the tangent line with the circle
+        const distanceFromCenter = Math.sqrt(playHeadX * playHeadX + playHeadY * playHeadY);
+        
+        // Calculate the maximum length the line can have at this point to stay within the circle
+        const maxLineLength = 2 * Math.sqrt(logical_radius * logical_radius - distanceFromCenter * distanceFromCenter);
+        
+        // Use the smaller of the two: either the calculated max length or the original line length
+        const actualLineLength = Math.min(maxLineLength, lineLength);
+        
+        const lineStartX = playHeadX + normalizedTangentX * (actualLineLength / 2);
+        const lineStartY = playHeadY + normalizedTangentY * (actualLineLength / 2);
+        const lineEndX = playHeadX - normalizedTangentX * (actualLineLength / 2);
+        const lineEndY = playHeadY - normalizedTangentY * (actualLineLength / 2);
 
         // Draw the perpendicular playhead line
         context.beginPath();
         context.moveTo(lineStartX, lineStartY);
         context.lineTo(lineEndX, lineEndY);
-        context.lineWidth = 0.5; // Line width
-        context.strokeStyle = `hsl(0, 0%, 0%)`; // Color of the playhead line
+        context.lineWidth = 0.2; // Line width
+
+        context.strokeStyle = isDarkMode() ? `hsl(0, 0%, 100%)` : `hsl(0, 0%, 0%)`;  // Color of the playhead line
+
         context.stroke();
         context.closePath();
     }
@@ -444,7 +452,13 @@
                             0,
                             Math.PI * 2
                         );
-                        context!.fillStyle = `hsl(${30 + colorVel / 10} 80% ${colorVel}% )`;
+                        if($selectedAngle && body.voiceNode.id === BigInt($selectedAngle)) {
+                            context!.fillStyle = `hsl(${$selectedAngle}, 100%, 50%)`;
+                        } else if ($hoveredAngle && body.voiceNode.id === BigInt($hoveredAngle)) {
+                            context!.fillStyle = `hsl(${$hoveredAngle}, 100%, 80%)`;
+                        } else {
+                            context!.fillStyle = `hsla(${30 + colorVel / 10}, 80%, ${colorVel}%, ${colorVel}%)`;
+                        }
                         context!.fill();
                         context!.lineWidth = bodyLineWidth;
                         context!.strokeStyle = `hsl(${body.voiceNode.id} 100% 50% )`
@@ -463,9 +477,9 @@
                             0,
                             Math.PI * 2
                         );
-                        // context!.fillStyle = `hsl(0 100% 50% )`;
-                        // context!.fill();
-                        context!.strokeStyle = `hsl(0 100% 100% )`;
+
+                        context!.strokeStyle = isDarkMode() ? `hsl(0, 0%, 100%)` : `hsl(0, 0%, 0%)`;  // Color of the playhead line
+
                         context!.lineWidth = 0.5;
                         context!.stroke();
                         context!.closePath();

@@ -57,9 +57,6 @@
 
 
 <div>
-    {#if $hoveredAngle || $selectedAngle}
-        <p>{$hoveredAngle ? $hoveredAngle : $selectedAngle}</p>
-    {/if}
     {#if $selectedAngle && $identityAgent}
         <DroppableNode
             {nodeWidthPx}
@@ -88,5 +85,8 @@
         onFileLoaded={(loaded) => ($fileLoaded = loaded)}
         angle={0}
     />
+    {/if}
+    {#if $hoveredAngle || $selectedAngle}
+        <p>{$hoveredAngle ? $hoveredAngle : $selectedAngle}</p>
     {/if}
 </div>

@@ -101,8 +101,14 @@
         availableAngles={$myTokens}
         nodes={$voiceNodes}
         loading={$loadingTokens}
+        loggedIn={!!$identityAgent}
         class="absolute top-0 w-full h-full lg:max-w-[1200px]"
         onSelectAngle={(angle) => $selectedAngle = angle}
         onHoverAngle={(angle) => $hoveredAngle = angle}
     />
+    {#if $hoveredAngle}
+    <div class="absolute top-0 w-full h-full lg:max-w-[1200px] flex justify-center items-center pointer-events-none">
+        <h1 class="backdrop-filter text-7xl">{$hoveredAngle}°</h1>
+    </div>
+    {/if}
 </div>

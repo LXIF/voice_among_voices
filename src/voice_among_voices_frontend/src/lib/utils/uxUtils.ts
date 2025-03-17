@@ -1,4 +1,4 @@
-const isDarkMode = () => {
+export const isDarkMode = () => {
   //todo: this might better be a store with an eventlistened
   return (
     window.matchMedia &&
