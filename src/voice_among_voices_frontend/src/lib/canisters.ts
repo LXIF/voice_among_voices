@@ -40,6 +40,12 @@ identityAgent.subscribe((agent) => {
 
 export { backend };
 
-export const setIdentityAgent = async (newIdentity: SignIdentity) => {
-  identityAgent.set(await HttpAgent.create({ identity: newIdentity }));
+export const setIdentityAgent = async (
+  newIdentity: SignIdentity | undefined
+) => {
+  if (newIdentity) {
+    identityAgent.set(await HttpAgent.create({ identity: newIdentity }));
+  } else {
+    identityAgent.set(newIdentity);
+  }
 };

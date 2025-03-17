@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {tick, createEventDispatcher} from 'svelte';
+    import {tick} from 'svelte';
     import {backend} from '$lib/canisters';
     import {handleBackendAudioData} from '$lib/utils/convUtils';
     import type {
@@ -9,7 +9,8 @@
 
     let audioURL: string = $state('');
     let error: string = $state('');
-    let isPlaying = $state(false); // To track play/pause state
+    let isPlaying = $state(false);
+    let loadingProgress = $state(0);
 
     let { externalPlaybackPosition, onPlaybackPosition, onFileAngle, onFileLoaded }: { externalPlaybackPosition: number, onPlaybackPosition: (normalizedPosition: number) => void, onFileAngle: (angle: number) => void, onFileLoaded: (loaded: boolean) => void } = $props();
 
@@ -18,29 +19,61 @@
 
     // Fetch audio file based on angle
     async function fetchAudioFile() {
+
         try {
             error = '';
             audioURL = '';
-
             const response: HttpStreamingResponse =
-                await backend.get_zero_file();
-
+                await backend.get_angle_file(BigInt(0));
+            console.log(response);
             if (!response.streaming_strategy) {
                 throw new Error('No streaming strategy provided.');
             }
             const chunks = [response.body];
 
             let streamingToken = response.streaming_strategy[0]?.Callback.token;
+            const nTokens = response.streaming_strategy[0]?.Callback.token.chunks;
 
-            while (streamingToken) {
-                const {body, token} =
+            // while (streamingToken) {
+            //     const {body, token} =
+            //         await backend.http_request_streaming_callback(
+            //             streamingToken
+            //         );
+            //         console.log(token);
+            //     chunks.push(body);
+            //     streamingToken = token[0] || undefined;
+            // }
 
-                    await backend.http_request_streaming_callback(
-                        streamingToken
-                    );
-                chunks.push(body);
-                streamingToken = token[0] || undefined;
+            if (nTokens === undefined) throw new Error('No tokens provided.');
+
+            // First chunk is already loaded
+            loadingProgress = 1 / nTokens * 100;
+
+            // Fetch all remaining chunks in parallel
+            const chunkPromises = [];
+            for (let i = 0; i < nTokens - 1; i++) {
+                const chunkToken = {
+                    angle: streamingToken?.angle!,
+                    auth_token: streamingToken?.auth_token!,
+                    chunk_index: i,
+                    chunks: streamingToken?.chunks!
+                };
+                chunkPromises.push(
+                    backend.http_request_streaming_callback(chunkToken)
+                    .then(result => {
+                            // Update progress after each chunk loads
+                            loadingProgress = (loadingProgress + (1 / nTokens * 100));
+                            return result;
+                        })
+                );
             }
+
+            // Wait for all chunks and sort them by index
+            const chunkResults = await Promise.all(chunkPromises);
+            chunkResults.sort((a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!);
+            
+            // Add sorted chunks to the chunks array
+            chunks.push(...chunkResults.map(result => result.body));
 
             const audioData = new Uint8Array(
                 chunks.reduce((acc, chunk) => acc + chunk.length, 0)
@@ -55,7 +88,7 @@
             audioURL = await handleBackendAudioData(audioData);
             await tick();
             downloadLink!.href = audioURL;
-            downloadLink!.download = 'zero_angle.wav';
+            downloadLink!.download = `audio_angle_0.wav`;
             onFileAngle(0);
             onFileLoaded(true);
         } catch (e) {
@@ -84,6 +117,8 @@
 
     // Set playback position externally (in response to incoming props)
     $effect(() => {
+        console.log(externalPlaybackPosition);
+        console.log(audioElement);
         if (
             audioElement &&
             audioElement.duration &&

@@ -115,3 +115,11 @@ export function handleBackendAudioData(audioData: Uint8Array): Promise<string> {
 export function angleToRadians(angle: number): number {
   return (angle * Math.PI) / 180;
 }
+
+export function abbreviateWalletAddress(address: string) {
+  return (
+    address.slice(0, 6) +
+    "..." +
+    address.slice(address.length - 4, address.length)
+  );
+}

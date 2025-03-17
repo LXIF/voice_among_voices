@@ -52,6 +52,7 @@
     let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
     let colliderCoordinates: ColliderCoordinate[] = $state([]);
+    const drawCollider = false;
 
     let max_distance: number = $state(0);
     let force_strength: number = $state(0);
@@ -294,16 +295,16 @@
         });
     }
 
-    function stopSlowNodes(bodies: PhysicsBody[], velocityCutoff: number) {
-        bodies.forEach((body) => {
-            const linVel = body.rigidBody.linvel();
-            const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
+    // function stopSlowNodes(bodies: PhysicsBody[], velocityCutoff: number) {
+    //     bodies.forEach((body) => {
+    //         const linVel = body.rigidBody.linvel();
+    //         const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
 
-            if (absVel < velocityCutoff) {
-                body.rigidBody.setLinvel({x: 0, y: 0}, true);
-            }
-        });
-    }
+    //         if (absVel < velocityCutoff) {
+    //             body.rigidBody.setLinvel({x: 0, y: 0}, true);
+    //         }
+    //     });
+    // }
 
     function drawPlayHead(context: CanvasRenderingContext2D) {
         if (!showPlayHead || !context) return;
@@ -399,7 +400,7 @@
 
 
                     // Draw the collider
-                    if (colliderCoords?.length > 0) {
+                    if (drawCollider && colliderCoords?.length > 0) {
                         context.beginPath();
                         context.moveTo(
                             colliderCoords[0].x,
@@ -444,8 +445,9 @@
                         );
                         context!.fillStyle = `hsl(${30 + colorVel / 10} 80% ${colorVel}% )`;
                         context!.fill();
-                        // context!.lineWidth = 0.5;
-                        // context!.stroke();
+                        context!.lineWidth = 0.5;
+                        context!.strokeStyle = `hsl(${body.voiceNode.id} 100% 50% )`
+                        context!.stroke();
                         context!.closePath();
                     });
 
@@ -454,15 +456,15 @@
                         context!.ellipse(
                             body.x,
                             body.y,
-                            body.radius,
-                            body.radius,
+                            body.radius + 1,
+                            body.radius + 1,
                             0,
                             0,
                             Math.PI * 2
                         );
                         // context!.fillStyle = `hsl(0 100% 50% )`;
                         // context!.fill();
-                        context!.strokeStyle = `hsl(0 100% 50% )`;
+                        context!.strokeStyle = `hsl(0 100% 100% )`;
                         context!.lineWidth = 0.5;
                         context!.stroke();
                         context!.closePath();

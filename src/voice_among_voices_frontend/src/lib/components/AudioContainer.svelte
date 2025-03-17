@@ -1,11 +1,13 @@
 <script lang="ts">
-    import { audioParameters, simulationParameters, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded, voiceNodes, hoveredAngle, selectedAngle } from "$lib/state/uxState.svelte";
+    import { audioParameters, simulationParameters, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded, hoveredAngle, selectedAngle } from "$lib/state/uxState.svelte";
     import DroppableNode from "./DroppableNode.svelte";
     import VoiceRecorder from "./VoiceRecorder.svelte";
     import AngleFileBox from "./AngleFileBox.svelte";
-    import {usableCanvasWidth} from '$lib/config/nodeMap';
+    import { usableCanvasWidth } from '$lib/config/nodeMap';
     import { onMount } from "svelte";
     import { backend } from "$lib/canisters";
+    import { identityAgent } from "$lib/canisters";
+  import ZeroFileBox from "./ZeroFileBox.svelte";
 
     let sampleLength = $state(0);
     let nodeWidthPx = $state(0);
@@ -59,24 +61,32 @@
     {#if $hoveredAngle || $selectedAngle}
         <p>{$hoveredAngle ? $hoveredAngle : $selectedAngle}</p>
     {/if}
-    {#if $selectedAngle}
-    <DroppableNode
-        {nodeWidthPx}
-        {nodeWidthLogical}
-        ondragstart={() => ($dragging = true)}
-        ondragend={() => ($dragging = false)}
-    />
-    <VoiceRecorder
-        recordingLength={handleRecordingLength}
-        voiceRecorded={handleVoiceRecorded}
-        audioParameters={$audioParameters}
-    />
+    {#if $selectedAngle && $identityAgent}
+        <DroppableNode
+            {nodeWidthPx}
+            {nodeWidthLogical}
+            ondragstart={() => ($dragging = true)}
+            ondragend={() => ($dragging = false)}
+        />
+        <VoiceRecorder
+            recordingLength={handleRecordingLength}
+            voiceRecorded={handleVoiceRecorded}
+            audioParameters={$audioParameters}
+        />
+        <AngleFileBox
+            externalPlaybackPosition={$externalPlaybackPosition}
+            onPlaybackPosition={(position) => ($playheadPosition = position)}
+            onFileAngle={(newAngle) => ($angle = newAngle)}
+            onFileLoaded={(loaded) => ($fileLoaded = loaded)}
+            angle={$selectedAngle!}
+        />
+    {:else}
     <AngleFileBox
         externalPlaybackPosition={$externalPlaybackPosition}
         onPlaybackPosition={(position) => ($playheadPosition = position)}
         onFileAngle={(newAngle) => ($angle = newAngle)}
         onFileLoaded={(loaded) => ($fileLoaded = loaded)}
-        angle={$selectedAngle!}
+        angle={0}
     />
     {/if}
 </div>

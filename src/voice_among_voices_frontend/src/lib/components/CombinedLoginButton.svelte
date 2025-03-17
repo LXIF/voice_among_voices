@@ -2,10 +2,11 @@
     import { getContext } from "svelte";
     import type { SiweContextInterface } from "$lib/siwe/SiweContext.type";
     import { onMount } from "svelte";
-    import { backend, setIdentityAgent } from "$lib/canisters";
+    import { setIdentityAgent } from "$lib/canisters";
     import Button from "./Button.svelte";
     import { appkitModal } from "$lib/appKit.svelte";
     import { identityAgent } from "$lib/canisters";
+  import { abbreviateWalletAddress } from "$lib/utils/convUtils";
 
     let context = getContext<SiweContextInterface>('siwe');
     let walletConnected = $state(false);
@@ -49,6 +50,7 @@
 
     async function handleLogout() {
         $appkitModal.disconnect();
+        setIdentityAgent(undefined);
     }
 </script>
 
@@ -56,8 +58,8 @@
 <Button class="text-xl font-bold" onclick={handleLogin}>Login</Button>
 {:else}
 <!-- TODO handle styling -->
-<div class="flex flex-col justify-end">
+<div class="flex flex-col justify-end items-end">
     <Button class="text-xl font-bold" onclick={handleLogout}>Logout</Button>
-    <p>{walletAddress}</p>
+    <p>{abbreviateWalletAddress(walletAddress)}</p>
 </div>
 {/if}

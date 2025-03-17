@@ -40,7 +40,7 @@
         try {
             error = '';
             audioURL = '';
-            const response: HttpStreamingResponse =
+            const response: HttpStreamingResponse = angle === 0 ? await backend.get_zero_file() :
                 await backend.get_angle_file(BigInt(Math.round(angle)));
             console.log(response);
             if (!response.streaming_strategy) {
@@ -159,7 +159,7 @@
 <div class="container">
 
 
-    <button onclick={fetchAudioFile}>Request Audio File</button>
+    <button onclick={fetchAudioFile}>Generate file for angle {angle}</button>
     {#if loadingProgress > 0 && loadingProgress < 100}
     <div class="progress-bar">
         <div 
