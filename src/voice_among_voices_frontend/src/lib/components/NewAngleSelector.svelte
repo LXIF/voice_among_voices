@@ -131,7 +131,7 @@
             return hsvToRgb(adjustedAngle, pulsingSaturation, pulsingBrightness);
         }
         // Normal state
-        return isAvailable ? hsvToRgb(angle, 100, 100) : hsvToRgb(angle, 50, 100);
+        return isAvailable ? hsvToRgb(angle, 100, 100) : hsvToRgb(angle, 30, 20);
     }
 </script>
 
@@ -176,18 +176,6 @@
             pointer-events={isAngleAvailable(angle) ? 'auto' : 'none'}
         />
     {/each}
-
-    <!-- Draw voice nodes -->
-    {#if nodes && nodes.length > 0}
-        {#each nodes as node}
-            <circle
-                cx={centerX + node.x / 2}
-                cy={centerY - node.y / 2}
-                r={node.radius / 2}
-                fill="blue"
-            />
-        {/each}
-    {/if}
 </svg>
 
 <!-- {#if hoveredAngle}

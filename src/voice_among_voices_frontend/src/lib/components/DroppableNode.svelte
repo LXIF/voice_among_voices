@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number } = $props();
+    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical, nodeId }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number, nodeId: number } = $props();
 
     let dragging = $state(false);
 
@@ -11,8 +11,8 @@
             true
         ) as HTMLDivElement;
         dragImageElement.style.position = 'absolute';
-        dragImageElement.style.top = '-1000px';
-        dragImageElement.style.left = '-1000px';
+        dragImageElement.style.top = '-10000px';
+        dragImageElement.style.left = '-10000px';
         document.body.appendChild(dragImageElement);
 
         const rect = dragImageElement.getBoundingClientRect();
@@ -40,8 +40,8 @@
         aria-roledescription="drag this onto the map to place your node"
         ondragstart={handleDragStart}
         ondragend={handleDragEnd}
-        class="flex justify-center items-center rounded-full cursor-pointer bg-red-600"
+        class="flex justify-center items-center rounded-full cursor-pointer"
         class:opacity-0={dragging}
-        style={`height: ${nodeWidthPx}px; width: ${nodeWidthPx}px;`}
+        style={`height: ${nodeWidthPx}px; width: ${nodeWidthPx}px; background-color: hsl(${nodeId % 360}, 100%, 50%);`}
     ></div>
 </div>

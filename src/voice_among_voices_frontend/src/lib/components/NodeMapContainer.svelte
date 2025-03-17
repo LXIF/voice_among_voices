@@ -95,13 +95,13 @@
         movePlayHead={(normalizedPosition) => {
             $externalPlaybackPosition = normalizedPosition;
         }}
-        class="w-full h-full lg:max-w-[600px]"
+        class="w-full h-full lg:max-w-[1200px]"
     />
     <NewAngleSelector
         availableAngles={$myTokens}
         nodes={$voiceNodes}
         loading={$loadingTokens}
-        class="absolute top-0 w-full h-full lg:max-w-[600px]"
+        class="absolute top-0 w-full h-full lg:max-w-[1200px]"
         onSelectAngle={(angle) => $selectedAngle = angle}
         onHoverAngle={(angle) => $hoveredAngle = angle}
     />

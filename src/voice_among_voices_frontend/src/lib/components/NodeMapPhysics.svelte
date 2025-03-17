@@ -46,13 +46,14 @@
     let canvas: HTMLCanvasElement | null = null;
     let context: CanvasRenderingContext2D | null = null;
 
-    let canvasDiameter = $state(600);
+    let canvasDiameter = $state(800);
     let marginDivisor = 12; // total margin is 50 per default
     let canvasMargin = $derived(canvasDiameter / marginDivisor);
     let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
     let colliderCoordinates: ColliderCoordinate[] = $state([]);
     const drawCollider = false;
+    const bodyLineWidth = 0.3;
 
     let max_distance: number = $state(0);
     let force_strength: number = $state(0);
@@ -445,7 +446,7 @@
                         );
                         context!.fillStyle = `hsl(${30 + colorVel / 10} 80% ${colorVel}% )`;
                         context!.fill();
-                        context!.lineWidth = 0.5;
+                        context!.lineWidth = bodyLineWidth;
                         context!.strokeStyle = `hsl(${body.voiceNode.id} 100% 50% )`
                         context!.stroke();
                         context!.closePath();

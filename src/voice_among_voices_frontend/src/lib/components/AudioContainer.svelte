@@ -7,7 +7,6 @@
     import { onMount } from "svelte";
     import { backend } from "$lib/canisters";
     import { identityAgent } from "$lib/canisters";
-  import ZeroFileBox from "./ZeroFileBox.svelte";
 
     let sampleLength = $state(0);
     let nodeWidthPx = $state(0);
@@ -67,6 +66,7 @@
             {nodeWidthLogical}
             ondragstart={() => ($dragging = true)}
             ondragend={() => ($dragging = false)}
+            nodeId={$selectedAngle}
         />
         <VoiceRecorder
             recordingLength={handleRecordingLength}
