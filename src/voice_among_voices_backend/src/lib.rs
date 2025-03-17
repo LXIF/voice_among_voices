@@ -6,6 +6,7 @@ mod structs;
 pub mod test_functions;
 mod utils;
 
+use alloy::primitives::Address;
 use audio::*;
 use candid::Principal;
 use ic_cdk::{
@@ -107,26 +108,14 @@ fn get_audio_parameters() -> AudioParameters {
 }
 
 // EVM
+#[query]
+async fn get_token_address() -> AddressEgress {
+    AddressEgress::from(token_address())
+}
+
 #[query(composite = true)]
 async fn get_wallet_address() -> Result<String, String> {
     get_caller_wallet_address().await
-}
-
-#[update]
-async fn get_owned_tokens() -> Result<Vec<String>, String> {
-    get_caller_owned_tokens()
-        .await
-        .map(|tokens| tokens.into_iter().map(|t| t.to_string()).collect())
-}
-
-#[update]
-async fn get_balance() -> Result<String, String> {
-    get_caller_balance().await.map(|bal| bal.to_string())
-}
-
-#[update]
-async fn is_owner_of(token_id: u64) -> Result<bool, String> {
-    caller_is_owner_of(token_id).await
 }
 
 export_candid!();

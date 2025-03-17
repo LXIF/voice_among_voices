@@ -22,7 +22,7 @@
         usableCanvasHeight as standardUsableCanvasHeight,
         worldStepInterval,
     } from '$lib/config/nodeMap';
-    import { simulationParameters, selectedAngle, hoveredAngle } from '$lib/state/uxState.svelte';
+    import { simulationParameters, selectedAngle, hoveredAngle, mapRotation } from '$lib/state/uxState.svelte';
     import { isDarkMode } from "$lib/utils/uxUtils";
     let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
@@ -104,7 +104,7 @@
     onMount(async () => {
         $simulationParameters = await backend.get_simulation_parameters();
         colliderCoordinates = await backend.get_collider_coordinates();
-        console.log($simulationParameters);
+
         if (!$simulationParameters) return;
         if (colliderCoordinates.length === 0) return;
 
@@ -686,7 +686,6 @@
             const mappedPlayHeadPosition = playHeadPosition * 2 * logical_radius;
             
             const distanceFromPlayhead = Math.abs(distanceToTangent - mappedPlayHeadPosition);
-            console.log(mappedPlayHeadPosition, distanceToTangent, tangentX, tangentY);
 
             return distanceFromPlayhead <= nodeRadius;
         }
@@ -725,17 +724,11 @@
         ondragover={handleDragOver}
         ondrop={handleDrop}
         class={`w-[${canvasDiameter}px] h-[${canvasDiameter}px]`}
+        style={`transform-origin: center; transform: rotate(${mapRotation.current}deg);`}
     ></canvas>
 </div>
-<!-- TODO handle these -->
-<!-- <label for="node-id">node id</label>
-<input
-    id="node-id"
-    type="number"
-    min="0"
-    max="359"
-    bind:value={nodeId}
-/>
+<!-- TODO handle this -->
+<!-- 
 {#if physicsActive && backendNodes.length > 0}
     <button
         class="hover:shadow-lg rounded-full bg-slate-500 px-5"

@@ -6,11 +6,11 @@
     import Button from "./Button.svelte";
     import { appkitModal } from "$lib/appKit.svelte";
     import { identityAgent } from "$lib/canisters";
-  import { abbreviateWalletAddress } from "$lib/utils/convUtils";
+    import { abbreviateWalletAddress } from "$lib/utils/convUtils";
+    import { walletAddress } from "$lib/state/uxState.svelte";
 
     let context = getContext<SiweContextInterface>('siwe');
     let walletConnected = $state(false);
-    let walletAddress = $state("");
     let isLoggingIn = $state(false);
 
     // $effect(() => {
@@ -36,7 +36,7 @@
 
             $appkitModal.subscribeAccount((newState) => {
                 walletConnected = newState.isConnected
-                walletAddress = newState.address ?? "";
+                $walletAddress = newState.address ?? "";
                 if(walletConnected && !$identityAgent && !isLoggingIn) {
                     isLoggingIn = true;
                     context.login()
@@ -60,6 +60,6 @@
 <!-- TODO handle styling -->
 <div class="flex flex-col justify-end items-end">
     <Button class="text-xl font-bold" onclick={handleLogout}>Logout</Button>
-    <p>{abbreviateWalletAddress(walletAddress)}</p>
+    <p>{abbreviateWalletAddress($walletAddress)}</p>
 </div>
 {/if}

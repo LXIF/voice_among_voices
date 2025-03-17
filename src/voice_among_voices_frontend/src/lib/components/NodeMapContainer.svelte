@@ -9,10 +9,8 @@
     import { appkitModal } from "$lib/appKit.svelte";
     import { blobToUint8Array } from "$lib/utils/convUtils";
     import { voiceNodes, simulationParameters, backendSimulationResult, myAddress, myTokens, loadingTokens, selectedAngle, hoveredAngle, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded } from "$lib/state/uxState.svelte";
-
-    let myPrincipal: string | undefined = $state();
-
-
+    import { blur } from "svelte/transition";
+  import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
 
     let { class: classes } : { class?: string } = $props();
 
@@ -31,30 +29,12 @@
         }
     });
 
-    async function getOwnedTokensWithRetry(attempt = 1, maxRetries = 3): Promise<number[]> {
-        const response = await backend.get_owned_tokens();
-        
-        if ('Ok' in response) {
-            return response.Ok.map((token) => Number(token));
-        }
-
-        console.log("error loading tokens, retrying: ", response.Err);
-        
-        if (attempt < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return getOwnedTokensWithRetry(attempt + 1, maxRetries);
-        }
-        
-        console.error('Failed to fetch owned tokens after', maxRetries, 'attempts');
-        return [];
-    }
-
     async function fetchOwnedTokens() {
         if($myTokens.length === 0) {
             $loadingTokens = true;
         }
 
-        $myTokens = await getOwnedTokensWithRetry();
+        $myTokens = await fetchTokens();
         $loadingTokens = false;
     }
 
@@ -108,7 +88,7 @@
     />
     {#if $hoveredAngle}
     <div class="absolute top-0 w-full h-full lg:max-w-[1200px] flex justify-center items-center pointer-events-none">
-        <h1 class="backdrop-filter text-7xl">{$hoveredAngle}°</h1>
+        <h1 transition:blur={{duration: 100}} class="backdrop-filter text-9xl">{$hoveredAngle}°</h1>
     </div>
     {/if}
 </div>

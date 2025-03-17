@@ -4,6 +4,7 @@ type AddVoiceNodeError = variant {
   NotValidAudioFileError : text;
   NotWithinCircleError : text;
 };
+type AddressEgress = record { address : text };
 type AudioParameters = record {
   fade_ms : nat32;
   sample_rate : nat32;
@@ -87,6 +88,7 @@ service : (opt VoiceAmongVoicesInit) -> {
   get_owned_tokens : () -> (Result_2);
   get_simulation_parameters : () -> (SimulationParameters) query;
   get_siwe_principal : () -> (principal) query;
+  get_token_address : () -> (AddressEgress) query;
   get_voice_nodes : () -> (vec VoiceNodeEgress) query;
   get_wallet_address : () -> (Result) composite_query;
   get_zero_file : () -> (HttpStreamingResponse) query;
