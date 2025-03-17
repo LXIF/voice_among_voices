@@ -6,7 +6,6 @@ mod structs;
 pub mod test_functions;
 mod utils;
 
-use alloy::primitives::Address;
 use audio::*;
 use candid::Principal;
 use ic_cdk::{
@@ -19,7 +18,7 @@ use serde_bytes::ByteBuf;
 use std::{time::Duration, u64};
 use storage::{
     files_and_voices::{
-        get_caller_voices, get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk,
+        get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk,
     },
     init::*,
     voice_nodes::update_stored_voice_node,
@@ -31,7 +30,7 @@ use utils::{node_within_circle, split_into_chunks};
 use voice_nodes::get_stored_voice_nodes;
 
 use evm::{
-    caller_is_owner_of, check_auth_for_single_node_id, get_caller_balance, get_caller_owned_tokens,
+    check_auth_for_single_node_id,
     get_caller_wallet_address, StorableAddress,
 };
 
@@ -61,11 +60,6 @@ async fn update_voice_node(
 #[query]
 fn get_voice_nodes() -> VoiceNodeEgressStore {
     get_stored_voice_nodes()
-}
-
-#[query]
-async fn get_my_voices() -> Result<Option<Vec<AudioSample>>, String> {
-    get_caller_voices().await
 }
 
 #[update]
