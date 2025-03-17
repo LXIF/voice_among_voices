@@ -1,11 +1,11 @@
 <script lang="ts">
-    import {tick, createEventDispatcher} from 'svelte';
+    import {tick} from 'svelte';
     import {backend} from '$lib/canisters';
     import {handleBackendAudioData} from '$lib/utils/convUtils';
     import type {
         HttpStreamingResponse,
-        StreamingCallbackHttpResponse,
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    import { loadingProgress, loadingFile } from '$lib/state/uxState.svelte';
 
 
     let {
@@ -25,7 +25,6 @@
     let audioURL: string = $state('');
     let error: string = $state('');
     let isPlaying = $state(false); // To track play/pause state
-    let loadingProgress = $state(0);
 
     let audioElement: HTMLAudioElement | undefined = $state();
     let downloadLink: HTMLAnchorElement | undefined = $state();
@@ -38,11 +37,11 @@
         }
 
         try {
+            $loadingFile = true;
             error = '';
             audioURL = '';
             const response: HttpStreamingResponse = angle === 0 ? await backend.get_zero_file() :
                 await backend.get_angle_file(BigInt(Math.round(angle)));
-            console.log(response);
             if (!response.streaming_strategy) {
                 throw new Error('No streaming strategy provided.');
             }
@@ -64,7 +63,7 @@
             if (nTokens === undefined) throw new Error('No tokens provided.');
 
             // First chunk is already loaded
-            loadingProgress = 1 / nTokens * 100;
+            loadingProgress.target = 1 / nTokens;
 
             // Fetch all remaining chunks in parallel
             const chunkPromises = [];
@@ -79,7 +78,7 @@
                     backend.http_request_streaming_callback(chunkToken)
                     .then(result => {
                             // Update progress after each chunk loads
-                            loadingProgress = (loadingProgress + (1 / nTokens * 100));
+                            loadingProgress.target = (loadingProgress.current + (1 / nTokens));
                             return result;
                         })
                 );
@@ -106,6 +105,7 @@
             await tick();
             downloadLink!.href = audioURL;
             downloadLink!.download = `audio_angle_${angle}.wav`;
+            $loadingFile = false;
             onFileAngle(angle);
             onFileLoaded(true);
         } catch (e) {
@@ -157,18 +157,7 @@
 </script>
 
 <div class="container">
-
-
     <button onclick={fetchAudioFile}>Generate file for angle {angle}</button>
-    {#if loadingProgress > 0 && loadingProgress < 100}
-    <div class="progress-bar">
-        <div 
-            class="progress-bar-fill" 
-            style="width: {loadingProgress}%"
-        ></div>
-    </div>
-    <p>Loading: {Math.round(loadingProgress)}%</p>
-{/if}
 
     {#if error}
         <p class="error">{error}</p>
@@ -221,21 +210,5 @@
     .error {
         color: red;
         font-weight: bold;
-    }
-
-    /* TODO *?
-    /* Optional: Add a progress bar style */
-    .progress-bar {
-        width: 100%;
-        height: 20px;
-        background-color: #f0f0f0;
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    .progress-bar-fill {
-        height: 100%;
-        background-color: #4CAF50;
-        transition: width 0.3s ease;
     }
 </style>

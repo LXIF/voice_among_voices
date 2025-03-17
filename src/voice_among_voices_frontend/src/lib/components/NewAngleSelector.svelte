@@ -5,8 +5,10 @@
         usableCanvasWidth,
         usableCanvasHeight,
     } from '$lib/config/nodeMap';
-    import { mapRotation, selectedAngle, playheadPosition } from "$lib/state/uxState.svelte";
+    import { mapRotation, selectedAngle, playheadPosition, loadingProgress, loadingFile } from "$lib/state/uxState.svelte";
     import { identityAgent } from '$lib/canisters';
+    import {blur} from "svelte/transition";
+  import { isDarkMode } from '$lib/utils/uxUtils';
 
     let { 
         availableAngles, 
@@ -41,7 +43,7 @@
         // instead of selectedAngle, especially after dragging
         const currentMapRotation = -mapRotation.current; // Convert from negative map rotation
         const normalizedCurrentRotation = ((currentMapRotation % 360) + 360) % 360; // Normalize to 0-359
-        $playheadPosition = 0;
+        playheadPosition.target = 0;
         
         // Calculate the adjusted target angle for continuous rotation
         let targetAngle = angle;
@@ -276,6 +278,25 @@
         // Prevent default behavior to avoid text selection, etc.
         e.preventDefault();
     }
+
+    // Helper function to generate SVG arc path
+    function getProgressArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+        // Convert angles from degrees to radians and adjust for SVG coordinates
+        const start = angleToRadians(90 - startAngle);
+        const end = angleToRadians(90 - endAngle);
+        
+        // Calculate start and end points
+        const startX = cx + r * Math.cos(start);
+        const startY = cy - r * Math.sin(start);
+        const endX = cx + r * Math.cos(end);
+        const endY = cy - r * Math.sin(end);
+        
+        // Determine if the arc should be drawn the long way around
+        const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+        
+        // Create the SVG arc path
+        return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
+    }
 </script>
 
 <svg
@@ -285,7 +306,6 @@
     xmlns="http://www.w3.org/2000/svg"
     class={`${classes} pointer-events-none`}
 >
-   <g style={`transform-origin: center; transform: rotate(${mapRotation.current + 180}deg);`}>
     <!-- ui element for drag-rotating -->
     <circle
         role="button"
@@ -300,6 +320,7 @@
         pointer-events={!!$identityAgent ? 'auto' : 'none'}
         class="cursor-grab active:cursor-grabbing"
     />
+   <g style={`transform-origin: center; transform: rotate(${mapRotation.current + 180}deg);`}>
        <!-- Draw lines for all angles -->
        {#each Array.from({length: 360}, (_, i) => i + 1) as angle}
            <line
@@ -327,6 +348,22 @@
            />
        {/each}
    </g>
+    
+    <!-- Loading progress arc -->
+    {#if $loadingFile}
+        <path
+            d={getProgressArc(centerX, centerY, radius * 0.99, 0, 360 * (loadingProgress.target * 0.99999))}
+            stroke={isDarkMode() ? "white" : "black"}
+            stroke-width="0.5"
+            fill="none"
+            opacity="1"
+            transition:blur={{
+                duration: 500
+            }}
+            pointer-events="none"
+            class="pointer-events-none"
+        />
+    {/if}
 </svg>
 
 <style>

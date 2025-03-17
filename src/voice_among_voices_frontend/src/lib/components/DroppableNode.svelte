@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical, nodeId, class: classes }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number, nodeId: number, class: string } = $props();
+    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical, nodeId, class: classes }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number, nodeId: number, class?: string} = $props();
 
     let dragging = $state(false);
 

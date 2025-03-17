@@ -5,13 +5,16 @@ import type {
 } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
 import { writable } from "svelte/store";
 import { Tween } from "svelte/motion";
-import { elasticOut, cubicOut } from "svelte/easing";
+import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
 
 export const selectedAngle = writable<number | null>(null);
 export const hoveredAngle = writable<number | null>(null);
 export const currentVoiceBlob = writable<Blob | undefined>(undefined);
 export const dragging = writable<boolean>(false);
-export const playheadPosition = writable<number>(0);
+export const playheadPosition = new Tween(0, {
+  easing: sineInOut,
+  duration: 500,
+});
 export const externalPlaybackPosition = writable<number>(0);
 export const angle = writable<number>(0);
 export const fileLoaded = writable<boolean>(false);
@@ -29,3 +32,8 @@ export const mapRotation = new Tween(0, {
   duration: 800,
 });
 export let walletAddress = writable<string>("");
+export let loadingFile = writable(false);
+export let loadingProgress = new Tween(0, {
+  easing: sineInOut,
+  duration: 1000,
+});

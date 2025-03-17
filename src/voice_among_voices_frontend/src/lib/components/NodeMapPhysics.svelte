@@ -24,7 +24,6 @@
     } from '$lib/config/nodeMap';
     import { simulationParameters, selectedAngle, hoveredAngle, mapRotation } from '$lib/state/uxState.svelte';
     import { isDarkMode } from "$lib/utils/uxUtils";
-  import { recoverTransactionAddress } from 'viem';
     let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
         backendNodes: VoiceNodeEgress[];
@@ -521,21 +520,19 @@
     }
 
     function handleClick(e: MouseEvent) {
-        const rect = canvas!.parentElement!.getBoundingClientRect();
+        const rect = canvas!.getBoundingClientRect();
         const canvasX = (e.clientX - rect.left) * canvasRatio;
         const canvasY = (e.clientY - rect.top) * canvasRatio;
 
         //canvasX needs to add canvaswidth-usablecanvaswitdh/2
         
-        const { logicalX, logicalY } = canvasToLogical(
+        const { logicalY } = canvasToLogical(
             canvasX,
             canvasY,
             usableCanvasDiameter,
             canvasMargin,
             logical_radius
         );
-        
-        console.log(logicalX, logicalY);
 
         if (showPlayHead) {
             const normalizedPosition = (logicalY + 50) / 100;

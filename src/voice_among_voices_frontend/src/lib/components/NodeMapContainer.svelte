@@ -72,7 +72,7 @@
         dragging={$dragging}
         showPlayHead={$fileLoaded}
         playHeadAngle={$angle}
-        playHeadPosition={$playheadPosition}
+        playHeadPosition={playheadPosition.current}
         movePlayHead={(normalizedPosition) => {
             $externalPlaybackPosition = normalizedPosition;
         }}
