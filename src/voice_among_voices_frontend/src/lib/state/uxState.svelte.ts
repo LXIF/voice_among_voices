@@ -13,7 +13,7 @@ export const currentVoiceBlob = writable<Blob | undefined>(undefined);
 export const dragging = writable<boolean>(false);
 export const playheadPosition = new Tween(0, {
   easing: sineInOut,
-  duration: 500,
+  duration: 50,
 });
 export const externalPlaybackPosition = writable<number>(0);
 export const angle = writable<number>(0);
@@ -34,6 +34,6 @@ export const mapRotation = new Tween(0, {
 export let walletAddress = writable<string>("");
 export let loadingFile = writable(false);
 export let loadingProgress = new Tween(0, {
-  easing: sineInOut,
-  duration: 1000,
+  easing: cubicInOut,
+  duration: 500,
 });

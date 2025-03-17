@@ -73,7 +73,7 @@
         />
         <AngleFileBox
             externalPlaybackPosition={$externalPlaybackPosition}
-            onPlaybackPosition={(position) => (playheadPosition.target = position)}
+            onPlaybackPosition={(position) => {playheadPosition.target = position}}
             onFileAngle={(newAngle) => ($angle = newAngle)}
             onFileLoaded={(loaded) => ($fileLoaded = loaded)}
             angle={$selectedAngle!}

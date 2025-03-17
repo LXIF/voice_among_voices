@@ -352,7 +352,7 @@
     <!-- Loading progress arc -->
     {#if $loadingFile}
         <path
-            d={getProgressArc(centerX, centerY, radius * 0.99, 0, 360 * (loadingProgress.target * 0.99999))}
+            d={getProgressArc(centerX, centerY, radius * 0.99, 0, 360 * (loadingProgress.current * 0.99999))}
             stroke={isDarkMode() ? "white" : "black"}
             stroke-width="0.5"
             fill="none"

@@ -50,20 +50,11 @@
             let streamingToken = response.streaming_strategy[0]?.Callback.token;
             const nTokens = response.streaming_strategy[0]?.Callback.token.chunks;
 
-            // while (streamingToken) {
-            //     const {body, token} =
-            //         await backend.http_request_streaming_callback(
-            //             streamingToken
-            //         );
-            //         console.log(token);
-            //     chunks.push(body);
-            //     streamingToken = token[0] || undefined;
-            // }
-
             if (nTokens === undefined) throw new Error('No tokens provided.');
 
+            let currentlyDownloaded = 1 / nTokens; 
             // First chunk is already loaded
-            loadingProgress.target = 1 / nTokens;
+            loadingProgress.target = currentlyDownloaded;
 
             // Fetch all remaining chunks in parallel
             const chunkPromises = [];
@@ -78,7 +69,8 @@
                     backend.http_request_streaming_callback(chunkToken)
                     .then(result => {
                             // Update progress after each chunk loads
-                            loadingProgress.target = (loadingProgress.current + (1 / nTokens));
+                            currentlyDownloaded += 1 / nTokens;
+                            loadingProgress.target = currentlyDownloaded;
                             return result;
                         })
                 );
