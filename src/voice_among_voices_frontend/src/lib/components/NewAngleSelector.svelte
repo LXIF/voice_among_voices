@@ -5,12 +5,11 @@
         usableCanvasWidth,
         usableCanvasHeight,
     } from '$lib/config/nodeMap';
-    import { mapRotation, selectedAngle } from "$lib/state/uxState.svelte";
-  import { identityAgent } from '$lib/canisters';
+    import { mapRotation, selectedAngle, playheadPosition } from "$lib/state/uxState.svelte";
+    import { identityAgent } from '$lib/canisters';
 
     let { 
         availableAngles, 
-        nodes,
         class: classes = '',
         loading,
         onSelectAngle,
@@ -42,6 +41,7 @@
         // instead of selectedAngle, especially after dragging
         const currentMapRotation = -mapRotation.current; // Convert from negative map rotation
         const normalizedCurrentRotation = ((currentMapRotation % 360) + 360) % 360; // Normalize to 0-359
+        $playheadPosition = 0;
         
         // Calculate the adjusted target angle for continuous rotation
         let targetAngle = angle;
@@ -283,7 +283,7 @@
     xmlns="http://www.w3.org/2000/svg"
     class={`${classes} pointer-events-none`}
 >
-   <g style={`transform-origin: center; transform: rotate(${mapRotation.current}deg);`}>
+   <g style={`transform-origin: center; transform: rotate(${mapRotation.current + 180}deg);`}>
     <!-- ui element for drag-rotating -->
     <circle
         role="button"

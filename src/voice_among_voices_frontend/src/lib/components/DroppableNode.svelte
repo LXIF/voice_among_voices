@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical, nodeId }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number, nodeId: number } = $props();
+    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical, nodeId, class: classes }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number, nodeId: number, class: string } = $props();
 
     let dragging = $state(false);
 
@@ -32,7 +32,7 @@
     }
 </script>
 
-<div class="flex justify-center items-center h-20 w-full">
+<div class={`flex justify-center items-center h-20 w-full ${classes}`}>
     <div
         draggable="true"
         role="button"
@@ -40,7 +40,7 @@
         aria-roledescription="drag this onto the map to place your node"
         ondragstart={handleDragStart}
         ondragend={handleDragEnd}
-        class="flex justify-center items-center rounded-full cursor-pointer"
+        class="flex justify-center items-center rounded-full cursor-pointer z-10"
         class:opacity-0={dragging}
         style={`height: ${nodeWidthPx}px; width: ${nodeWidthPx}px; background-color: hsl(${nodeId % 360}, 100%, 50%);`}
     ></div>

@@ -10,7 +10,8 @@
     import { blobToUint8Array } from "$lib/utils/convUtils";
     import { voiceNodes, simulationParameters, backendSimulationResult, myAddress, myTokens, loadingTokens, selectedAngle, hoveredAngle, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded } from "$lib/state/uxState.svelte";
     import { blur } from "svelte/transition";
-  import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
+    import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
+    import { untrack } from "svelte";
 
     let { class: classes } : { class?: string } = $props();
 
@@ -25,7 +26,7 @@
 
     $effect(() => {
         if($myAddress !== "") {
-            fetchOwnedTokens()
+            untrack(() => fetchOwnedTokens());
         }
     });
 

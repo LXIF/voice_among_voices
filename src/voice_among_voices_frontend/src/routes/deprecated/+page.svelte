@@ -115,11 +115,11 @@
 
     const handleGetAddress = async () => {
         if(myPrincipal === undefined) throw "Principal is undefined";
-        const addressResult = await backend.get_wallet_address();
-        console.log(addressResult);
-        if('Ok' in addressResult) {
-            myAddress = addressResult.Ok
-        }
+        // const addressResult = await backend.get_wallet_address();
+        // console.log(addressResult);
+        // if('Ok' in addressResult) {
+        //     myAddress = addressResult.Ok
+        // }
     };
 
     const handleGetTokens = async () => {
@@ -174,6 +174,7 @@
             {nodeWidthLogical}
             ondragstart={() => (dragging = true)}
             ondragend={() => (dragging = false)}
+            nodeId={0}
         />
         <VoiceRecorder
             recordingLength={handleRecordingLength}

@@ -5,7 +5,7 @@ import type {
 } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
 import { writable } from "svelte/store";
 import { Tween } from "svelte/motion";
-import { elasticOut } from "svelte/easing";
+import { elasticOut, cubicOut } from "svelte/easing";
 
 export const selectedAngle = writable<number | null>(null);
 export const hoveredAngle = writable<number | null>(null);
@@ -25,7 +25,7 @@ export const myAddress = writable<string>("");
 export const myTokens = writable<number[]>([]);
 export const loadingTokens = writable<boolean>(false);
 export const mapRotation = new Tween(0, {
-  easing: elasticOut,
+  easing: cubicOut,
   duration: 800,
 });
 export let walletAddress = writable<string>("");

@@ -24,6 +24,7 @@
     } from '$lib/config/nodeMap';
     import { simulationParameters, selectedAngle, hoveredAngle, mapRotation } from '$lib/state/uxState.svelte';
     import { isDarkMode } from "$lib/utils/uxUtils";
+  import { recoverTransactionAddress } from 'viem';
     let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
         backendNodes: VoiceNodeEgress[];
@@ -65,6 +66,8 @@
     let moving = $state(false);
     let scaled = $state(false);
     let fastForward = $state(false);
+
+    let lastAppliedRotation = $state(0);
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -401,6 +404,20 @@
                         canvasDiameter,
                         canvasDiameter
                     );
+                    
+                    // Check if rotation needs to be updated
+                    if (lastAppliedRotation !== mapRotation.current) {
+                        // Reset previous rotation first
+                        if (lastAppliedRotation !== 0) {
+                            context.rotate(((lastAppliedRotation + 180) / 360) * 2 * Math.PI);
+                        }
+                        
+                        // Apply new rotation
+                        context.rotate(-((mapRotation.current + 180) / 360) * 2 * Math.PI);
+                        
+                        // Update the tracked rotation value
+                        lastAppliedRotation = mapRotation.current;
+                    }
 
                     // Draw the collider
                     if (drawCollider && colliderCoords?.length > 0) {
@@ -504,43 +521,24 @@
     }
 
     function handleClick(e: MouseEvent) {
-        const rect = canvas!.getBoundingClientRect();
+        const rect = canvas!.parentElement!.getBoundingClientRect();
         const canvasX = (e.clientX - rect.left) * canvasRatio;
         const canvasY = (e.clientY - rect.top) * canvasRatio;
 
-
         //canvasX needs to add canvaswidth-usablecanvaswitdh/2
-
-        const {logicalX, logicalY} = canvasToLogical(
+        
+        const { logicalX, logicalY } = canvasToLogical(
             canvasX,
             canvasY,
             usableCanvasDiameter,
             canvasMargin,
             logical_radius
         );
+        
+        console.log(logicalX, logicalY);
 
         if (showPlayHead) {
-            // Calculate the position along the playHead
-            const angleRadians = playHeadAngle * (Math.PI / 180);
-
-            // Tangent points (start and end of the line)
-            const startX = Math.sin(angleRadians) * logical_radius;
-            const startY = Math.cos(angleRadians) * logical_radius;
-            const endX = Math.sin(angleRadians) * -logical_radius;
-            const endY = Math.cos(angleRadians) * -logical_radius;
-
-            // Project the click position onto the line (start -> end)
-            const lineLength = Math.sqrt(
-                (endX - startX) ** 2 + (endY - startY) ** 2
-            );
-            const dotProduct =
-                ((logicalX - startX) * (endX - startX) +
-                    (logicalY - startY) * (endY - startY)) /
-                lineLength;
-
-            // Normalize the dotProduct to get playHeadPosition between 0 and 1
-            const normalizedPosition = clamp(dotProduct / lineLength, 0, 1);
-
+            const normalizedPosition = (logicalY + 50) / 100;
             // Dispatch the movePlayHead event with the normalized position
             movePlayHead(normalizedPosition);
         }
@@ -572,9 +570,34 @@
     async function handleDrop(e: DragEvent) {
         e.preventDefault();
         const rect = canvas!.getBoundingClientRect();
-        const canvasX = (e.clientX - rect.left) * canvasRatio;
-        const canvasY = (e.clientY - rect.top) * canvasRatio;
-
+        
+        // Get center of the canvas
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        // Get raw mouse position relative to canvas
+        const rawMouseX = e.clientX - rect.left;
+        const rawMouseY = e.clientY - rect.top;
+        
+        // Adjust for rotation: we need to apply inverse rotation to the mouse coordinates
+        // since the canvas itself is rotated
+        const rotationRadians = ((mapRotation.current + 180) * Math.PI) / 180;
+        
+        // Calculate position relative to center
+        const relativeToCanvasX = rawMouseX - centerX;
+        const relativeToCanvasY = rawMouseY - centerY;
+        
+        // Apply inverse rotation 
+        const unrotatedX = 
+            relativeToCanvasX * Math.cos(-rotationRadians) - 
+            relativeToCanvasY * Math.sin(-rotationRadians);
+        const unrotatedY = 
+            relativeToCanvasX * Math.sin(-rotationRadians) + 
+            relativeToCanvasY * Math.cos(-rotationRadians);
+        
+        // Convert back to canvas coordinates
+        const canvasX = (unrotatedX + centerX) * canvasRatio;
+        const canvasY = (unrotatedY + centerY) * canvasRatio;
 
         const {logicalX, logicalY} = canvasToLogical(
             canvasX,
@@ -625,33 +648,33 @@
         rendering = false;
     }
 
-        // Update canvas size when container size changes
-        function updateCanvasSize() {
-            if (!container) return;
+    // Update canvas size when container size changes
+    function updateCanvasSize() {
+        if (!container) return;
+        
+        const rect = container.getBoundingClientRect();
+        canvasDiameter = Math.min(rect.width, rect.height);
+        
+        if (canvas) {
+            canvas.width = canvasDiameter * canvasRatio;
+            canvas.height = canvasDiameter * canvasRatio;
             
-            const rect = container.getBoundingClientRect();
-            canvasDiameter = Math.min(rect.width, rect.height);
-            
-            if (canvas) {
-                canvas.width = canvasDiameter * canvasRatio;
-                canvas.height = canvasDiameter * canvasRatio;
-                
-                // Reset context and scaling when size changes
-                if (context && canvasRatio && logical_radius && canvasDiameter > 0 && canvasDiameter > 0) {
-                    context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-                    const translateX = canvasRatio * canvasDiameter / 2;
-                    const translateY = canvasRatio * canvasDiameter / 2;
-                    context.translate(translateX, translateY);
+            // Reset context and scaling when size changes
+            if (context && canvasRatio && logical_radius && canvasDiameter > 0 && canvasDiameter > 0) {
+                context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+                const translateX = canvasRatio * canvasDiameter / 2;
+                const translateY = canvasRatio * canvasDiameter / 2;
+                context.translate(translateX, translateY);
 
-                    context.scale(
-                        canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter),
-                        -canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter)
-                    );
-                } else {
-                    setTimeout(updateCanvasSize, 10);
-                }
+                context.scale(
+                    canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter),
+                    -canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter)
+                );
+            } else {
+                setTimeout(updateCanvasSize, 10);
             }
         }
+    }
 
         function isNodeTouchedByPlayhead(nodeX: number, nodeY: number, nodeRadius: number): boolean { //TODO: not working properly yet for some reason
             if (!showPlayHead) return false;
@@ -724,7 +747,6 @@
         ondragover={handleDragOver}
         ondrop={handleDrop}
         class={`w-[${canvasDiameter}px] h-[${canvasDiameter}px]`}
-        style={`transform-origin: center; transform: rotate(${mapRotation.current}deg);`}
     ></canvas>
 </div>
 <!-- TODO handle this -->

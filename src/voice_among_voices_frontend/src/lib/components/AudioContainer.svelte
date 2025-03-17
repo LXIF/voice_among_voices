@@ -64,6 +64,7 @@
             ondragstart={() => ($dragging = true)}
             ondragend={() => ($dragging = false)}
             nodeId={$selectedAngle}
+            class="z-10"
         />
         <VoiceRecorder
             recordingLength={handleRecordingLength}
