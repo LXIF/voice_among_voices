@@ -42,7 +42,7 @@
     // Adjusted scaling parameters for SVG
     const centerX = 100;
     const centerY = 100;
-    const radius = 84; // Radius of the outer circle
+    const radius = 86; // Radius of the outer circle
     const lineStopFactor = 0.875; // Factor to stop lines closer to the center (7/8th of the way)
 
     // Function to adjust angles: 0 is north, and positive angles go clockwise

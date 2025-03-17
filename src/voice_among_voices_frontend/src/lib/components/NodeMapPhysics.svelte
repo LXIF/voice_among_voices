@@ -402,12 +402,6 @@
                         canvasDiameter
                     );
 
-                    // context!.rect(-500, -500, 1000, 1000); //TODO remove this
-                    //     context!.fillStyle = `hsl(0 100% 50%)`;
-                    //     context!.fill();
-
-
-
                     // Draw the collider
                     if (drawCollider && colliderCoords?.length > 0) {
                         context.beginPath();
@@ -442,10 +436,10 @@
                         const canvasX = bodyPos.x;
                         const canvasY = bodyPos.y;
     
-                        const isTouchedByPlayhead = isNodeTouchedByPlayhead(
+                        let isTouchedByPlayhead = isNodeTouchedByPlayhead(
                             canvasX, 
                             canvasY, 
-                            body.voiceNode.radius * 10
+                            body.voiceNode.radius
                         );
 
                         context!.beginPath();
@@ -459,11 +453,11 @@
                             Math.PI * 2
                         );
                         if(isTouchedByPlayhead) {
-                            context!.fillStyle = `hsl(${body.voiceNode.id}, 100%, 50%)`;
+                            context!.fillStyle = `hsla(${body.voiceNode.id}, 30%, 70%)`;
                         } else if($selectedAngle && body.voiceNode.id === BigInt($selectedAngle)) {
-                            context!.fillStyle = `hsl(${$selectedAngle}, 100%, 50%)`;
+                            context!.fillStyle = `hsla(${$selectedAngle}, 100%, 50%, 80%)`;
                         } else if ($hoveredAngle && body.voiceNode.id === BigInt($hoveredAngle)) {
-                            context!.fillStyle = `hsl(${$hoveredAngle}, 100%, 80%)`;
+                            context!.fillStyle = `hsla(${$hoveredAngle}, 100%, 80%, 80%)`;
                         } else {
                             context!.fillStyle = `hsla(${30 + colorVel / 10}, 80%, ${colorVel}%, ${colorVel}%)`;
                         }
@@ -524,8 +518,6 @@
             canvasMargin,
             logical_radius
         );
-
-        console.log(logicalX, logicalY);
 
         if (showPlayHead) {
             // Calculate the position along the playHead
@@ -661,28 +653,42 @@
             }
         }
 
-        function isNodeTouchedByPlayhead(nodeX: number, nodeY: number, nodeRadius: number): boolean { //TODO: not working yet for some reason
-            // if (!showPlayHead) return false;
+        function isNodeTouchedByPlayhead(nodeX: number, nodeY: number, nodeRadius: number): boolean { //TODO: not working properly yet for some reason
+            if (!showPlayHead) return false;
+
+            
+            // Convert angle to radians
+            const angleRadians = playHeadAngle * (Math.PI / 180);
+            // get tangency points
+            let tangentX = logical_radius *  Math.sin(angleRadians);
+            let tangentY = logical_radius * Math.cos(angleRadians);
+            let distanceToTangent;
+            
+            if (playHeadAngle % 180 === 0) {
+                distanceToTangent = Math.abs(nodeY - tangentY) + logical_radius;
+            } else if (playHeadAngle % 90 === 0) {
+                distanceToTangent = Math.abs(nodeX - tangentX) + logical_radius;
+            } else {
     
-            // // Convert angle to radians
-            // const angleRadians = playHeadAngle * (Math.PI / 180);
+                // tangent slope
+                let tangentSlope = -tangentX / tangentY;
+    
+                // tangent line equation: nodeY - tangentY = tangentSlope * (nodeX - tangentX)
+                // rewriting it as Ax + By + C = 0
+    
+                let aTangent = tangentSlope;
+                let bTangent = -1;
+                let cTangent = -tangentSlope * tangentX + tangentY;
+                distanceToTangent = Math.abs(aTangent * nodeX + bTangent * nodeY + cTangent) / Math.sqrt(aTangent * aTangent + bTangent * bTangent);
+            }
+
+
+            const mappedPlayHeadPosition = playHeadPosition * 2 * logical_radius;
             
-            // // Get start and end points on the circle
-            // const startX = Math.sin(angleRadians) * logical_radius;
-            // const startY = Math.cos(angleRadians) * logical_radius;
-            // const endX = Math.sin(angleRadians) * -logical_radius;
-            // const endY = Math.cos(angleRadians) * -logical_radius;
-            
-            // // Interpolate between start and end based on playHeadPosition to get actual playhead point
-            // const playHeadX = startX + (endX - startX) * playHeadPosition;
-            // const playHeadY = startY + (endY - startY) * playHeadPosition;
-            
-            // // Calculate distance from node center to playhead point
-            // const distance = Math.sqrt((nodeX - playHeadX) ** 2 + (nodeY - playHeadY) ** 2);
-            // console.log(distance, nodeRadius);
-            // // Node is touched if distance is less than or equal to node radius
-            // return distance <= nodeRadius;
-            return false
+            const distanceFromPlayhead = Math.abs(distanceToTangent - mappedPlayHeadPosition);
+            console.log(mappedPlayHeadPosition, distanceToTangent, tangentX, tangentY);
+
+            return distanceFromPlayhead <= nodeRadius;
         }
 
         onMount(() => {
