@@ -498,7 +498,7 @@
 
                         context!.strokeStyle = isDarkMode() ? `hsl(0, 0%, 100%)` : `hsl(0, 0%, 0%)`;  // Color of the playhead line
 
-                        context!.lineWidth = 0.5;
+                        context!.lineWidth = 0.3;
                         context!.stroke();
                         context!.closePath();
                     });
@@ -673,63 +673,73 @@
         }
     }
 
-        function isNodeTouchedByPlayhead(nodeX: number, nodeY: number, nodeRadius: number): boolean { //TODO: not working properly yet for some reason
-            if (!showPlayHead) return false;
+    function isNodeTouchedByPlayhead(nodeX: number, nodeY: number, nodeRadius: number): boolean {
+        if (!showPlayHead) return false;
 
+        // Get current rotation in radians
+        const rotationRadians = ((lastAppliedRotation + 180) * Math.PI) / 180;
+        
+        // Rotate the node position by the inverse of the canvas rotation
+        // This gives us the node position in the non-rotated coordinate system
+        const rotatedNodeX = nodeX * Math.cos(rotationRadians) - nodeY * Math.sin(rotationRadians);
+        const rotatedNodeY = nodeX * Math.sin(rotationRadians) + nodeY * Math.cos(rotationRadians);
+        
+        // Convert playhead angle to radians
+        const angleRadians = playHeadAngle * (Math.PI / 180);
+        
+        // Get tangency points
+        let tangentX = logical_radius * Math.sin(angleRadians);
+        let tangentY = logical_radius * Math.cos(angleRadians);
+        let distanceToTangent;
+        
+        if (playHeadAngle % 180 === 0) {
+            distanceToTangent = Math.abs(rotatedNodeY - tangentY);
+        } else if (playHeadAngle % 90 === 0) {
+            distanceToTangent = Math.abs(rotatedNodeX - tangentX);
+        } else {
+            // Tangent slope
+            let tangentSlope = -tangentX / tangentY;
+
+            // Tangent line equation: y - tangentY = tangentSlope * (x - tangentX)
+            // Rewriting it as Ax + By + C = 0
+            let aTangent = tangentSlope;
+            let bTangent = -1;
+            let cTangent = -tangentSlope * tangentX + tangentY;
             
-            // Convert angle to radians
-            const angleRadians = playHeadAngle * (Math.PI / 180);
-            // get tangency points
-            let tangentX = logical_radius *  Math.sin(angleRadians);
-            let tangentY = logical_radius * Math.cos(angleRadians);
-            let distanceToTangent;
-            
-            if (playHeadAngle % 180 === 0) {
-                distanceToTangent = Math.abs(nodeY - tangentY) + logical_radius;
-            } else if (playHeadAngle % 90 === 0) {
-                distanceToTangent = Math.abs(nodeX - tangentX) + logical_radius;
-            } else {
-    
-                // tangent slope
-                let tangentSlope = -tangentX / tangentY;
-    
-                // tangent line equation: nodeY - tangentY = tangentSlope * (nodeX - tangentX)
-                // rewriting it as Ax + By + C = 0
-    
-                let aTangent = tangentSlope;
-                let bTangent = -1;
-                let cTangent = -tangentSlope * tangentX + tangentY;
-                distanceToTangent = Math.abs(aTangent * nodeX + bTangent * nodeY + cTangent) / Math.sqrt(aTangent * aTangent + bTangent * bTangent);
-            }
-
-
-            const mappedPlayHeadPosition = playHeadPosition * 2 * logical_radius;
-            
-            const distanceFromPlayhead = Math.abs(distanceToTangent - mappedPlayHeadPosition);
-
-            return distanceFromPlayhead <= nodeRadius;
+            // Calculate distance from rotated node to the tangent line
+            distanceToTangent = Math.abs(aTangent * rotatedNodeX + bTangent * rotatedNodeY + cTangent) / 
+                                Math.sqrt(aTangent * aTangent + bTangent * bTangent);
         }
 
-        onMount(() => {
-            if (canvas) {
-                context = canvas.getContext('2d');
-                canvasRatio = 1;
-                
-                // Set up resize observer
-                const resizeObserver = new ResizeObserver(() => {
-                    updateCanvasSize();
-                });
-                
-                resizeObserver.observe(container!);
-                updateCanvasSize(); // Initial size
-                
-                return () => resizeObserver.disconnect();
-            }
-        });
+        // Map the playhead position to logical coordinates
+        const mappedPlayHeadPosition = playHeadPosition * 2 * logical_radius;
+        
+        // Calculate distance from the node to the playhead
+        const distanceFromPlayhead = Math.abs(distanceToTangent - mappedPlayHeadPosition);
 
-        $effect(() => {
-            if(logical_radius) updateCanvasSize();
-        });
+        return distanceFromPlayhead <= nodeRadius;
+    }
+
+    onMount(() => {
+        if (canvas) {
+            context = canvas.getContext('2d');
+            canvasRatio = 1;
+            
+            // Set up resize observer
+            const resizeObserver = new ResizeObserver(() => {
+                updateCanvasSize();
+            });
+            
+            resizeObserver.observe(container!);
+            updateCanvasSize(); // Initial size
+            
+            return () => resizeObserver.disconnect();
+        }
+    });
+
+    $effect(() => {
+        if(logical_radius) updateCanvasSize();
+    });
 </script>
 
 <div
