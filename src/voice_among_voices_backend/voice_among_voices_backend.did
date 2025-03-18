@@ -12,12 +12,6 @@ type AudioParameters = record {
   total_length_ms : nat32;
   chunk_size : nat64;
 };
-type AudioSample = record {
-  id : nat64;
-  sample : blob;
-  sample_length_samples : nat32;
-  sample_length_ms : float64;
-};
 type ColliderCoordinate = record { x : float64; y : float64 };
 type HttpStreamingResponse = record {
   body : blob;
@@ -27,10 +21,7 @@ type HttpStreamingResponse = record {
   status_code : nat16;
 };
 type Result = variant { Ok : text; Err : text };
-type Result_1 = variant { Ok : opt vec AudioSample; Err : text };
-type Result_2 = variant { Ok : vec text; Err : text };
-type Result_3 = variant { Ok : bool; Err : text };
-type Result_4 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
+type Result_1 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
 type SimulationParameters = record {
   logical_radius : float64;
   density : float64;
@@ -81,11 +72,8 @@ type VoiceNodeIngress = record {
 service : (opt VoiceAmongVoicesInit) -> {
   get_angle_file : (nat64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
-  get_balance : () -> (Result);
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;
   get_my_principal : () -> (text) query;
-  get_my_voices : () -> (Result_1) query;
-  get_owned_tokens : () -> (Result_2);
   get_simulation_parameters : () -> (SimulationParameters) query;
   get_siwe_principal : () -> (principal) query;
   get_token_address : () -> (AddressEgress) query;
@@ -95,6 +83,5 @@ service : (opt VoiceAmongVoicesInit) -> {
   http_request_streaming_callback : (StreamingCallbackToken) -> (
       StreamingCallbackHttpResponse,
     ) query;
-  is_owner_of : (nat64) -> (Result_3);
-  update_voice_node : (VoiceNodeIngress) -> (Result_4);
+  update_voice_node : (VoiceNodeIngress) -> (Result_1);
 }

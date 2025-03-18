@@ -66,7 +66,7 @@
     let scaled = $state(false);
     let fastForward = $state(false);
 
-    let lastAppliedRotation = $state(0);
+    let lastAppliedRotation = $state<number | undefined>();
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -123,7 +123,7 @@
     $effect(() => {
         if(!!canvas) {
             untrack(() => {
-                mapRotation.set(180, {
+                mapRotation.set(0, {
                     duration: 0
                 });
             });
@@ -418,6 +418,7 @@
                     
                     // Check if rotation needs to be updated
                     if (lastAppliedRotation !== mapRotation.current) {
+                        if(lastAppliedRotation === undefined) lastAppliedRotation = 0;
                         // Reset previous rotation first
                         if (lastAppliedRotation !== 0) {
                             context.rotate(((lastAppliedRotation + 180) / 360) * 2 * Math.PI);

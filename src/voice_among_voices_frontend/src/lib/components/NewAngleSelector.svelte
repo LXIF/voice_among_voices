@@ -318,7 +318,7 @@
         opacity="0"
         onpointerdown={handleCirclePointerDown}
         pointer-events={!!$identityAgent ? 'auto' : 'none'}
-        class="cursor-grab active:cursor-grabbing"
+        class={!!$identityAgent ? "cursor-grab active:cursor-grabbing" : ''}
     />
    <g style={`transform-origin: center; transform: rotate(${mapRotation.current + 180}deg);`}>
        <!-- Draw lines for all angles -->
@@ -330,10 +330,11 @@
                y1={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 0.92 : 1) * getPulseScale()}
                x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.18 : 1.1) * getPulseScale()}
                y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius * (hoveredAngle === angle ? 1.18 : 1.1) * getPulseScale()}
-               class={`transition-all duration-200 ease-in-out pointer-events-auto outline-none ${isAngleAvailable(angle) ? "" : "cursor-grab active:cursor-grabbing"}`}
+               class={`transition-all duration-200 ease-in-out outline-none ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
                onmouseover={() => isAngleAvailable(angle) && (hoveredAngle = angle)}
                onmouseleave={() => (hoveredAngle = null)}
                onpointerdown={(e) => {
+                if(!$identityAgent) return;
                 if(isAngleAvailable(angle)) {handleSelectAngle(angle)} else {handleCirclePointerDown(e)}}}
                onfocus={() => isAngleAvailable(angle) && (hoveredAngle = angle)}
                onblur={() => (hoveredAngle = null)}
@@ -344,7 +345,7 @@
                }}
                stroke={getLineColor(angle, isAngleAvailable(angle))}
                stroke-width={hoveredAngle === angle ? 2.2 : 0.5}
-               pointer-events={isAngleAvailable(angle) ? 'auto' : 'none'}
+               pointer-events={!!$identityAgent && isAngleAvailable(angle) ? 'auto' : 'none'}
            />
        {/each}
    </g>

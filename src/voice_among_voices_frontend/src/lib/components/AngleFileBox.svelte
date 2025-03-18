@@ -97,7 +97,7 @@
             await tick();
             downloadLink!.href = audioURL;
             downloadLink!.download = `audio_angle_${angle}.wav`;
-            $loadingFile = false;
+            setTimeout(() => {$loadingFile = false;}, 150);
             onFileAngle(angle);
             onFileLoaded(true);
         } catch (e) {
@@ -126,8 +126,6 @@
 
     // Set playback position externally (in response to incoming props)
     $effect(() => {
-        console.log(externalPlaybackPosition);
-        console.log(audioElement);
         if (
             audioElement &&
             audioElement.duration &&
