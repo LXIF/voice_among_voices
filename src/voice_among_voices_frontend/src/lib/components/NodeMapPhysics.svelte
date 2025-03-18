@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import {onMount, untrack} from 'svelte';
     import {mapRange, clamp} from '$lib/utils/mathUtils';
     import RAPIER from '@dimforge/rapier2d-compat';
 
@@ -116,6 +116,18 @@
         linear_damping = $simulationParameters!.linear_damping;
         logical_radius = $simulationParameters!.logical_radius;
         friction = $simulationParameters!.friction;
+
+        
+    });
+
+    $effect(() => {
+        if(!!canvas) {
+            untrack(() => {
+                mapRotation.set(180, {
+                    duration: 0
+                });
+            });
+        }
     });
 
     $effect(() => {if (
