@@ -96,7 +96,7 @@
             audioURL = await handleBackendAudioData(audioData);
             await tick();
             downloadLink!.href = audioURL;
-            downloadLink!.download = `audio_angle_${angle}.wav`;
+            downloadLink!.download = `voice_among_voices_${angle}_${Date.now()}.wav`;
             setTimeout(() => {$loadingFile = false;}, 750);
             onFileAngle(angle);
             onFileLoaded(true);
@@ -190,11 +190,6 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
-    }
-
-    .angle-input {
-        width: 100px;
-        padding: 0.5rem;
     }
 
     .error {

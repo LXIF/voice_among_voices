@@ -5,21 +5,19 @@
         usableCanvasWidth,
         usableCanvasHeight,
     } from '$lib/config/nodeMap';
-    import { mapRotation, selectedAngle, playheadPosition, loadingProgress, loadingFile } from "$lib/state/uxState.svelte";
+    import { mapRotation, selectedAngle, playheadPosition, loadingProgress, loadingFile, myTokens } from "$lib/state/uxState.svelte";
     import { identityAgent } from '$lib/canisters';
     import {blur} from "svelte/transition";
   import { isDarkMode } from '$lib/utils/uxUtils';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
 
     let { 
-        availableAngles, 
         class: classes = '',
         loading,
         onSelectAngle,
         onHoverAngle,
         loggedIn
     }: { 
-        availableAngles: number[], 
         nodes: VoiceNodeEgress[],
         class?: string,
         loading: boolean,
@@ -34,10 +32,45 @@
         onHoverAngle(hoveredAngle);
     });
 
+    $effect(() => {
+        if($identityAgent && $myTokens.length > 0) {
+            untrack(() => {
+                rotateToClosest($myTokens);
+            });
+        }
+    });
+
     const handleSelectAngle = (angle: number) => { //TODO: not that great selection function
         rotateTo(angle);
         onSelectAngle(angle); // Still send the original angle (0-359) to the callback
     };
+
+    const rotateToClosest = (availableAngles: number[]) => {
+                // Find the nearest available angle based on the current rotation
+                const currentRotation = -mapRotation.current; // Convert from map rotation to angle
+                const normalizedRotation = ((currentRotation % 360) + 360) % 360; // Normalize to 0-359
+                
+                if (availableAngles.length > 0) {
+                    // Find the angle in availableAngles that is closest to the current rotation
+                    let { closestAngle, closestDistance } = findClosestAngle(normalizedRotation, availableAngles);
+                    hoveredAngle = closestAngle;
+
+                    // Rotate to the nearest available angle and wait for animation to complete
+                    const rotationPromise = rotateTo(currentRotation + closestDistance);
+                    rotationPromise.then(() => {
+                        mapRotation.set(-closestAngle, {
+                            duration: 0,
+                            easing: undefined
+                        });
+                        // Set a timeout to clear hoveredAngle 500ms after animation completes
+                        setTimeout(() => {
+                            hoveredAngle = null;
+                        }, 500);
+                    });
+                    
+                    onSelectAngle(closestAngle);
+                }
+    }
 
     const findClosestAngle = (angle: number, availableAngles: number[]) => {
         let closestAngle = angle + 180 % 360;
@@ -139,7 +172,7 @@
     }
 
     function isAngleAvailable(angle: number): boolean {
-        return availableAngles.includes(angle);
+        return $myTokens.includes(angle);
     }
 
     // Add a rotating offset for the loading animation
@@ -252,43 +285,19 @@
         }
         
         // Handle pointer up
-        function handlePointerUp(upEvent: PointerEvent) {
+        async function handlePointerUp(upEvent: PointerEvent) {
             // Clean up event listeners
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
+
+            const availableAngles = await $myTokens;
             
             // If not dragging, treat as a click
             if (!isDragging) {
                 console.log('Circle clicked (not dragged)');
                 // Add any click-specific handling here
             } else {
-                // Find the nearest available angle based on the current rotation
-                const currentRotation = -mapRotation.current; // Convert from map rotation to angle
-                const normalizedRotation = ((currentRotation % 360) + 360) % 360; // Normalize to 0-359
-                
-                if (availableAngles.length > 0) {
-                    // Find the angle in availableAngles that is closest to the current rotation
-                    let { closestAngle, closestDistance } = findClosestAngle(normalizedRotation, availableAngles);
-                    hoveredAngle = closestAngle;
-
-                    console.log(closestAngle, closestDistance);
-                    console.log(currentRotation + closestDistance);
-
-                    // Rotate to the nearest available angle and wait for animation to complete
-                    const rotationPromise = rotateTo(currentRotation + closestDistance);
-                    rotationPromise.then(() => {
-                        mapRotation.set(-closestAngle, {
-                            duration: 0,
-                            easing: undefined
-                        });
-                        // Set a timeout to clear hoveredAngle 500ms after animation completes
-                        setTimeout(() => {
-                            hoveredAngle = null;
-                        }, 500);
-                    });
-                    
-                    onSelectAngle(closestAngle);
-                }
+                rotateToClosest(availableAngles);
             }
         }
         

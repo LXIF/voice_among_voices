@@ -88,7 +88,7 @@
             audioURL = await handleBackendAudioData(audioData);
             await tick();
             downloadLink!.href = audioURL;
-            downloadLink!.download = `audio_angle_0.wav`;
+            downloadLink!.download = `voice_among_voices_${Date.now()}.wav`;
             onFileAngle(0);
             onFileLoaded(true);
         } catch (e) {

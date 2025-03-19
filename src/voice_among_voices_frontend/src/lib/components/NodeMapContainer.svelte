@@ -31,7 +31,8 @@
     });
 
     async function fetchOwnedTokens() {
-        if($myTokens.length === 0) {
+        let tokens = await $myTokens;
+        if(tokens.length === 0) {
             $loadingTokens = true;
         }
 
@@ -79,7 +80,6 @@
         class="w-full h-full lg:max-w-[1200px]"
     />
     <NewAngleSelector
-        availableAngles={$myTokens}
         nodes={$voiceNodes}
         loading={$loadingTokens}
         loggedIn={!!$identityAgent}
