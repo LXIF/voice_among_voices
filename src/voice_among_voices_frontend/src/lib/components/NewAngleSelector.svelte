@@ -9,6 +9,7 @@
     import { identityAgent } from '$lib/canisters';
     import {blur} from "svelte/transition";
   import { isDarkMode } from '$lib/utils/uxUtils';
+  import { onMount } from 'svelte';
 
     let { 
         availableAngles, 
@@ -38,32 +39,60 @@
         onSelectAngle(angle); // Still send the original angle (0-359) to the callback
     };
 
+    const findClosestAngle = (angle: number, availableAngles: number[]) => {
+        let closestAngle = angle + 180 % 360;
+        let closestDistance = 180;
+
+        availableAngles.forEach((availableAngle) => {
+            // closest angles don't cross 0
+            let distanceWithoutCrossing = availableAngle - angle;
+            // closest angles cross 0 forwards
+            let distanceCrossingForwards = availableAngle - angle - 360;
+            // closest angles cross 0 backwards
+            let distanceCrossingBackwards = availableAngle - angle + 360;
+
+            if(Math.abs(distanceWithoutCrossing) < Math.abs(closestDistance)) {
+                closestAngle = availableAngle;
+                closestDistance = distanceWithoutCrossing;
+            }
+            if(Math.abs(distanceCrossingForwards) < Math.abs(closestDistance)) {
+                closestAngle = availableAngle;
+                closestDistance = distanceCrossingForwards;
+            }
+            if(Math.abs(distanceCrossingBackwards) < Math.abs(closestDistance)) {
+                closestAngle = availableAngle;
+                closestDistance = distanceCrossingBackwards;
+            }
+        });
+
+        return {closestAngle, closestDistance}
+    }
+
     const rotateTo = (angle: number) => {
         // We need to use the current map rotation as our starting point
         // instead of selectedAngle, especially after dragging
         const currentMapRotation = -mapRotation.current; // Convert from negative map rotation
-        const normalizedCurrentRotation = ((currentMapRotation % 360) + 360) % 360; // Normalize to 0-359
         playheadPosition.target = 0;
         
         // Calculate the adjusted target angle for continuous rotation
         let targetAngle = angle;
         
         // Calculate the standard difference within 0-360 range
-        const standardDiff = Math.abs(normalizedCurrentRotation - angle);
+        const standardDiff = Math.abs(currentMapRotation - angle);
         
         // If the standard difference is more than 180 degrees, take the shorter path
         if (standardDiff > 180) {
             // If going clockwise across the 0° boundary
-            if (normalizedCurrentRotation > 180 && angle < 180) {
+            if (currentMapRotation > 180 && angle < 180) {
                 targetAngle = angle + 360; // Add 360 to make it continue past 360
             }
             // If going counterclockwise across the 0° boundary
-            else if (normalizedCurrentRotation < 180 && angle > 180) {
+            else if (currentMapRotation < 180 && angle > 180) {
                 targetAngle = angle - 360; // Subtract 360 to make it go below 0
             }
         }
         
-        const angleDifference = Math.abs(targetAngle - normalizedCurrentRotation);
+        const angleDifference = Math.abs(targetAngle - currentMapRotation);
         
         // Store the promise from the set operation and return it
         const rotationPromise = mapRotation.set(-targetAngle, {
@@ -239,34 +268,26 @@
                 
                 if (availableAngles.length > 0) {
                     // Find the angle in availableAngles that is closest to the current rotation
-                    let nearestAngle = availableAngles[0];
-                    let minDifference = 360;
-                    
-                    for (const angle of availableAngles) {
-                        const diff = Math.min(
-                            Math.abs(normalizedRotation - angle),
-                            Math.abs(normalizedRotation - (angle + 360)),
-                            Math.abs((normalizedRotation + 360) - angle)
-                        );
-                        
-                        if (diff < minDifference) {
-                            minDifference = diff;
-                            nearestAngle = angle;
-                        }
-                    }
-                    
-                    hoveredAngle = nearestAngle;
+                    let { closestAngle, closestDistance } = findClosestAngle(normalizedRotation, availableAngles);
+                    hoveredAngle = closestAngle;
+
+                    console.log(closestAngle, closestDistance);
+                    console.log(currentRotation + closestDistance);
 
                     // Rotate to the nearest available angle and wait for animation to complete
-                    const rotationPromise = rotateTo(nearestAngle);
+                    const rotationPromise = rotateTo(currentRotation + closestDistance);
                     rotationPromise.then(() => {
+                        mapRotation.set(-closestAngle, {
+                            duration: 0,
+                            easing: undefined
+                        });
                         // Set a timeout to clear hoveredAngle 500ms after animation completes
                         setTimeout(() => {
                             hoveredAngle = null;
                         }, 500);
                     });
                     
-                    onSelectAngle(nearestAngle);
+                    onSelectAngle(closestAngle);
                 }
             }
         }
@@ -306,6 +327,21 @@
     xmlns="http://www.w3.org/2000/svg"
     class={`${classes} pointer-events-none`}
 >
+    <!-- Loading progress arc -->
+    {#if $loadingFile}
+        <path
+            d={getProgressArc(centerX, centerY, radius * 0.99, 0, 360 * (loadingProgress.current * 0.99999))}
+            stroke={isDarkMode() ? "white" : "black"}
+            stroke-width="0.5"
+            fill="none"
+            opacity="1"
+            transition:blur={{
+                duration: 500
+            }}
+            pointer-events="none"
+            class="pointer-events-none"
+        />
+    {/if}
     <!-- ui element for drag-rotating -->
     <circle
         role="button"
@@ -349,22 +385,6 @@
            />
        {/each}
    </g>
-    
-    <!-- Loading progress arc -->
-    {#if $loadingFile}
-        <path
-            d={getProgressArc(centerX, centerY, radius * 0.99, 0, 360 * (loadingProgress.current * 0.99999))}
-            stroke={isDarkMode() ? "white" : "black"}
-            stroke-width="0.5"
-            fill="none"
-            opacity="1"
-            transition:blur={{
-                duration: 500
-            }}
-            pointer-events="none"
-            class="pointer-events-none"
-        />
-    {/if}
 </svg>
 
 <style>

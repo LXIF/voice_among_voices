@@ -97,7 +97,7 @@
             await tick();
             downloadLink!.href = audioURL;
             downloadLink!.download = `audio_angle_${angle}.wav`;
-            setTimeout(() => {$loadingFile = false;}, 150);
+            setTimeout(() => {$loadingFile = false;}, 750);
             onFileAngle(angle);
             onFileLoaded(true);
         } catch (e) {

@@ -688,6 +688,7 @@
 
     function isNodeTouchedByPlayhead(nodeX: number, nodeY: number, nodeRadius: number): boolean {
         if (!showPlayHead) return false;
+        if (!lastAppliedRotation) lastAppliedRotation = 0;
 
         // Get current rotation in radians
         const rotationRadians = ((lastAppliedRotation + 180) * Math.PI) / 180;
