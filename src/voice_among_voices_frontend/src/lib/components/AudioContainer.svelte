@@ -71,23 +71,11 @@
             voiceRecorded={handleVoiceRecorded}
             audioParameters={$audioParameters}
         />
-        <AngleFileBox
-            externalPlaybackPosition={$externalPlaybackPosition}
-            onPlaybackPosition={(position) => {playheadPosition.target = position}}
-            onFileAngle={(newAngle) => ($angle = newAngle)}
-            onFileLoaded={(loaded) => ($fileLoaded = loaded)}
-            angle={$selectedAngle!}
-        />
-    {:else}
+    {/if}
     <AngleFileBox
-        externalPlaybackPosition={$externalPlaybackPosition}
         onPlaybackPosition={(position) => {playheadPosition.target = position}}
         onFileAngle={(newAngle) => ($angle = newAngle)}
         onFileLoaded={(loaded) => ($fileLoaded = loaded)}
-        angle={0}
     />
-    {/if}
-    {#if $hoveredAngle || $selectedAngle}
-        <p>{$hoveredAngle ? $hoveredAngle : $selectedAngle}</p>
-    {/if}
+
 </div>

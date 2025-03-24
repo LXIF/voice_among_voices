@@ -233,6 +233,12 @@
     }
 
     function handleCirclePointerDown(e: PointerEvent) {
+        //prevent body scroll
+        document.querySelector("body")?.classList.add("touch-none");
+        document.querySelector("body")?.classList.add("overflow-hidden");
+        e.preventDefault();
+        e.stopPropagation();
+
         // Capture the starting point of the interaction
         const startX = e.clientX;
         const startY = e.clientY;
@@ -280,12 +286,14 @@
                 const normalizedRotation = Math.round(((currentRotation % 360) + 360) % 360); // Normalize to 0-359 and round
                 hoveredAngle = normalizedRotation;
             }
-            
-            moveEvent.preventDefault();
+
+
         }
         
         // Handle pointer up
         async function handlePointerUp(upEvent: PointerEvent) {
+            document.querySelector("body")?.classList.remove("touch-none");
+            document.querySelector("body")?.classList.remove("overflow-hidden");
             // Clean up event listeners
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
@@ -312,8 +320,8 @@
     // Helper function to generate SVG arc path
     function getProgressArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
         // Convert angles from degrees to radians and adjust for SVG coordinates
-        const start = angleToRadians(90 - startAngle);
-        const end = angleToRadians(90 - endAngle);
+        const start = angleToRadians(270 - startAngle);
+        const end = angleToRadians(270 - endAngle);
         
         // Calculate start and end points
         const startX = cx + r * Math.cos(start);
@@ -357,7 +365,7 @@
         cx={centerX}
         cy={centerY}
         r={radius * 1.05}
-        stroke-width="10"
+        stroke-width="15"
         fill="none"
         stroke="red"
         opacity="0"
@@ -400,5 +408,10 @@
     .highlight {
         stroke: red; /* Highlight color */
         stroke-width: 2;
+    }
+
+    .locked-scroll {
+        overflow: hidden;
+        touch-action: none;
     }
 </style>

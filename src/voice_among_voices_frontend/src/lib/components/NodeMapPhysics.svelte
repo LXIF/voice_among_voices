@@ -87,7 +87,6 @@
     $effect(() => {
         if (!scaled && context && logical_radius && canvasRatio) {
             scaled = true;
-
             setupContext();
         }
     });
@@ -120,15 +119,6 @@
         
     });
 
-    $effect(() => {
-        if(!!canvas) {
-            untrack(() => {
-                mapRotation.set(0, {
-                    duration: 0
-                });
-            });
-        }
-    });
 
     $effect(() => {if (
         browser &&
@@ -418,17 +408,19 @@
                     
                     // Check if rotation needs to be updated
                     if (lastAppliedRotation !== mapRotation.current) {
-                        if(lastAppliedRotation === undefined) lastAppliedRotation = 0;
+                        if(lastAppliedRotation === undefined) {
+                            lastAppliedRotation = 0
+                        };
+
                         // Reset previous rotation first
-                        if (lastAppliedRotation !== 0) {
-                            context.rotate(((lastAppliedRotation + 180) / 360) * 2 * Math.PI);
-                        }
-                        
                         // Apply new rotation
-                        context.rotate(-((mapRotation.current + 180) / 360) * 2 * Math.PI);
+                        context.rotate(
+                            (lastAppliedRotation - mapRotation.current) / 180 * Math.PI + Math.PI
+                        );
                         
                         // Update the tracked rotation value
-                        lastAppliedRotation = mapRotation.current;
+                        // TODO: this works from trial and error but it is not quite clear to my why.
+                        lastAppliedRotation = mapRotation.current + 180;
                     }
 
                     // Draw the collider
@@ -591,7 +583,7 @@
         
         // Adjust for rotation: we need to apply inverse rotation to the mouse coordinates
         // since the canvas itself is rotated
-        const rotationRadians = ((mapRotation.current + 180) * Math.PI) / 180;
+        const rotationRadians = ((mapRotation.current) * Math.PI) / 180 + Math.PI; // add pi because the world is upside down
         
         // Calculate position relative to center
         const relativeToCanvasX = rawMouseX - centerX;
@@ -675,7 +667,6 @@
                 const translateX = canvasRatio * canvasDiameter / 2;
                 const translateY = canvasRatio * canvasDiameter / 2;
                 context.translate(translateX, translateY);
-
                 context.scale(
                     canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter),
                     -canvasRatio * canvasDiameter / logical_radius / 2 * (usableCanvasDiameter / canvasDiameter)
@@ -688,10 +679,9 @@
 
     function isNodeTouchedByPlayhead(nodeX: number, nodeY: number, nodeRadius: number): boolean {
         if (!showPlayHead) return false;
-        if (!lastAppliedRotation) lastAppliedRotation = 0;
 
         // Get current rotation in radians
-        const rotationRadians = ((lastAppliedRotation + 180) * Math.PI) / 180;
+        const rotationRadians = ((mapRotation.current) * Math.PI) / 180;
         
         // Rotate the node position by the inverse of the canvas rotation
         // This gives us the node position in the non-rotated coordinate system

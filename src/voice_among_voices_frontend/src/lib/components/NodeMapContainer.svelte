@@ -8,7 +8,7 @@
     import type { VoiceNodeIngress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     import { appkitModal } from "$lib/appKit.svelte";
     import { blobToUint8Array } from "$lib/utils/convUtils";
-    import { voiceNodes, simulationParameters, backendSimulationResult, myAddress, myTokens, loadingTokens, selectedAngle, hoveredAngle, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded } from "$lib/state/uxState.svelte";
+    import { voiceNodes, simulationParameters, backendSimulationResult, walletAddress, myTokens, loadingTokens, selectedAngle, hoveredAngle, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded } from "$lib/state/uxState.svelte";
     import { blur } from "svelte/transition";
     import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
     import { untrack } from "svelte";
@@ -21,11 +21,11 @@
     });
 
     $effect(() => {if($identityAgent) {
-        $myAddress = $appkitModal.getAddress()!;
+        $walletAddress = $appkitModal.getAddress()!;
     }});
 
     $effect(() => {
-        if($myAddress !== "") {
+        if($walletAddress !== "") {
             untrack(() => fetchOwnedTokens());
         }
     });
@@ -65,31 +65,35 @@
 
 </script>
 
-<div class="w-full h-full flex justify-center items-center scale-100">
-    <NodeMapPhysics
-        nodes={$voiceNodes}
-        backendNodes={$backendSimulationResult}
-        dropNewNode={handleDropNewNode}
-        dragging={$dragging}
-        showPlayHead={$fileLoaded}
-        playHeadAngle={$angle}
-        playHeadPosition={playheadPosition.current}
-        movePlayHead={(normalizedPosition) => {
-            $externalPlaybackPosition = normalizedPosition;
-        }}
-        class="w-full h-full lg:max-w-[1200px]"
-    />
-    <NewAngleSelector
-        nodes={$voiceNodes}
-        loading={$loadingTokens}
-        loggedIn={!!$identityAgent}
-        class="absolute top-0 w-full h-full lg:max-w-[1200px]"
-        onSelectAngle={(angle) => $selectedAngle = angle}
-        onHoverAngle={(angle) => $hoveredAngle = angle}
-    />
-    {#if $hoveredAngle}
-    <div class="absolute top-0 w-full h-full lg:max-w-[1200px] flex justify-center items-center pointer-events-none">
-        <h1 transition:blur={{duration: 100}} class="backdrop-filter text-9xl">{$hoveredAngle}°</h1>
+<div class="w-screen flex items-center justify-center">
+    <div class="max-w-[70svh] w-full max-h-[70svh] h-full flex justify-center items-center scale-100">
+        <NodeMapPhysics
+            nodes={$voiceNodes}
+            backendNodes={$backendSimulationResult}
+            dropNewNode={handleDropNewNode}
+            dragging={$dragging}
+            showPlayHead={$fileLoaded}
+            playHeadAngle={$angle}
+            playHeadPosition={playheadPosition.current}
+            movePlayHead={(normalizedPosition) => {
+                $externalPlaybackPosition = normalizedPosition;
+            }}
+            class="w-full h-full lg:max-w-[1200px]"
+        />
+        <NewAngleSelector
+            nodes={$voiceNodes}
+            loading={$loadingTokens}
+            loggedIn={!!$identityAgent}
+            class="absolute top-0 w-full h-full lg:max-w-[1200px]"
+            onSelectAngle={(angle) => {
+                $selectedAngle = angle
+                }}
+            onHoverAngle={(angle) => $hoveredAngle = angle}
+        />
+        {#if $hoveredAngle}
+        <div class="absolute top-0 w-full h-full lg:max-w-[1200px] flex justify-center items-center pointer-events-none">
+            <h1 transition:blur={{duration: 100}} class="backdrop-filter text-9xl">{$hoveredAngle}°</h1>
+        </div>
+        {/if}
     </div>
-    {/if}
 </div>

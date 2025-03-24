@@ -7,18 +7,18 @@
     "@dfinity/principal": "^2.0.0",
     "@dimforge/rapier2d": "^0.14.0",
     "@dimforge/rapier2d-compat": "^0.14.0",
-    "@reown/appkit": "^1.6.0",
-    "@reown/appkit-adapter-wagmi": "^1.6.0",
+    "@reown/appkit": "^1.7.0",
+    "@reown/appkit-adapter-wagmi": "^1.7.0",
     "@wagmi/connectors": "^5.7.4",
-    "@wagmi/core": "^2.16.0",
+    "@wagmi/core": "^2.16.7",
     "extendable-media-recorder": "^9.2.11",
     "extendable-media-recorder-wav-encoder": "^7.0.115",
     "ic-siwe-js": "^0.2.4",
     "svelte-wagmi": "^1.0.7",
-    "viem": "^2.21.55",
+    "viem": "^2.23.13",
     "vite-plugin-top-level-await": "^1.4.4",
     "vite-plugin-wasm": "^3.3.0",
-    "wagmi": "^2.14.1"
+    "wagmi": "^2.14.15"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^3.0.6",
@@ -51,7 +51,8 @@
     "setup": "npm i && dfx canister create voice_among_voices_backend && dfx generate voice_among_voices_backend && dfx deploy",
     "start": "vite --port 3000",
     "test": "vitest run",
-    "dev": "vite dev"
+    "dev": "vite dev",
+    "dev-host": "vite dev --host"
   },
   "type": "module",
   "version": "0.0.0"

@@ -7,7 +7,7 @@
     import { appkitModal } from "$lib/appKit.svelte";
     import { identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
-    import { walletAddress } from "$lib/state/uxState.svelte";
+    import { walletAddress, resetUxState } from "$lib/state/uxState.svelte";
 
     let context = getContext<SiweContextInterface>('siwe');
     let walletConnected = $state(false);
@@ -25,7 +25,7 @@
             if (newState.initialized) {
                 walletConnected = $appkitModal.getIsConnectedState();
                 if(walletConnected && !$identityAgent && !isLoggingIn) {
-                    $appkitModal.disconnect();
+                    $appkitModal.disconnect(); //TODO: handle sessions better
                 }
             }
         });
@@ -48,14 +48,25 @@
             });
         }
 
+    // async function handleLoginSiwe() {
+    //     // $appkitModal.open();
+    //     context.login()
+    //                 .then(async (response) => {
+    //                     setIdentityAgent(response);
+    //                     isLoggingIn = false;
+    //                 });
+    // }
+
     async function handleLogout() {
         $appkitModal.disconnect();
         setIdentityAgent(undefined);
+        resetUxState();
     }
 </script>
 
 {#if !$identityAgent}
 <Button class="text-xl font-bold" onclick={handleLogin}>Login</Button>
+<!-- <Button class="text-xl font-bold" onclick={handleLoginSiwe}>Login harder</Button> -->
 {:else}
 <!-- TODO handle styling -->
 <div class="flex flex-col justify-end items-end">

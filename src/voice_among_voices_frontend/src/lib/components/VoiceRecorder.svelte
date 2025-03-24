@@ -208,7 +208,7 @@
 </script>
 
 <audio
-    controls
+    hidden
     bind:this={audioElement}
 ></audio>
 <!-- <button

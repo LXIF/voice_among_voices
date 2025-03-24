@@ -35,6 +35,6 @@ dfx deploy ic_siwe_provider --argument $'(
     }
 )'
 
-dfx deploy
+#dfx deploy
 
 npm run prebuild

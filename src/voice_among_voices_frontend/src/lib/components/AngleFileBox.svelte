@@ -6,23 +6,20 @@
         HttpStreamingResponse,
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
     import { loadingProgress, loadingFile } from '$lib/state/uxState.svelte';
-
+    import { selectedAngle, externalPlaybackPosition } from '$lib/state/uxState.svelte';
+  import Button from './Button.svelte';
 
     let {
-        externalPlaybackPosition,
         onPlaybackPosition,
         onFileAngle,
         onFileLoaded,
-        angle
     }: {
-        externalPlaybackPosition: number,
         onPlaybackPosition: (normalizedPosition: number) => void,
         onFileAngle: (angle: number) => void,
         onFileLoaded: (loaded: boolean) => void,
-        angle: number
     } = $props();
 
-    let audioURL: string = $state('');
+    let audioURL: string = $state("");
     let error: string = $state('');
     let isPlaying = $state(false); // To track play/pause state
 
@@ -30,8 +27,15 @@
     let downloadLink: HTMLAnchorElement | undefined = $state();
  
     // Fetch audio file based on angle
-    async function fetchAudioFile() {
-        if (angle < 0 || angle > 359) {
+    async function fetchAudioFileOrPlayPause(angle: number) {
+        if(isPlaying) {
+            togglePlayPause();
+            return;
+        } else if(audioURL) {
+            togglePlayPause();
+            return;
+        }
+        if ($selectedAngle < 0 || $selectedAngle > 359) {
             error = 'Please input an angle between 0 and 359.';
             return;
         }
@@ -39,9 +43,9 @@
         try {
             $loadingFile = true;
             error = '';
-            audioURL = '';
-            const response: HttpStreamingResponse = angle === 0 ? await backend.get_zero_file() :
-                await backend.get_angle_file(BigInt(Math.round(angle)));
+            // audioURL = '';
+            const response: HttpStreamingResponse = $selectedAngle === 0 ? await backend.get_zero_file() :
+                await backend.get_angle_file(BigInt(Math.round($selectedAngle)));
             if (!response.streaming_strategy) {
                 throw new Error('No streaming strategy provided.');
             }
@@ -96,10 +100,11 @@
             audioURL = await handleBackendAudioData(audioData);
             await tick();
             downloadLink!.href = audioURL;
-            downloadLink!.download = `voice_among_voices_${angle}_${Date.now()}.wav`;
+            downloadLink!.download = `voice_among_voices_${$selectedAngle}_${Date.now()}.wav`;
             setTimeout(() => {$loadingFile = false;}, 750);
-            onFileAngle(angle);
+            onFileAngle($selectedAngle);
             onFileLoaded(true);
+            togglePlayPause();
         } catch (e) {
             error = 'Error fetching the audio file.';
             console.error(e);
@@ -126,14 +131,22 @@
 
     // Set playback position externally (in response to incoming props)
     $effect(() => {
+        console.log($externalPlaybackPosition); //TODO: figure out why this needs to be here
         if (
             audioElement &&
             audioElement.duration &&
-            externalPlaybackPosition >= 0 &&
-            externalPlaybackPosition <= 1
+            $externalPlaybackPosition >= 0 &&
+            $externalPlaybackPosition <= 1
         ) {
             audioElement.currentTime =
-                externalPlaybackPosition * audioElement.duration;
+                $externalPlaybackPosition * audioElement.duration;
+            onPlaybackPosition($externalPlaybackPosition);
+        }
+    });
+
+    $effect(() => {
+        if($selectedAngle) {
+            audioURL = "";
         }
     });
 
@@ -145,26 +158,23 @@
     // // Toggle play/pause button state
     // $: isPlaying = !audioElement?.paused;
 </script>
-
-<div class="container">
-    <button onclick={fetchAudioFile}>Generate file for angle {angle}</button>
-
+ 
+<div class="flex flex-col items-center gap-4 w-full">
+    <Button class="text-center text-5xl font-bold w-min z-10" onclick={fetchAudioFileOrPlayPause}>{isPlaying ? 'Pause' : $loadingFile ? 'Loading...' : 'Play'}</Button>
+    <h1 style={`color: hsl(${$selectedAngle},100%,50%)`} class="text-5xl text-center font-bold">{$selectedAngle}°</h1>
+    
     {#if error}
         <p class="error">{error}</p>
     {/if}
 
     {#if audioURL}
         <div>
-            <!-- Custom Play/Pause Button -->
-            <button onclick={togglePlayPause}>
-                {isPlaying ? 'Pause' : 'Play'}
-            </button>
-
             <!-- Hidden audio element (no controls) -->
             <audio
                 bind:this={audioElement}
                 ontimeupdate={onTimeUpdate}
                 onended={onEnded}
+                hidden
             >
                 <source
                     src={audioURL}
@@ -186,12 +196,6 @@
 </div>
 
 <style>
-    .container {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
     .error {
         color: red;
         font-weight: bold;

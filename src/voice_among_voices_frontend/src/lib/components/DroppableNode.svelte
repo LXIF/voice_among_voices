@@ -1,6 +1,22 @@
 <script lang="ts">
 
-    let { ondragstart, ondragend, nodeWidthPx, nodeWidthLogical, nodeId, class: classes }: { ondragstart: () => void, ondragend: () => void, nodeWidthPx: number, nodeWidthLogical: number, nodeId: number, class?: string} = $props();
+    let {
+        ondragstart,
+        ondragend,
+        nodeWidthPx,
+        nodeWidthLogical,
+        nodeId,
+        class: classes,
+        showHandle = true
+    }: {
+        ondragstart: () => void,
+        ondragend: () => void,
+        nodeWidthPx: number,
+        nodeWidthLogical: number,
+        nodeId: number,
+        class?: string,
+        showHandle?: boolean
+    } = $props();
 
     let dragging = $state(false);
 
@@ -32,7 +48,7 @@
     }
 </script>
 
-<div class={`flex justify-center items-center h-20 w-full ${classes}`}>
+<div class={`flex justify-center items-center h-10 w-full ${classes}`}>
     <div
         draggable="true"
         role="button"
@@ -43,5 +59,7 @@
         class="flex justify-center items-center rounded-full cursor-pointer z-10"
         class:opacity-0={dragging}
         style={`height: ${nodeWidthPx}px; width: ${nodeWidthPx}px; background-color: hsl(${nodeId % 360}, 100%, 50%);`}
-    ></div>
+    >
+    <!-- <div class="relative top-14 bg-black dark:bg-white text-white dark:text-black min-w-10 min-h-10 rounded-full text-center flex justify-center items-center text-3xl">drag</div> -->
+</div>
 </div>
