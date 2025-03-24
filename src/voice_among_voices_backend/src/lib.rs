@@ -18,7 +18,7 @@ use serde_bytes::ByteBuf;
 use std::{time::Duration, u64};
 use storage::{
     files_and_voices::{
-        get_caller_voices, get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk,
+        get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk,
     },
     init::*,
     voice_nodes::update_stored_voice_node,
@@ -30,7 +30,7 @@ use utils::{node_within_circle, split_into_chunks};
 use voice_nodes::get_stored_voice_nodes;
 
 use evm::{
-    caller_is_owner_of, check_auth_for_single_node_id, get_caller_balance, get_caller_owned_tokens,
+    check_auth_for_single_node_id,
     get_caller_wallet_address, StorableAddress,
 };
 
@@ -60,11 +60,6 @@ async fn update_voice_node(
 #[query]
 fn get_voice_nodes() -> VoiceNodeEgressStore {
     get_stored_voice_nodes()
-}
-
-#[query]
-async fn get_my_voices() -> Result<Option<Vec<AudioSample>>, String> {
-    get_caller_voices().await
 }
 
 #[update]
@@ -107,26 +102,14 @@ fn get_audio_parameters() -> AudioParameters {
 }
 
 // EVM
+#[query]
+async fn get_token_address() -> AddressEgress {
+    AddressEgress::from(token_address())
+}
+
 #[query(composite = true)]
 async fn get_wallet_address() -> Result<String, String> {
     get_caller_wallet_address().await
-}
-
-#[update]
-async fn get_owned_tokens() -> Result<Vec<String>, String> {
-    get_caller_owned_tokens()
-        .await
-        .map(|tokens| tokens.into_iter().map(|t| t.to_string()).collect())
-}
-
-#[update]
-async fn get_balance() -> Result<String, String> {
-    get_caller_balance().await.map(|bal| bal.to_string())
-}
-
-#[update]
-async fn is_owner_of(token_id: u64) -> Result<bool, String> {
-    caller_is_owner_of(token_id).await
 }
 
 export_candid!();

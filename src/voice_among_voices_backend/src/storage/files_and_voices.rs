@@ -1,6 +1,6 @@
 use crate::{
-    generate_angle_file, get_caller_owned_tokens, performance_counter, set_timer,
-    split_into_chunks, AudioSample, ByteBuf, Duration, HttpStreamingResponse,
+    generate_angle_file, performance_counter, set_timer,
+    split_into_chunks, ByteBuf, Duration, HttpStreamingResponse,
     StreamingCallbackHttpResponse, StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_CACHE,
     AUDIO_PARAMETERS, SAMPLES_MEMORY, SIMULATION_PARAMETERS, STREAMING_CALLBACK,
     VOICE_NODES_MEMORY, ZERO_DEGREE_FILE_CACHE,
@@ -123,38 +123,4 @@ fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {
     let callback = STREAMING_CALLBACK.clone();
 
     Some(StreamingStrategy::Callback { token, callback })
-}
-
-pub async fn get_caller_voices() -> Result<Option<Vec<AudioSample>>, String> {
-    let tokens = get_caller_owned_tokens()
-        .await
-        .map(|tokens| {
-            tokens
-                .into_iter()
-                .map(|t| t.try_into())
-                .collect::<Result<Vec<i32>, _>>()
-        })?
-        .map_err(|err| err.to_string())?;
-
-    if tokens.len() == 0 {
-        return Ok(None);
-    };
-
-    let mut response_samples: Vec<AudioSample> = Vec::with_capacity(tokens.len());
-
-    VOICE_NODES_MEMORY.with_borrow(|nodes| {
-        SAMPLES_MEMORY.with_borrow(|samples| {
-            for token in tokens {
-                if let Some(node) = nodes.get(token as u64) {
-                    response_samples.push(
-                        samples
-                            .get(node.sample_id)
-                            .expect("No sample - this shouldn't happen"),
-                    );
-                }
-            }
-        });
-    });
-
-    Ok(Some(response_samples))
 }

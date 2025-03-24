@@ -73,7 +73,7 @@ fn generate_normalized_sample_positions(
         let position = distance_from_tangent(angle, node.x, node.y, x_c, y_c) / (2. * radius);
         Some(SamplePosition {
             begins_at: (position - (node.radius / (2. * radius))).max(0.).min(1.),
-            pan_position: signed_distance_from_center_line(angle, node.x, node.y, y_c, x_c)
+            pan_position: signed_distance_from_center_line(angle, node.x, node.y, x_c, y_c)
                 / radius,
             sample_id: node.sample_id,
             sample_length_samples: node.sample_length_samples,
@@ -826,29 +826,16 @@ mod tests {
             }
 
             // Test with left pan (-1.0), center (0.0), and right pan (1.0)
-            let sample_positions = vec![
-                SamplePosition {
-                    begins_at: 0.0,
-                    sample_id: 0,
-                    sample_length_samples: 44100,
-                    pan_position: -1.0, // Full left pan
-                },
-                SamplePosition {
-                    begins_at: 0.0,
-                    sample_id: 1,
-                    sample_length_samples: 44100,
-                    pan_position: -0.0, // Center pan
-                },
-                SamplePosition {
-                    begins_at: 0.0,
-                    sample_id: 2,
-                    sample_length_samples: 44100,
-                    pan_position: -1.0, // Full right pan
-                },
-            ];
 
             let (left_channel, right_channel) =
-                generate_audio_vectors(&sample_positions, &audio_params, samples);
+                generate_audio_vectors(&vec![
+                    SamplePosition {
+                        begins_at: 0.0,
+                        sample_id: 0,
+                        sample_length_samples: 44100,
+                        pan_position: -1.0, // Full left pan
+                    },
+                ], &audio_params, samples);
 
             // Left pan should result in higher values in the left channel
             for (left, right) in left_channel.iter().zip(right_channel.iter()) {
@@ -976,7 +963,7 @@ mod tests {
             let (x, y) = (0., 25.);
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 25.);
         }
@@ -986,7 +973,7 @@ mod tests {
             let (x, y) = (0., -25.);
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert_eq!(d, -25.);
         }
@@ -996,7 +983,7 @@ mod tests {
             let (x, y) = (25., 0.);
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert_eq!(d, -25.);
         }
@@ -1009,7 +996,7 @@ mod tests {
             );
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert!(approximately_equal(d, -25., 1e-6));
         }
@@ -1022,7 +1009,7 @@ mod tests {
             );
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert!(approximately_equal(d, 25., 1e-6));
         }
@@ -1032,7 +1019,7 @@ mod tests {
             let (x, y) = (0., 25.);
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 0.);
         }
@@ -1042,7 +1029,7 @@ mod tests {
             let (x, y) = (1., 25.);
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert_eq!(d, -1.);
         }
@@ -1052,7 +1039,17 @@ mod tests {
             let (x, y) = (-1., 25.);
 
             let (x_c, y_c) = tangency_points(radius, angle);
-            let d = signed_distance_from_center_line(angle, x, y, y_c, x_c);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
+
+            assert_eq!(d, 1.);
+        }
+        {
+            let angle = 0.;
+            let radius = 50.;
+            let (x, y) = (-1., 25.);
+
+            let (x_c, y_c) = tangency_points(radius, angle);
+            let d = signed_distance_from_center_line(angle, x, y, x_c, y_c);
 
             assert_eq!(d, 1.);
         }

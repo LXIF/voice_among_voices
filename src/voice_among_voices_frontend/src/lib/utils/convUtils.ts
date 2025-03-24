@@ -27,12 +27,16 @@ export function mapToCanvasY(
 export function canvasToLogical(
   x: number,
   y: number,
-  canvasWidth: number,
-  canvasHeight: number,
+  usableCanvasDiameter: number,
+  margin: number,
   logical_radius: number
 ) {
-  const logicalX = (x / canvasWidth) * 2 * logical_radius - logical_radius;
-  const logicalY = -((y / canvasHeight) * 2 * logical_radius - logical_radius);
+  const logicalX =
+    ((x - margin) / usableCanvasDiameter) * 2 * logical_radius - logical_radius;
+  const logicalY = -(
+    ((y - margin) / usableCanvasDiameter) * 2 * logical_radius -
+    logical_radius
+  );
   return { logicalX, logicalY };
 }
 
@@ -110,4 +114,12 @@ export function handleBackendAudioData(audioData: Uint8Array): Promise<string> {
 
 export function angleToRadians(angle: number): number {
   return (angle * Math.PI) / 180;
+}
+
+export function abbreviateWalletAddress(address: string) {
+  return (
+    address.slice(0, 6) +
+    "..." +
+    address.slice(address.length - 4, address.length)
+  );
 }

@@ -24,7 +24,7 @@ function dummyActor(): ActorType {
 
 const buildingOrTesting = building || process.env.NODE_ENV === "test";
 
-const identityAgent: Writable<HttpAgent | undefined> = writable();
+export const identityAgent: Writable<HttpAgent | undefined> = writable();
 
 let backend: ActorType = dummyActor();
 
@@ -40,6 +40,12 @@ identityAgent.subscribe((agent) => {
 
 export { backend };
 
-export const setIdentityAgent = async (newIdentity: SignIdentity) => {
-  identityAgent.set(await HttpAgent.create({ identity: newIdentity }));
+export const setIdentityAgent = async (
+  newIdentity: SignIdentity | undefined
+) => {
+  if (newIdentity) {
+    identityAgent.set(await HttpAgent.create({ identity: newIdentity }));
+  } else {
+    identityAgent.set(newIdentity);
+  }
 };

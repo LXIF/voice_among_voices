@@ -4,6 +4,7 @@ use crate::structs::*;
 use crate::utils::split_into_chunks;
 use crate::StorableAddress;
 use alloy::primitives::Address;
+use candid::CandidType;
 use candid::Principal;
 
 use ic_stable_structures::{
@@ -12,6 +13,7 @@ use ic_stable_structures::{
     DefaultMemoryImpl, StableCell, StableVec,
 };
 use once_cell::sync::Lazy;
+use serde::Serialize;
 use std::{cell::RefCell, collections::HashMap};
 
 pub mod files_and_voices;
@@ -101,6 +103,19 @@ pub fn store_token_address(address: Address) -> Result<StorableAddress, ValueErr
 
 pub fn token_address() -> Address {
     TOKEN_ADDRESS.with_borrow(|token_address| token_address.get().0)
+}
+
+#[derive(CandidType, Serialize)]
+pub struct AddressEgress {
+    pub address: String,
+}
+
+impl From<Address> for AddressEgress {
+    fn from(addr: Address) -> Self {
+        AddressEgress {
+            address: format!("{:#x}", addr),
+        }
+    }
 }
 
 pub fn store_dev_mode(dev_mode: bool) -> Result<StorableConfig, ValueError> {

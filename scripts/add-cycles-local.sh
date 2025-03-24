@@ -1,0 +1,1 @@
+dfx canister deposit-cycles 10_000_000_000_000 $(dfx canister id voice_among_voices_backend)

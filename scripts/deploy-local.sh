@@ -5,7 +5,7 @@ dfx canister create --all
 dfx deploy voice_among_voices_backend --argument $'(
     opt record {
         siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider)'";
-        token_address = opt "0x431352373f5d99b8d388bce95d995fab762554e1";
+        token_address = opt "0x1d0406e0df3f50a1399d299c28e58f8444508013";
         dev_mode = opt true;
     }
 )'
@@ -19,7 +19,7 @@ dfx deps deploy
 
 dfx deploy ic_siwe_provider --argument $'(
     record {
-        domain = "127.0.0.1";
+        domain = "localhost";
         uri = "http://127.0.0.1:5173";
         salt = "my-secret-salt";
         chain_id = opt 1;
@@ -35,6 +35,6 @@ dfx deploy ic_siwe_provider --argument $'(
     }
 )'
 
-dfx deploy
+#dfx deploy
 
 npm run prebuild

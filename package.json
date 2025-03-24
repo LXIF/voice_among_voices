@@ -11,6 +11,7 @@
     "start": "npm start --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
+    "dev-host": "npm run dev-host --workspaces --if-present",
     "extract-candid": "candid-extractor target/wasm32-unknown-unknown/release/voice_among_voices_backend.wasm > src/voice_among_voices_backend/voice_among_voices_backend.did"
   },
   "type": "module",

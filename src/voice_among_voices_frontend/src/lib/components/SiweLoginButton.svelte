@@ -3,6 +3,7 @@
     import type { SiweContextInterface } from "$lib/siwe/SiweContext.type";
     import { onMount } from "svelte";
     import { setIdentityAgent } from "$lib/canisters";
+    import Button from "./Button.svelte";
 
     let context = getContext<SiweContextInterface>('siwe');
 
@@ -15,10 +16,11 @@
 
     async function handleLogin() {
             const loginResponse = await context.login();
-            console.log(loginResponse);
             setIdentityAgent(loginResponse);
         }
-    
+
+        //TODO: add connect wallet functionality into here
+        //TODO: Login button should reflect logged-in state with address
 </script>
 
-<button onclick={handleLogin}>login with siwe</button>
+<Button class="text-xl font-bold" onclick={handleLogin}>Login</Button>

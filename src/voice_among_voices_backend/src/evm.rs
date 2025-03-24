@@ -2,13 +2,14 @@ use std::str::FromStr;
 
 use crate::token_address;
 use crate::{siwe_principal, storage::dev_mode};
+use alloy::transports::BoxFuture;
 use alloy::{
     primitives::{Address, Uint},
     providers::{ProviderBuilder, RootProvider},
     sol,
     transports::icp::{EthSepoliaService, IcpConfig, IcpTransport, RpcService},
 };
-use futures::Future;
+use futures::{future, Future};
 use ic_cdk::{call, caller};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde_bytes::ByteBuf;
@@ -55,128 +56,6 @@ where
     }
 }
 
-// TODO: try to fix this async version (got compiler errored)
-// pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
-//     let CallObjects {
-//         owner,
-//         token_contract,
-//     } = setup_call_objects().await?;
-
-//     // First get the balance with retry
-//     let balance = retry(
-//         || async {
-//             token_contract
-//                 .balanceOf(owner)
-//                 .call()
-//                 .await
-//                 .map_err(|e| format!("Failed to call balanceOf: {}", e))
-//         },
-//         3, // max retries
-//     )
-//     .await?;
-
-//     let mut calls: Vec<BoxFuture<Result<Uint<256, 4>, String>>> = Vec::new();
-
-//     let balance_i32 = balance
-//         ._0
-//         .try_into()
-//         .map_err(|_| format!("Failed to parse token number"))?;
-
-//     for i in 0..balance_i32 {
-//         let token_contract = token_contract.clone();
-//         calls.push(Box::pin(async move {
-//             retry(
-//                 || async {
-//                     token_contract
-//                         .tokenOfOwnerByIndex(owner, Uint::from(i))
-//                         .call()
-//                         .await
-//                         .map(|res| res._0)
-//                         .map_err(|e| format!("Failed to get token at index {}: {}", i, e))
-//                 },
-//                 3, // max retries
-//             )
-//             .await
-//         }));
-//     }
-
-//     let results = future::join_all(calls).await;
-//     let mut tokens = Vec::new();
-//     for result in results {
-//         tokens.push(result?);
-//     }
-
-//     Ok(tokens)
-// }
-
-pub async fn get_caller_owned_tokens() -> Result<Vec<Uint<256, 4>>, String> {
-    let CallObjects {
-        owner,
-        token_contract,
-    } = setup_call_objects().await?;
-
-    // First get the balance with retry
-    let balance = retry(
-        || async {
-            token_contract
-                .balanceOf(owner)
-                .call()
-                .await
-                .map_err(|e| format!("Failed to call balanceOf: {}", e))
-        },
-        3,
-    )
-    .await?;
-
-    let balance_u64 = balance
-        ._0
-        .try_into()
-        .map_err(|_| format!("Failed to parse token number"))?;
-
-    let mut tokens = Vec::new();
-
-    // Do sequential calls with retry instead of parallel
-    for i in 0..balance_u64 {
-        let token_id = retry(
-            || async {
-                token_contract
-                    .tokenOfOwnerByIndex(owner, Uint::from(i))
-                    .call()
-                    .await
-                    .map(|res| res._0)
-                    .map_err(|e| format!("Failed to get token at index {}: {}", i, e))
-            },
-            3,
-        )
-        .await?;
-
-        tokens.push(token_id);
-    }
-
-    Ok(tokens)
-}
-
-pub async fn get_caller_balance() -> Result<Uint<256, 4>, String> {
-    let CallObjects {
-        owner,
-        token_contract,
-    } = setup_call_objects().await?;
-
-    let call_response = retry(
-        || async {
-            token_contract
-                .balanceOf(owner)
-                .call()
-                .await
-                .map_err(|e| format!("Failed to call balanceOf: {}", e))
-        },
-        3,
-    )
-    .await?;
-
-    Ok(call_response._0)
-}
-
 pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
     let CallObjects {
         owner,
@@ -191,7 +70,7 @@ pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
                 .await
                 .map_err(|e| format!("Failed to call ownerOf: {}", e))
         },
-        3,
+        7,
     )
     .await?;
 
@@ -233,7 +112,7 @@ async fn setup_call_objects() -> Result<CallObjects, String> {
 
 fn setup_evm_provider() -> RootProvider<IcpTransport> {
     //TODO: change for mainnet (or put in config)
-    let rpc_service = RpcService::EthSepolia(EthSepoliaService::Alchemy);
+    let rpc_service = RpcService::EthSepolia(EthSepoliaService::PublicNode);
     let config = IcpConfig::new(rpc_service);
     ProviderBuilder::new().on_icp(config)
 }

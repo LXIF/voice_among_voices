@@ -208,7 +208,7 @@
 </script>
 
 <audio
-    controls
+    hidden
     bind:this={audioElement}
 ></audio>
 <!-- <button
@@ -217,8 +217,8 @@
 > -->
 <button
     onpointerdown={handleRecordDown}
-    class="bg-red-600 rounded-full w-20 h-20"
-    class:recording>record</button
+    class="bg-red-600 rounded-full w-20 h-20 font-semibold"
+    class:recording>Record</button
 >
 
 <style lang="postcss">
