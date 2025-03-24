@@ -48,7 +48,7 @@
     }
 </script>
 
-<div class={`flex justify-center items-center h-10 w-full ${classes}`}>
+<!-- <div class={`flex justify-center items-center h-10 w-full ${classes}`}> -->
     <div
         draggable="true"
         role="button"
@@ -62,4 +62,4 @@
     >
     <!-- <div class="relative top-14 bg-black dark:bg-white text-white dark:text-black min-w-10 min-h-10 rounded-full text-center flex justify-center items-center text-3xl">drag</div> -->
 </div>
-</div>
+<!-- </div> -->

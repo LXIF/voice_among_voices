@@ -8,7 +8,7 @@
 
 <button
 	{...others}
-	class={`${classes} transition-all text-xl font-bold hover:scale-110`}
+	class={`${classes} transition-all font-bold hover:scale-110`}
 >
 	{@render children?.()}
 </button>

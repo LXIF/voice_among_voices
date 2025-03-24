@@ -41,6 +41,9 @@
         }
 
         try {
+            loadingProgress.set(0, {
+                duration: 0
+            });
             $loadingFile = true;
             error = '';
             // audioURL = '';
@@ -147,6 +150,7 @@
     $effect(() => {
         if($selectedAngle) {
             audioURL = "";
+            isPlaying = false;
         }
     });
 
@@ -160,7 +164,11 @@
 </script>
  
 <div class="flex flex-col items-center gap-4 w-full">
-    <Button class="text-center text-5xl font-bold w-min z-10" onclick={fetchAudioFileOrPlayPause}>{isPlaying ? 'Pause' : $loadingFile ? 'Loading...' : 'Play'}</Button>
+    {#if $loadingFile}
+        <h1 class="text-center text-5xl font-bold w-min">Loading...</h1>
+    {:else}
+        <Button class="text-center text-5xl font-bold w-min z-10" onclick={fetchAudioFileOrPlayPause}>{isPlaying ? 'Pause' : 'Play'}</Button>
+    {/if}
     <h1 style={`color: hsl(${$selectedAngle},100%,50%)`} class="text-5xl text-center font-bold">{$selectedAngle}°</h1>
     
     {#if error}
@@ -189,7 +197,7 @@
                 href={audioURL}
                 download
             >
-                Download Audio
+                Download
             </a>
         </div>
     {/if}

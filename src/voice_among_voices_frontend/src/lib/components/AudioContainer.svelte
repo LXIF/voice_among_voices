@@ -58,6 +58,12 @@
 
 <div>
     {#if $selectedAngle && $identityAgent}
+    <div class="absolute bottom-24 flex justify-between items-center w-screen px-8">
+        <VoiceRecorder
+        recordingLength={handleRecordingLength}
+        voiceRecorded={handleVoiceRecorded}
+        audioParameters={$audioParameters}
+        />
         <DroppableNode
             {nodeWidthPx}
             {nodeWidthLogical}
@@ -66,11 +72,7 @@
             nodeId={$selectedAngle}
             class="z-10"
         />
-        <VoiceRecorder
-            recordingLength={handleRecordingLength}
-            voiceRecorded={handleVoiceRecorded}
-            audioParameters={$audioParameters}
-        />
+    </div>
     {/if}
     <AngleFileBox
         onPlaybackPosition={(position) => {playheadPosition.target = position}}

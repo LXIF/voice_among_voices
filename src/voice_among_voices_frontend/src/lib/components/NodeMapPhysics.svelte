@@ -419,7 +419,6 @@
                         );
                         
                         // Update the tracked rotation value
-                        // TODO: this works from trial and error but it is not quite clear to my why.
                         lastAppliedRotation = mapRotation.current + 180;
                     }
 
@@ -681,15 +680,15 @@
         if (!showPlayHead) return false;
 
         // Get current rotation in radians
-        const rotationRadians = ((mapRotation.current) * Math.PI) / 180;
+        const rotationRadians = mapRotation.current * Math.PI / 180;
         
         // Rotate the node position by the inverse of the canvas rotation
         // This gives us the node position in the non-rotated coordinate system
-        const rotatedNodeX = nodeX * Math.cos(rotationRadians) - nodeY * Math.sin(rotationRadians);
-        const rotatedNodeY = nodeX * Math.sin(rotationRadians) + nodeY * Math.cos(rotationRadians);
+        const rotatedNodeX = nodeX * Math.cos(rotationRadians) + nodeY * Math.sin(rotationRadians);
+        const rotatedNodeY = nodeX * Math.sin(rotationRadians) - nodeY * Math.cos(rotationRadians);
         
         // Convert playhead angle to radians
-        const angleRadians = playHeadAngle * (Math.PI / 180);
+        const angleRadians = playHeadAngle * Math.PI / 180;
         
         // Get tangency points
         let tangentX = logical_radius * Math.sin(angleRadians);
