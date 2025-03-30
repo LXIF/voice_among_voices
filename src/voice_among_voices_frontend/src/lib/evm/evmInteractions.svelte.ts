@@ -46,8 +46,13 @@ export const fetchTokens = async () => {
   ];
 
   try {
+    const config = get(wagmiConfig);
+    if (!config) throw "wagmi config not initialized!";
+    const client = config.getClient();
+    if (!client) throw "wagmi client not initialized!";
+
     // First, get the balance of tokens owned by the user
-    const balance = await readContract(get(wagmiConfig).getClient(), {
+    const balance = await readContract(client, {
       address: nftAddress as `0x${string}`,
       abi,
       functionName: "balanceOf",
@@ -60,7 +65,7 @@ export const fetchTokens = async () => {
     const tokenPromises = [];
     for (let i = 0; i < Number(balance); i++) {
       tokenPromises.push(
-        readContract(get(wagmiConfig).getClient(), {
+        readContract(client, {
           address: nftAddress as `0x${string}`,
           abi,
           functionName: "tokenOfOwnerByIndex",

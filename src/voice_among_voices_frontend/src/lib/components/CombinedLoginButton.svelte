@@ -6,7 +6,7 @@
     import { identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
     import { walletAddress, resetUxState } from "$lib/state/uxState.svelte";
-    import { siwe, loginStatus } from "$lib/siwe/siwe.svelte";
+    import { siwe } from "$lib/siwe/siwe.svelte";
 
     let walletConnected = $state(false);
     let isLoggingIn = $state(false);
@@ -18,6 +18,7 @@
     // })
 
     onMount(() => {
+        if (!$appkitModal) throw "Appkit Modal not initialized!";
         $appkitModal.subscribeState((newState) => {
             if (newState.initialized) {
                 walletConnected = $appkitModal.getIsConnectedState();
@@ -35,6 +36,7 @@
     });
 
     async function handleLogin() {
+        if (!$appkitModal) throw "Appkit Modal not initialized!";
             $appkitModal.open();
 
             $appkitModal.subscribeAccount((newState) => {
@@ -61,6 +63,7 @@
     // }
 
     async function handleLogout() {
+        if (!$appkitModal) throw "Appkit Modal not initialized!";
         $appkitModal.disconnect();
         setIdentityAgent(undefined);
         $siwe.clear();

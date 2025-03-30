@@ -12,9 +12,13 @@ dotenv.config({ path: "../../.env" });
 export default defineConfig({
   build: {
     emptyOutDir: true,
-    // rollupOptions: {
-    //   external: ["@dfinity/agent"],
-    // },
+    minify: false,
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
   },
   optimizeDeps: {
     esbuildOptions: {
