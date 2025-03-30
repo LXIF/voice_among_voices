@@ -6,27 +6,17 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ESNext"
-    ],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "module": "esnext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
     "target": "ESNext",
-    "types": [
-      "vite/client",
-      "@testing-library/jest-dom",
-      "node"
-    ],
-    "useDefineForClassFields": true,
+    "types": ["vite/client", "@testing-library/jest-dom", "node"],
+    "useDefineForClassFields": true
   },
   "extends": "./.svelte-kit/tsconfig.json",
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

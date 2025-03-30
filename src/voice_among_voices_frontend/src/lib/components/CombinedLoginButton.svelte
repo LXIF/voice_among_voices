@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { getContext } from "svelte";
-    import type { SiweContextInterface } from "$lib/siwe/SiweContext.type";
     import { onMount } from "svelte";
     import { setIdentityAgent } from "$lib/canisters";
     import Button from "./Button.svelte";
@@ -8,8 +6,8 @@
     import { identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
     import { walletAddress, resetUxState } from "$lib/state/uxState.svelte";
+    import { siwe, loginStatus } from "$lib/siwe/siwe.svelte";
 
-    let context = getContext<SiweContextInterface>('siwe');
     let walletConnected = $state(false);
     let isLoggingIn = $state(false);
 
@@ -20,12 +18,17 @@
     // })
 
     onMount(() => {
-        context = getContext<SiweContextInterface>('siwe');
         $appkitModal.subscribeState((newState) => {
             if (newState.initialized) {
                 walletConnected = $appkitModal.getIsConnectedState();
                 if(walletConnected && !$identityAgent && !isLoggingIn) {
-                    $appkitModal.disconnect(); //TODO: handle sessions better
+                    // TODO: handle better
+                    isLoggingIn = true;
+                    $siwe.login()
+                        .then(async (response) => {
+                            setIdentityAgent(response);
+                            isLoggingIn = false;
+                        });
                 }
             }
         });
@@ -39,7 +42,7 @@
                 $walletAddress = newState.address ?? "";
                 if(walletConnected && !$identityAgent && !isLoggingIn) {
                     isLoggingIn = true;
-                    context.login()
+                    $siwe.login()
                         .then(async (response) => {
                             setIdentityAgent(response);
                             isLoggingIn = false;
@@ -60,6 +63,7 @@
     async function handleLogout() {
         $appkitModal.disconnect();
         setIdentityAgent(undefined);
+        $siwe.clear();
         resetUxState();
     }
 </script>

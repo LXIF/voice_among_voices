@@ -1,22 +1,20 @@
 /// <reference types="vitest" />
-import { fileURLToPath, URL } from 'url';
-import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
-import environment from 'vite-plugin-environment';
-import dotenv from 'dotenv';
+import { fileURLToPath, URL } from "url";
+import { sveltekit } from "@sveltejs/kit/vite";
+import { defineConfig } from "vite";
+import environment from "vite-plugin-environment";
+import dotenv from "dotenv";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
 
-dotenv.config({ path: '../../.env' });
+dotenv.config({ path: "../../.env" });
 
 export default defineConfig({
   build: {
     emptyOutDir: true,
-    rollupOptions: {
-      external: [
-        '@dfinity/agent'
-      ]
-    }
+    // rollupOptions: {
+    //   external: ["@dfinity/agent"],
+    // },
   },
   optimizeDeps: {
     esbuildOptions: {
@@ -41,17 +39,16 @@ export default defineConfig({
     environment("all", { prefix: "DFX_" }),
   ],
   test: {
-    environment: 'jsdom',
-    setupFiles: 'src/setupTests.js',
+    environment: "jsdom",
+    setupFiles: "src/setupTests.js",
   },
   resolve: {
     alias: [
       {
         find: "declarations",
-        replacement: fileURLToPath(
-          new URL("../declarations", import.meta.url)
-        ),
+        replacement: fileURLToPath(new URL("../declarations", import.meta.url)),
       },
     ],
+    dedupe: ["@dfinity/agent"],
   },
 });

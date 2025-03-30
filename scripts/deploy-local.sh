@@ -22,7 +22,7 @@ dfx deploy ic_siwe_provider --argument $'(
         domain = "localhost";
         uri = "http://127.0.0.1:5173";
         salt = "my-secret-salt";
-        chain_id = opt 1;
+        chain_id = opt 11155111;
         scheme = opt "http";
         statement = opt "Login to the app";
         sign_in_expires_in = opt 300000000000;

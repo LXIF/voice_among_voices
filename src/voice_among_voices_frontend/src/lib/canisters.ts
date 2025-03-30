@@ -2,9 +2,7 @@ import {
   createActor,
   canisterId,
 } from "../../../declarations/voice_among_voices_backend";
-import { canisterId as IIcanisterId } from "../../../declarations/internet_identity";
 import { HttpAgent, SignIdentity } from "@dfinity/agent";
-import { AuthClient } from "@dfinity/auth-client";
 import { building } from "$app/environment";
 
 import { writable, type Writable } from "svelte/store";

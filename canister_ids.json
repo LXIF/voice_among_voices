@@ -1,5 +1,11 @@
 {
   "ic_siwe_provider": {
     "ic": "gqwux-cyaaa-aaaad-aalka-cai"
+  },
+  "voice_among_voices_backend": {
+    "ic": "hg5m4-xiaaa-aaaad-aalpa-cai"
+  },
+  "voice_among_voices_frontend": {
+    "ic": "hb4ki-2qaaa-aaaad-aalpq-cai"
   }
 }
