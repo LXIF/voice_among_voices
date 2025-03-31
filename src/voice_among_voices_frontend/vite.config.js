@@ -16,13 +16,35 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks(id) {
+          // Ensure core runtime chunks are loaded first
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
+          // Group related app code
+          if (id.includes("src/lib")) {
+            return "lib";
+          }
+        },
       },
     },
   },
   optimizeDeps: {
+    include: [
+      "@reown/appkit",
+      "@reown/appkit-adapter-wagmi",
+      "ic-siwe-js",
+      "@wagmi/core",
+      "viem",
+      "wagmi",
+      "@dfinity/agent",
+      "@dfinity/candid",
+      "@dfinity/identity",
+      "@dfinity/principal",
+    ],
     esbuildOptions: {
       define: {
+        target: "es2020",
         global: "globalThis",
       },
     },

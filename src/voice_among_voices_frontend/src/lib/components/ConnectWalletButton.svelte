@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { appkitModal } from "$lib/appKit.svelte";
+    import { appkitModal } from "$lib/appKit";
 
 // $appkitModal.subscribeWalletInfo((newState) => console.log(newState));
 // $appkitModal.subscribeAccount((newState) => console.log(newState));
 </script>
 
 <button class="font-display" onclick={() => {
-    $appkitModal.open();
+    $appkitModal!.open();
 }}>
     Connect Wallet
 </button>

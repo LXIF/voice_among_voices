@@ -6,6 +6,11 @@ import type {
 import { writable } from "svelte/store";
 import { Tween } from "svelte/motion";
 import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
+import { browser } from "$app/environment";
+
+if (browser) {
+  console.log("[Debug] uxState.svelte.ts module initialization");
+}
 
 export const selectedAngle = writable<number>(0);
 export const hoveredAngle = writable<number | null>(null);
@@ -37,6 +42,7 @@ export const loadingProgress = new Tween(0, {
   easing: cubicInOut,
   duration: 500,
 });
+export const loadingVoices = writable<boolean>(false);
 
 export const resetUxState = () => {
   selectedAngle.set(0);
@@ -54,4 +60,5 @@ export const resetUxState = () => {
   walletAddress.set("");
   loadingFile.set(false);
   loadingProgress.set(0);
+  loadingVoices.set(false);
 };

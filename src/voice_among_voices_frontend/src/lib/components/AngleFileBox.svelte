@@ -5,8 +5,8 @@
     import type {
         HttpStreamingResponse,
     } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
-    import { loadingProgress, loadingFile } from '$lib/state/uxState.svelte';
-    import { selectedAngle, externalPlaybackPosition } from '$lib/state/uxState.svelte';
+    import { loadingProgress, loadingFile } from '$lib/state/uxState';
+    import { selectedAngle, externalPlaybackPosition } from '$lib/state/uxState';
   import Button from './Button.svelte';
 
     let {

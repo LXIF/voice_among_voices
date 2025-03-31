@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { audioParameters, simulationParameters, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded, hoveredAngle, selectedAngle } from "$lib/state/uxState.svelte";
+    import { audioParameters, simulationParameters, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded, hoveredAngle, selectedAngle } from "$lib/state/uxState";
     import DroppableNode from "./DroppableNode.svelte";
     import VoiceRecorder from "./VoiceRecorder.svelte";
     import AngleFileBox from "./AngleFileBox.svelte";

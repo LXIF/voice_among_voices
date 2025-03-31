@@ -4,6 +4,8 @@
     import {browser} from '$app/environment';
     import {encodeWav} from '$lib/utils/convUtils';
     import type {AudioParameters} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    // import { MediaRecorder as ImportedMediaRecorder } from 'extendable-media-recorder';
+    // import { connect as ImportedConnect } from "extendable-media-recorder-wav-encoder";
 
     let localStream: MediaStream | undefined = $state();
     let audioElement: HTMLAudioElement | undefined = $state();
@@ -34,62 +36,6 @@
             // mediaRecorder = ImportedMediaRecorder;
             register = ImportedRegister;
             connect = ImportedConnect;
-
-            function handleActivateMicrophone() {
-                if (
-                    navigator.mediaDevices &&
-                    navigator.mediaDevices.getUserMedia
-                ) {
-                    navigator.mediaDevices
-                        .getUserMedia({audio: true})
-                        .then((stream) => (localStream = stream))
-                        .then(setupMediaRecorder)
-                        .catch((err) => {
-                            console.error(`getUserMedia hiccup: ${err}`);
-                        });
-                } else {
-                    console.log('getUserMedia not supported on your browser!');
-                }
-            }
-
-            async function setupMediaRecorder() {
-                if (!browser || !audioParameters || !localStream) return;
-
-                await register(await connect());
-
-                const audioContext = new AudioContext({sampleRate: 44100});
-                const mediaStreamAudioSourceNode =
-                    new MediaStreamAudioSourceNode(audioContext, {
-                        mediaStream: localStream,
-                    });
-                const mediaStreamAudioDestinationNode =
-                    new MediaStreamAudioDestinationNode(audioContext);
-
-                mediaStreamAudioSourceNode.connect(
-                    mediaStreamAudioDestinationNode
-                );
-
-                mediaRecorder = new ImportedMediaRecorder(
-                    mediaStreamAudioDestinationNode.stream,
-                    {
-                        mimeType: 'audio/wav',
-                    }
-                );
-                mediaRecorder.ondataavailable = (e: any) => {
-                    chunks.push(e.data);
-                };
-                mediaRecorder.onstop = (e: any) => {
-                    audioBlob = new Blob(chunks, {type: 'audio/wav'});
-                    chunks = [];
-                    processAudioBlob(
-                        audioBlob,
-                        audioParameters.max_sample_length_ms
-                    );
-
-                    // checkAudioLength(audioBlob);
-                    // dispatch('voiceRecorded', audioBlob);
-                };
-            }
 
             handleActivateMicrophone();
         }
@@ -182,6 +128,9 @@
 
     function handleRecordDown() {
         if(!audioParameters) throw "no parameters";
+
+        handleActivateMicrophone();
+
         recording = true;
         window.addEventListener('pointerup', handleRecordUp);
         mediaRecorder?.start();
@@ -205,6 +154,66 @@
         window.removeEventListener('pointerup', handleRecordUp);
         mediaRecorder?.stop();
     }
+
+    function handleActivateMicrophone() {
+                if (
+                    navigator.mediaDevices &&
+                    navigator.mediaDevices.getUserMedia
+                ) {
+                    navigator.mediaDevices
+                        .getUserMedia({audio: true})
+                        .then((stream) => (localStream = stream))
+                        .then(setupMediaRecorder)
+                        .catch((err) => {
+                            console.error(`getUserMedia hiccup: ${err}`);
+                        });
+                } else {
+                    console.log('getUserMedia not supported on your browser!');
+                }
+            }
+
+            async function setupMediaRecorder() {
+                if (!browser || !audioParameters || !localStream) return;
+
+                const {
+                    MediaRecorder: ImportedMediaRecorder,
+                } = await import('extendable-media-recorder');
+
+                await register(await connect());
+
+                const audioContext = new AudioContext({sampleRate: 44100});
+                const mediaStreamAudioSourceNode =
+                    new MediaStreamAudioSourceNode(audioContext, {
+                        mediaStream: localStream,
+                    });
+                const mediaStreamAudioDestinationNode =
+                    new MediaStreamAudioDestinationNode(audioContext);
+
+                mediaStreamAudioSourceNode.connect(
+                    mediaStreamAudioDestinationNode
+                );
+
+                mediaRecorder = new ImportedMediaRecorder(
+                    mediaStreamAudioDestinationNode.stream,
+                    {
+                        mimeType: 'audio/wav',
+                    }
+                );
+                mediaRecorder.ondataavailable = (e: any) => {
+                    chunks.push(e.data);
+                };
+                mediaRecorder.onstop = (e: any) => {
+                    audioBlob = new Blob(chunks, {type: 'audio/wav'});
+                    chunks = [];
+                    processAudioBlob(
+                        audioBlob,
+                        audioParameters.max_sample_length_ms
+                    );
+
+                    // checkAudioLength(audioBlob);
+                    // dispatch('voiceRecorded', audioBlob);
+                };
+            }
 </script>
 
 <audio

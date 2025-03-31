@@ -7,16 +7,18 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "ESNext",
+    "target": "ES2020",
     "types": ["vite/client", "@testing-library/jest-dom", "node"],
     "useDefineForClassFields": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "experimentalDecorators": true,
+    "strictPropertyInitialization": false
   },
   "extends": "./.svelte-kit/tsconfig.json",
   "include": ["src"]

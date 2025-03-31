@@ -2,11 +2,11 @@
     import { onMount } from "svelte";
     import { setIdentityAgent } from "$lib/canisters";
     import Button from "./Button.svelte";
-    import { appkitModal } from "$lib/appKit.svelte";
+    import { appkitModal, wagmiConfig } from "$lib/appKit";
     import { identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
-    import { walletAddress, resetUxState } from "$lib/state/uxState.svelte";
-    import { siwe } from "$lib/siwe/siwe.svelte";
+    import { walletAddress, resetUxState } from "$lib/state/uxState";
+    import { siwe } from "$lib/siwe/siwe";
 
     let walletConnected = $state(false);
     let isLoggingIn = $state(false);
@@ -25,7 +25,7 @@
                 if(walletConnected && !$identityAgent && !isLoggingIn) {
                     // TODO: handle better
                     isLoggingIn = true;
-                    $siwe.login()
+                    $siwe!.login()
                         .then(async (response) => {
                             setIdentityAgent(response);
                             isLoggingIn = false;
@@ -44,7 +44,7 @@
                 $walletAddress = newState.address ?? "";
                 if(walletConnected && !$identityAgent && !isLoggingIn) {
                     isLoggingIn = true;
-                    $siwe.login()
+                    $siwe!.login()
                         .then(async (response) => {
                             setIdentityAgent(response);
                             isLoggingIn = false;
@@ -66,12 +66,14 @@
         if (!$appkitModal) throw "Appkit Modal not initialized!";
         $appkitModal.disconnect();
         setIdentityAgent(undefined);
-        $siwe.clear();
+        $siwe!.clear();
         resetUxState();
     }
 </script>
 
-{#if !$identityAgent}
+{#if !$appkitModal || !$wagmiConfig}
+<Button class="text-xl font-bold cursor-wait">...</Button>
+{:else if !$identityAgent}
 <Button class="text-xl font-bold" onclick={handleLogin}>Login</Button>
 <!-- <Button class="text-xl font-bold" onclick={handleLoginSiwe}>Login harder</Button> -->
 {:else}

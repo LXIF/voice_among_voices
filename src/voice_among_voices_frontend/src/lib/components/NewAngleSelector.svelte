@@ -5,7 +5,7 @@
         usableCanvasWidth,
         usableCanvasHeight,
     } from '$lib/config/nodeMap';
-    import { mapRotation, selectedAngle, playheadPosition, loadingProgress, loadingFile, myTokens } from "$lib/state/uxState.svelte";
+    import { mapRotation, selectedAngle, playheadPosition, loadingProgress, loadingFile, myTokens } from "$lib/state/uxState";
     import { identityAgent } from '$lib/canisters';
     import {blur} from "svelte/transition";
   import { isDarkMode } from '$lib/utils/uxUtils';

@@ -6,22 +6,33 @@
 
     import { backend, identityAgent } from "$lib/canisters";
     import type { VoiceNodeIngress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    import { appkitModal } from "$lib/appKit.svelte";
+    import { appkitModal } from "$lib/appKit";
     import { blobToUint8Array } from "$lib/utils/convUtils";
-    import { voiceNodes, simulationParameters, backendSimulationResult, walletAddress, myTokens, loadingTokens, selectedAngle, hoveredAngle, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded } from "$lib/state/uxState.svelte";
+    import { voiceNodes, simulationParameters, backendSimulationResult, walletAddress, myTokens, loadingTokens, selectedAngle, hoveredAngle, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded, loadingVoices } from "$lib/state/uxState";
     import { blur } from "svelte/transition";
     import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
     import { untrack } from "svelte";
+    import { withRetry } from "$lib/utils/commsUtils";
 
     let { class: classes } : { class?: string } = $props();
 
     onMount(async () => {
-        $voiceNodes = await backend.get_voice_nodes();
+        $loadingVoices = true;
+        $voiceNodes = await withRetry(
+            () => backend.get_voice_nodes(),
+            {
+                maxRetries: 15,
+                delayMs: 1000,
+                validate: (nodes) => nodes && nodes.length > 0,
+                onRetry: (attempt) => console.log(`Retrying fetch nodes, attempt ${attempt}...`)
+            }
+        );
+        $loadingVoices = false;
         $simulationParameters = await backend.get_simulation_parameters();
     });
 
     $effect(() => {if($identityAgent) {
-        $walletAddress = $appkitModal.getAddress()!;
+        $walletAddress = $appkitModal!.getAddress()!;
     }});
 
     $effect(() => {
@@ -82,7 +93,7 @@
         />
         <NewAngleSelector
             nodes={$voiceNodes}
-            loading={$loadingTokens}
+            loading={$loadingTokens || $loadingVoices}
             loggedIn={!!$identityAgent}
             class="absolute top-0 w-full h-full lg:max-w-[1200px]"
             onSelectAngle={(angle) => {

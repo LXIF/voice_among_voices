@@ -1,8 +1,8 @@
 import { backend } from "$lib/canisters";
 import { readContract } from "viem/actions";
-import { walletAddress } from "$lib/state/uxState.svelte";
+import { walletAddress } from "$lib/state/uxState";
 import { get } from "svelte/store";
-import { wagmiConfig } from "$lib/appKit.svelte";
+import { wagmiConfig } from "$lib/appKit";
 import { writable } from "svelte/store";
 
 export let tokenAddress = writable<string | undefined>();
@@ -43,7 +43,7 @@ export const fetchTokens = async () => {
       stateMutability: "view",
       type: "function",
     },
-  ];
+  ] as const;
 
   try {
     const config = get(wagmiConfig);

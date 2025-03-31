@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount, untrack} from 'svelte';
+    import {onMount} from 'svelte';
     import {mapRange, clamp} from '$lib/utils/mathUtils';
     import RAPIER from '@dimforge/rapier2d-compat';
 
@@ -22,7 +22,7 @@
         usableCanvasHeight as standardUsableCanvasHeight,
         worldStepInterval,
     } from '$lib/config/nodeMap';
-    import { simulationParameters, selectedAngle, hoveredAngle, mapRotation } from '$lib/state/uxState.svelte';
+    import { simulationParameters, selectedAngle, hoveredAngle, mapRotation } from '$lib/state/uxState';
     import { isDarkMode } from "$lib/utils/uxUtils";
     let { nodes, backendNodes, dragging, showPlayHead = true, playHeadPosition = 0, playHeadAngle = 0, dropNewNode, movePlayHead, class: classes = "" }: {
         nodes: VoiceNodeEgress[];
