@@ -16,9 +16,20 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
+        chunkFileNames: "chunks/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash].[ext]",
+        entryFileNames: "entry-[name]-[hash].js",
         manualChunks(id) {
-          // Ensure core runtime chunks are loaded first
           if (id.includes("node_modules")) {
+            if (id.includes("@dfinity")) {
+              return "vendor-dfinity";
+            }
+            if (id.includes("@reown")) {
+              return "vendor-reown";
+            }
+            if (id.includes("wagmi") || id.includes("viem")) {
+              return "vendor-web3";
+            }
             return "vendor";
           }
           // Group related app code
