@@ -17,9 +17,7 @@ use physics::*;
 use serde_bytes::ByteBuf;
 use std::{time::Duration, u64};
 use storage::{
-    files_and_voices::{
-        get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk,
-    },
+    files_and_voices::{get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk},
     init::*,
     voice_nodes::update_stored_voice_node,
     *,
@@ -29,10 +27,7 @@ use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
 use voice_nodes::get_stored_voice_nodes;
 
-use evm::{
-    check_auth_for_single_node_id,
-    get_caller_wallet_address, StorableAddress,
-};
+use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress};
 
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {

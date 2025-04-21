@@ -13,6 +13,7 @@
     import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
     import { untrack } from "svelte";
     import { withRetry } from "$lib/utils/commsUtils";
+    import { nonNullish } from "@dfinity/utils";
 
     let { class: classes } : { class?: string } = $props();
 
@@ -23,10 +24,11 @@
             {
                 maxRetries: 15,
                 delayMs: 1000,
-                validate: (nodes) => nodes && nodes.length > 0,
+                validate: (nodes) => nonNullish(nodes),
                 onRetry: (attempt) => console.log(`Retrying fetch nodes, attempt ${attempt}...`)
             }
         );
+
         $loadingVoices = false;
         $simulationParameters = await backend.get_simulation_parameters();
     });
