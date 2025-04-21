@@ -31,16 +31,16 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      "@reown/appkit",
-      "@reown/appkit-adapter-wagmi",
+      // "@reown/appkit",
+      // "@reown/appkit-adapter-wagmi",
       "ic-siwe-js",
-      "@wagmi/core",
-      "viem",
-      "wagmi",
-      "@dfinity/agent",
-      "@dfinity/candid",
-      "@dfinity/identity",
-      "@dfinity/principal",
+      // "@wagmi/core",
+      // "viem",
+      // "wagmi",
+      // "@dfinity/agent",
+      // "@dfinity/candid",
+      // "@dfinity/identity",
+      // "@dfinity/principal",
     ],
     esbuildOptions: {
       define: {
