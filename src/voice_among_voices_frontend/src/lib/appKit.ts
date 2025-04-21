@@ -1,5 +1,5 @@
 import { type AppKit, createAppKit } from "@reown/appkit";
-import { mainnet, polygonAmoy, polygon, sepolia } from "@reown/appkit/networks";
+import { base } from "@reown/appkit/networks";
 import {
   WagmiAdapter,
   type WagmiAdapter as WagmiAdapterType,
@@ -14,7 +14,7 @@ const initializeStores = () => {
   console.log("[Debug] Initializing stores");
 
   const projectId = "da65f4e00cada14e87d84160b45060f5";
-  const networks = [mainnet, polygon, polygonAmoy, sepolia];
+  const networks = [base];
 
   // Create stores with initial values
   const wagmiAdapter = readable<WagmiAdapterType | undefined>(
@@ -38,7 +38,7 @@ const initializeStores = () => {
       try {
         const modal = createAppKit({
           adapters: [get(wagmiAdapter)].filter(Boolean) as WagmiAdapterType[],
-          networks: [sepolia],
+          networks: [base],
           metadata: {
             name: "Voice among Voices",
             description: "Big Cool Sound Map Wee",

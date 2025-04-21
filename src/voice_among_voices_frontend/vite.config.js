@@ -12,7 +12,7 @@ dotenv.config({ path: "../../.env" });
 export default defineConfig({
   build: {
     emptyOutDir: true,
-    minify: false,
+    minify: true,
     sourcemap: true,
     rollupOptions: {
       output: {
