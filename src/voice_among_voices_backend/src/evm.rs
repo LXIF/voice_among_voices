@@ -7,9 +7,9 @@ use alloy::{
     primitives::{Address, Uint},
     providers::{ProviderBuilder, RootProvider},
     sol,
-    transports::icp::{EthSepoliaService, IcpConfig, IcpTransport, RpcService},
+    transports::icp::{IcpConfig, IcpTransport, L2MainnetService, RpcService},
 };
-use futures::{future, Future};
+use futures::Future;
 use ic_cdk::{call, caller};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde_bytes::ByteBuf;
@@ -112,7 +112,7 @@ async fn setup_call_objects() -> Result<CallObjects, String> {
 
 fn setup_evm_provider() -> RootProvider<IcpTransport> {
     //TODO: change for mainnet (or put in config)
-    let rpc_service = RpcService::EthSepolia(EthSepoliaService::PublicNode);
+    let rpc_service = RpcService::BaseMainnet(L2MainnetService::PublicNode);
     let config = IcpConfig::new(rpc_service);
     ProviderBuilder::new().on_icp(config)
 }
