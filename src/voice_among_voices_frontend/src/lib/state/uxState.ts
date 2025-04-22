@@ -42,7 +42,7 @@ export const loadingProgress = new Tween(0, {
   easing: cubicInOut,
   duration: 500,
 });
-export const loadingVoices = writable<boolean>(false);
+export const loadingVoices = writable<boolean>(true); // start with loading animation active
 
 export const resetUxState = () => {
   selectedAngle.set(0);
