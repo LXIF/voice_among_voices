@@ -696,7 +696,7 @@
         if (!container) return;
 
         const rect = container.getBoundingClientRect();
-        canvasDiameter = Math.min(rect.width, rect.height);
+        canvasDiameter = Math.max(rect.width, rect.height);
 
         if (canvas) {
             canvas.width = canvasDiameter * canvasRatio;
@@ -811,7 +811,7 @@
 
 <div
     bind:this={container}
-    class={`relative ${classes} w-full flex items-center justify-center`}
+    class={`relative ${classes} flex w-full items-center justify-center`}
 >
     <canvas
         bind:this={canvas}
