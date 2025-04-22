@@ -696,7 +696,11 @@
         if (!container) return;
 
         const rect = container.getBoundingClientRect();
-        canvasDiameter = Math.max(rect.width, rect.height);
+        const screenWidth = window.innerWidth;
+        canvasDiameter = Math.min(
+            Math.max(rect.width, rect.height),
+            screenWidth,
+        );
 
         if (canvas) {
             canvas.width = canvasDiameter * canvasRatio;
