@@ -53,6 +53,14 @@
     }
 
     async function loginSiwe() {
+        if (!$walletAddress) {
+            try {
+                $walletAddress = $appkitModal?.getAddress()!;
+            } catch {
+                console.log("Please connect a wallet first");
+                return;
+            }
+        }
         $siwe!
             .login()
             .then(async (response) => {
@@ -72,6 +80,7 @@
         $siwe!.clear();
         resetUxState();
         isLoggingOut = false;
+        isLoggingIn = false;
     }
 </script>
 
@@ -88,8 +97,24 @@
     </div>
 {/if}
 {#if isLoggingIn && !isLoggingOut}
-    <Dialog title={"Finish Login"}>
+    <Dialog
+        title={"Finish Login"}
+        onClose={() => {
+            isLoggingIn = false;
+            isLoggingOut = false;
+        }}
+        closeOnOutsideClick
+    >
         Not connecting automatically?
-        <Button onclick={loginSiwe}>Finish connecting</Button>
+        <div class="mt-4 flex w-full justify-between">
+            <Button
+                class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
+                onclick={handleLogout}>Disconnect</Button
+            >
+            <Button
+                class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
+                onclick={loginSiwe}>Finish connecting</Button
+            >
+        </div>
     </Dialog>
 {/if}

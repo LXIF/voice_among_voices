@@ -48,6 +48,7 @@
     });
 </script>
 
+<div class="fixed left-0 top-0 z-20 h-screen w-screen backdrop-blur-lg"></div>
 <dialog
     bind:this={dialogRef}
     oncancel={onCancel}
@@ -65,9 +66,9 @@
 >
     <div
         class={[
-            "w-100 flex max-h-screen flex-col overflow-hidden p-6 backdrop-blur-lg max-[460px]:min-w-full max-[460px]:max-w-full",
+            "w-100 flex max-h-screen flex-col overflow-hidden bg-slate-100 p-6 max-[460px]:min-w-full max-[460px]:max-w-full dark:bg-slate-900",
             ($isTouch && bottomSheet === "mobile") || bottomSheet === "always"
-                ? "max-w-full rounded-t-2xl"
+                ? "fixed bottom-0 max-w-full rounded-t-2xl"
                 : "rounded-2xl max-[460px]:flex-1 max-[460px]:rounded-none",
             className,
         ]}
@@ -79,10 +80,8 @@
                 </h1>
             {/if}
             {#if showCloseButton && nonNullish(onClose)}
-                <button
-                    type="button"
-                    class="btn-icon preset-tonal rounded-full"
-                    onclick={onClose}>✕</button
+                <button type="button" class="rounded-full" onclick={onClose}
+                    >✕</button
                 >
             {/if}
         </div>
