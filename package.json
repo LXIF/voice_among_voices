@@ -6,6 +6,7 @@
   "name": "voice_among_voices",
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
     "prebuild": "npm run extract-candid && npm run prebuild --workspaces --if-present",
     "pretest": "npm run prebuild --workspaces --if-present",
     "start": "npm start --workspaces --if-present",
