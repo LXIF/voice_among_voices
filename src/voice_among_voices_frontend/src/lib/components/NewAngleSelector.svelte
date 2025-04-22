@@ -270,13 +270,14 @@
         //prevent body scroll
         document.querySelector("body")?.classList.add("touch-none");
         document.querySelector("body")?.classList.add("overflow-hidden");
+
         e.preventDefault();
         e.stopPropagation();
 
         // Capture the starting point of the interaction
         const startX = e.clientX;
         const startY = e.clientY;
-        let isDragging = false;
+        // let isDragging = false;
         let lastAngle = 0;
 
         // Calculate center of the circle in client coordinates
@@ -320,7 +321,7 @@
         }
 
         // Handle pointer up
-        async function handlePointerUp(upEvent: PointerEvent) {
+        async function handlePointerUp(_upEvent: PointerEvent) {
             document.querySelector("body")?.classList.remove("touch-none");
             document.querySelector("body")?.classList.remove("overflow-hidden");
             // Clean up event listeners
@@ -335,9 +336,6 @@
         // Add event listeners for move and up events
         window.addEventListener("pointermove", handlePointerMove);
         window.addEventListener("pointerup", handlePointerUp);
-
-        // Prevent default behavior to avoid text selection, etc.
-        e.preventDefault();
     }
 
     // Helper function to generate SVG arc path
@@ -438,7 +436,7 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`transition-all duration-200 ease-in-out outline-none ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    class={`outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
                     onmouseover={() =>
                         isAngleAvailable(angle) && (hoveredAngle = angle)}
                     onmouseleave={() => (hoveredAngle = null)}
@@ -500,7 +498,7 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`transition-all duration-200 ease-in-out outline-none ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    class={`outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
                     stroke={getLineColor(angle, isAngleAvailable(angle))}
                     stroke-width={hoveredAngle === angle ? 2.2 : 0.5}
                     pointer-events="none"
