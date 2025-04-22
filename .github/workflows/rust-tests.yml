@@ -29,5 +29,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      # Not running integration tests for now as needs pocketic setup
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --lib --bins --verbose

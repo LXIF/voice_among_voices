@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use crate::token_address;
 use crate::{siwe_principal, storage::dev_mode};
-use alloy::transports::BoxFuture;
 use alloy::{
     primitives::{Address, Uint},
     providers::{ProviderBuilder, RootProvider},
