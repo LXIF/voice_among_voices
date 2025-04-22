@@ -46,9 +46,8 @@
     });
 
     const handleSelectAngle = (angle: number) => {
-        //TODO: not that great selection function
         rotateTo(angle);
-        onSelectAngle(angle); // Still send the original angle (0-359) to the callback
+        onSelectAngle(angle);
     };
 
     const rotateToClosest = (availableAngles: number[]) => {
@@ -369,7 +368,7 @@
     height={usableCanvasHeight}
     viewBox="0 0 200 200"
     xmlns="http://www.w3.org/2000/svg"
-    class={`${classes} pointer-events-none`}
+    class={`${classes} pointer-events-none touch-none`}
 >
     <!-- Loading progress arc -->
     {#if $loadingFile}
@@ -512,7 +511,7 @@
             cy={centerY}
             r={radius * 1.05}
             stroke-width="15"
-            fill="red"
+            fill="none"
             stroke="red"
             opacity="0"
             onpointerdown={handleCirclePointerDown}

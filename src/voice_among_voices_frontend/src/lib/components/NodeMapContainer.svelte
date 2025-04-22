@@ -96,9 +96,9 @@
     };
 </script>
 
-<div class="w-screen flex items-center justify-center">
+<div class="flex w-screen items-center justify-center">
     <div
-        class="max-w-[70svh] w-full max-h-[70svh] h-full flex justify-center items-center scale-100"
+        class="flex h-full max-h-[70svh] w-full max-w-[70svh] scale-100 items-center justify-center"
     >
         <NodeMapPhysics
             nodes={$voiceNodes}
@@ -111,25 +111,27 @@
             movePlayHead={(normalizedPosition) => {
                 $externalPlaybackPosition = normalizedPosition;
             }}
-            class="w-full h-full lg:max-w-[1200px]"
+            class="h-full w-full lg:max-w-[1200px]"
         />
         <NewAngleSelector
             nodes={$voiceNodes}
             loading={$loadingTokens || $loadingVoices}
             loggedIn={!!$identityAgent}
-            class="absolute top-0 w-full h-full lg:max-w-[1200px]"
+            class="absolute top-0 h-full w-full lg:max-w-[1200px]"
             onSelectAngle={(angle) => {
                 $selectedAngle = angle;
             }}
-            onHoverAngle={(angle) => ($hoveredAngle = angle)}
+            onHoverAngle={(angle) => {
+                $hoveredAngle = angle;
+            }}
         />
         {#if $hoveredAngle}
             <div
-                class="absolute top-0 w-full h-full lg:max-w-[1200px] flex justify-center items-center pointer-events-none"
+                class="pointer-events-none absolute top-0 flex h-full w-full items-center justify-center lg:max-w-[1200px]"
             >
                 <h1
                     transition:blur={{ duration: 100 }}
-                    class="backdrop-filter text-9xl"
+                    class="text-9xl backdrop-filter"
                 >
                     {$hoveredAngle}°
                 </h1>
