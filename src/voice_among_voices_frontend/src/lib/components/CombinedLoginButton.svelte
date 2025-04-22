@@ -61,6 +61,7 @@
                 return;
             }
         }
+        $siwe!.clear();
         $siwe!
             .login()
             .then(async (response) => {
