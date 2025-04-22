@@ -53,10 +53,15 @@
     }
 
     async function loginSiwe() {
-        $siwe!.login().then(async (response) => {
-            setIdentityAgent(response);
-            isLoggingIn = false;
-        });
+        $siwe!
+            .login()
+            .then(async (response) => {
+                setIdentityAgent(response);
+                isLoggingIn = false;
+            })
+            .then(() => {
+                $appkitModal?.close();
+            });
     }
 
     async function handleLogout() {
