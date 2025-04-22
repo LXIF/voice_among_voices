@@ -1,6 +1,6 @@
 import { canisterId } from "../../../../declarations/ic_siwe_provider";
 import { SiweManager, siweStateStore } from "ic-siwe-js";
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
 import { browser } from "$app/environment";
 
 // Initialize stores with null for SSR
