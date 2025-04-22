@@ -1,16 +1,19 @@
 <script lang="ts">
-    import {createEventDispatcher} from 'svelte';
-    import {angleToRadians} from '$lib/utils/convUtils';
-    import type {VoiceNodeEgress} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    import { createEventDispatcher } from "svelte";
+    import { angleToRadians } from "$lib/utils/convUtils";
+    import type { VoiceNodeEgress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     import {
         canvasWidth,
         canvasHeight,
         usableCanvasWidth,
         usableCanvasHeight,
         worldStepInterval,
-    } from '$lib/config/nodeMap';
+    } from "$lib/config/nodeMap";
 
-    let { availableAngles, nodes }: { availableAngles: number[], nodes: VoiceNodeEgress[] } = $props();
+    let {
+        availableAngles,
+        nodes,
+    }: { availableAngles: number[]; nodes: VoiceNodeEgress[] } = $props();
 
     let hoveredAngle: number | null = $state(null);
 
@@ -37,13 +40,7 @@
     xmlns="http://www.w3.org/2000/svg"
 >
     <!-- Draw circle -->
-    <circle
-        cx={centerX}
-        cy={centerY}
-        r={radius}
-        stroke="black"
-        fill="none"
-    />
+    <circle cx={centerX} cy={centerY} r={radius} stroke="black" fill="none" />
 
     <!-- Draw lines for available angles -->
     {#each availableAngles as angle}
@@ -60,14 +57,14 @@
                     lineStopFactor}
             x2={centerX + Math.cos(adjustedAngleToRadians(angle)) * radius}
             y2={centerY - Math.sin(adjustedAngleToRadians(angle)) * radius}
-            class={hoveredAngle === angle ? 'highlight' : ''}
+            class={hoveredAngle === angle ? "highlight" : ""}
             onmouseover={() => (hoveredAngle = angle)}
             onmouseleave={() => (hoveredAngle = null)}
             onclick={() => handleSelectAngle(angle)}
             onfocus={() => (hoveredAngle = angle)}
             onblur={() => (hoveredAngle = null)}
             onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
+                if (e.key === "Enter" || e.key === " ") {
                     handleSelectAngle(angle);
                 }
             }}

@@ -1,9 +1,9 @@
 <script lang="ts">
-    import {onDestroy, onMount} from 'svelte';
+    import { onDestroy, onMount } from "svelte";
 
-    import {browser} from '$app/environment';
-    import {encodeWav} from '$lib/utils/convUtils';
-    import type {AudioParameters} from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    import { browser } from "$app/environment";
+    import { encodeWav } from "$lib/utils/convUtils";
+    import type { AudioParameters } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     // import { MediaRecorder as ImportedMediaRecorder } from 'extendable-media-recorder';
     // import { connect as ImportedConnect } from "extendable-media-recorder-wav-encoder";
 
@@ -17,19 +17,26 @@
     let connect: any = $state();
     let recordingTimeout: ReturnType<typeof setTimeout> | undefined = $state();
 
-
-    let { audioParameters, voiceRecorded, recordingLength }: { audioParameters: AudioParameters | undefined, voiceRecorded: (blob: Blob) => void, recordingLength: (length: number) => void } = $props();
+    let {
+        audioParameters,
+        voiceRecorded,
+        recordingLength,
+    }: {
+        audioParameters: AudioParameters | undefined;
+        voiceRecorded: (blob: Blob) => void;
+        recordingLength: (length: number) => void;
+    } = $props();
 
     onMount(async () => {
         if (browser) {
             const {
                 MediaRecorder: ImportedMediaRecorder,
                 register: ImportedRegister,
-            } = await import('extendable-media-recorder');
+            } = await import("extendable-media-recorder");
 
             // Dynamically import the WAV encoder
-            const {connect: ImportedConnect} = await import(
-                'extendable-media-recorder-wav-encoder'
+            const { connect: ImportedConnect } = await import(
+                "extendable-media-recorder-wav-encoder"
             );
 
             // Store the imports in local variables
@@ -44,7 +51,7 @@
     onDestroy(cleanup);
 
     function cleanup() {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
             mediaRecorder.stop();
         }
         if (localStream) {
@@ -61,7 +68,7 @@
         fileReader.onloadend = () => {
             const audioData = fileReader.result;
 
-            if (!audioData || typeof audioData === 'string') return;
+            if (!audioData || typeof audioData === "string") return;
 
             const audioContext = new AudioContext();
 
@@ -73,18 +80,18 @@
                     buffer.duration * audioContext.sampleRate > targetDuration
                         ? targetDuration
                         : buffer.duration * audioContext.sampleRate,
-                    audioContext.sampleRate
+                    audioContext.sampleRate,
                 );
 
                 trimmedBuffer.copyToChannel(
                     buffer.getChannelData(0).slice(0, trimmedBuffer.length),
-                    0
+                    0,
                 );
 
                 trimmedBlob = encodeWav(trimmedBuffer);
                 // checkAudioLength(trimmedBlob);
 
-                if(!audioElement) throw "no audio element";
+                if (!audioElement) throw "no audio element";
                 const audioURL = window.URL.createObjectURL(trimmedBlob);
                 audioElement.src = audioURL;
 
@@ -103,7 +110,7 @@
 
         fileReader.onloadend = () => {
             const audioData = fileReader.result;
-            if (!audioData || typeof audioData === 'string') return;
+            if (!audioData || typeof audioData === "string") return;
 
             const audioContext = new window.OfflineAudioContext({
                 length: 44100 * 60,
@@ -118,7 +125,7 @@
                 },
                 (e) => {
                     console.error(e);
-                }
+                },
             );
         };
     }
@@ -127,12 +134,12 @@
     let recordingInterval: ReturnType<typeof setInterval>;
 
     function handleRecordDown() {
-        if(!audioParameters) throw "no parameters";
+        if (!audioParameters) throw "no parameters";
 
         handleActivateMicrophone();
 
         recording = true;
-        window.addEventListener('pointerup', handleRecordUp);
+        window.addEventListener("pointerup", handleRecordUp);
         mediaRecorder?.start();
 
         recordingStart = Date.now();
@@ -144,82 +151,73 @@
         clearTimeout(recordingTimeout);
         recordingTimeout = setTimeout(
             handleRecordUp,
-            audioParameters.max_sample_length_ms
+            audioParameters.max_sample_length_ms,
         );
     }
 
     function handleRecordUp() {
         clearInterval(recordingInterval);
         recording = false;
-        window.removeEventListener('pointerup', handleRecordUp);
+        window.removeEventListener("pointerup", handleRecordUp);
         mediaRecorder?.stop();
     }
 
     function handleActivateMicrophone() {
-                if (
-                    navigator.mediaDevices &&
-                    navigator.mediaDevices.getUserMedia
-                ) {
-                    navigator.mediaDevices
-                        .getUserMedia({audio: true})
-                        .then((stream) => (localStream = stream))
-                        .then(setupMediaRecorder)
-                        .catch((err) => {
-                            console.error(`getUserMedia hiccup: ${err}`);
-                        });
-                } else {
-                    console.log('getUserMedia not supported on your browser!');
-                }
-            }
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices
+                .getUserMedia({ audio: true })
+                .then((stream) => (localStream = stream))
+                .then(setupMediaRecorder)
+                .catch((err) => {
+                    console.error(`getUserMedia hiccup: ${err}`);
+                });
+        } else {
+            console.log("getUserMedia not supported on your browser!");
+        }
+    }
 
-            async function setupMediaRecorder() {
-                if (!browser || !audioParameters || !localStream) return;
+    async function setupMediaRecorder() {
+        if (!browser || !audioParameters || !localStream) return;
 
-                const {
-                    MediaRecorder: ImportedMediaRecorder,
-                } = await import('extendable-media-recorder');
+        const { MediaRecorder: ImportedMediaRecorder } = await import(
+            "extendable-media-recorder"
+        );
 
-                await register(await connect());
+        await register(await connect());
 
-                const audioContext = new AudioContext({sampleRate: 44100});
-                const mediaStreamAudioSourceNode =
-                    new MediaStreamAudioSourceNode(audioContext, {
-                        mediaStream: localStream,
-                    });
-                const mediaStreamAudioDestinationNode =
-                    new MediaStreamAudioDestinationNode(audioContext);
+        const audioContext = new AudioContext({ sampleRate: 44100 });
+        const mediaStreamAudioSourceNode = new MediaStreamAudioSourceNode(
+            audioContext,
+            {
+                mediaStream: localStream,
+            },
+        );
+        const mediaStreamAudioDestinationNode =
+            new MediaStreamAudioDestinationNode(audioContext);
 
-                mediaStreamAudioSourceNode.connect(
-                    mediaStreamAudioDestinationNode
-                );
+        mediaStreamAudioSourceNode.connect(mediaStreamAudioDestinationNode);
 
-                mediaRecorder = new ImportedMediaRecorder(
-                    mediaStreamAudioDestinationNode.stream,
-                    {
-                        mimeType: 'audio/wav',
-                    }
-                );
-                mediaRecorder.ondataavailable = (e: any) => {
-                    chunks.push(e.data);
-                };
-                mediaRecorder.onstop = (e: any) => {
-                    audioBlob = new Blob(chunks, {type: 'audio/wav'});
-                    chunks = [];
-                    processAudioBlob(
-                        audioBlob,
-                        audioParameters.max_sample_length_ms
-                    );
+        mediaRecorder = new ImportedMediaRecorder(
+            mediaStreamAudioDestinationNode.stream,
+            {
+                mimeType: "audio/wav",
+            },
+        );
+        mediaRecorder.ondataavailable = (e: any) => {
+            chunks.push(e.data);
+        };
+        mediaRecorder.onstop = (e: any) => {
+            audioBlob = new Blob(chunks, { type: "audio/wav" });
+            chunks = [];
+            processAudioBlob(audioBlob, audioParameters.max_sample_length_ms);
 
-                    // checkAudioLength(audioBlob);
-                    // dispatch('voiceRecorded', audioBlob);
-                };
-            }
+            // checkAudioLength(audioBlob);
+            // dispatch('voiceRecorded', audioBlob);
+        };
+    }
 </script>
 
-<audio
-    hidden
-    bind:this={audioElement}
-></audio>
+<audio hidden bind:this={audioElement}></audio>
 <!-- <button
     class="px-4 py-2 bg-slate-500 rounded-full"
     onclick={handleActivateMicrophone}>activate microphone</button

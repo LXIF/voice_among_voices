@@ -1,3 +1,10 @@
-export const mapRange = (input: number, inMin: number, inMax: number, outMin: number, outMax: number) => (input - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+export const mapRange = (
+    input: number,
+    inMin: number,
+    inMax: number,
+    outMin: number,
+    outMax: number,
+) => ((input - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
 
-export const clamp = (val: number, min: number, max:number) => Math.min(Math.max(val, min), max);
+export const clamp = (val: number, min: number, max: number) =>
+    Math.min(Math.max(val, min), max);

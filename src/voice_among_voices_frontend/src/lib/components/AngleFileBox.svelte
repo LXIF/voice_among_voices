@@ -1,65 +1,71 @@
 <script lang="ts">
-    import {tick} from 'svelte';
-    import {backend} from '$lib/canisters';
-    import {handleBackendAudioData} from '$lib/utils/convUtils';
-    import type {
-        HttpStreamingResponse,
-    } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
-    import { loadingProgress, loadingFile } from '$lib/state/uxState';
-    import { selectedAngle, externalPlaybackPosition } from '$lib/state/uxState';
-  import Button from './Button.svelte';
+    import { tick } from "svelte";
+    import { backend } from "$lib/canisters";
+    import { handleBackendAudioData } from "$lib/utils/convUtils";
+    import type { HttpStreamingResponse } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+    import { loadingProgress, loadingFile } from "$lib/state/uxState";
+    import {
+        selectedAngle,
+        externalPlaybackPosition,
+    } from "$lib/state/uxState";
+    import Button from "./Button.svelte";
 
     let {
         onPlaybackPosition,
         onFileAngle,
         onFileLoaded,
     }: {
-        onPlaybackPosition: (normalizedPosition: number) => void,
-        onFileAngle: (angle: number) => void,
-        onFileLoaded: (loaded: boolean) => void,
+        onPlaybackPosition: (normalizedPosition: number) => void;
+        onFileAngle: (angle: number) => void;
+        onFileLoaded: (loaded: boolean) => void;
     } = $props();
 
     let audioURL: string = $state("");
-    let error: string = $state('');
+    let error: string = $state("");
     let isPlaying = $state(false); // To track play/pause state
 
     let audioElement: HTMLAudioElement | undefined = $state();
     let downloadLink: HTMLAnchorElement | undefined = $state();
- 
+
     // Fetch audio file based on angle
     async function fetchAudioFileOrPlayPause(angle: number) {
-        if(isPlaying) {
+        if (isPlaying) {
             togglePlayPause();
             return;
-        } else if(audioURL) {
+        } else if (audioURL) {
             togglePlayPause();
             return;
         }
         if ($selectedAngle < 0 || $selectedAngle > 359) {
-            error = 'Please input an angle between 0 and 359.';
+            error = "Please input an angle between 0 and 359.";
             return;
         }
 
         try {
             loadingProgress.set(0, {
-                duration: 0
+                duration: 0,
             });
             $loadingFile = true;
-            error = '';
+            error = "";
             // audioURL = '';
-            const response: HttpStreamingResponse = $selectedAngle === 0 ? await backend.get_zero_file() :
-                await backend.get_angle_file(BigInt(Math.round($selectedAngle)));
+            const response: HttpStreamingResponse =
+                $selectedAngle === 0
+                    ? await backend.get_zero_file()
+                    : await backend.get_angle_file(
+                          BigInt(Math.round($selectedAngle)),
+                      );
             if (!response.streaming_strategy) {
-                throw new Error('No streaming strategy provided.');
+                throw new Error("No streaming strategy provided.");
             }
             const chunks = [response.body];
 
             let streamingToken = response.streaming_strategy[0]?.Callback.token;
-            const nTokens = response.streaming_strategy[0]?.Callback.token.chunks;
+            const nTokens =
+                response.streaming_strategy[0]?.Callback.token.chunks;
 
-            if (nTokens === undefined) throw new Error('No tokens provided.');
+            if (nTokens === undefined) throw new Error("No tokens provided.");
 
-            let currentlyDownloaded = 1 / nTokens; 
+            let currentlyDownloaded = 1 / nTokens;
             // First chunk is already loaded
             loadingProgress.target = currentlyDownloaded;
 
@@ -70,28 +76,31 @@
                     angle: streamingToken?.angle!,
                     auth_token: streamingToken?.auth_token!,
                     chunk_index: i,
-                    chunks: streamingToken?.chunks!
+                    chunks: streamingToken?.chunks!,
                 };
                 chunkPromises.push(
-                    backend.http_request_streaming_callback(chunkToken)
-                    .then(result => {
+                    backend
+                        .http_request_streaming_callback(chunkToken)
+                        .then((result) => {
                             // Update progress after each chunk loads
                             currentlyDownloaded += 1 / nTokens;
                             loadingProgress.target = currentlyDownloaded;
                             return result;
-                        })
+                        }),
                 );
             }
 
             // Wait for all chunks and sort them by index
             const chunkResults = await Promise.all(chunkPromises);
-            chunkResults.sort((a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!);
-            
+            chunkResults.sort(
+                (a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!,
+            );
+
             // Add sorted chunks to the chunks array
-            chunks.push(...chunkResults.map(result => result.body));
+            chunks.push(...chunkResults.map((result) => result.body));
 
             const audioData = new Uint8Array(
-                chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+                chunks.reduce((acc, chunk) => acc + chunk.length, 0),
             );
 
             let offset = 0;
@@ -104,12 +113,14 @@
             await tick();
             downloadLink!.href = audioURL;
             downloadLink!.download = `voice_among_voices_${$selectedAngle}_${Date.now()}.wav`;
-            setTimeout(() => {$loadingFile = false;}, 750);
+            setTimeout(() => {
+                $loadingFile = false;
+            }, 750);
             onFileAngle($selectedAngle);
             onFileLoaded(true);
             togglePlayPause();
         } catch (e) {
-            error = 'Error fetching the audio file.';
+            error = "Error fetching the audio file.";
             console.error(e);
         }
     }
@@ -148,7 +159,7 @@
     });
 
     $effect(() => {
-        if($selectedAngle) {
+        if ($selectedAngle) {
             audioURL = "";
             isPlaying = false;
         }
@@ -162,15 +173,24 @@
     // // Toggle play/pause button state
     // $: isPlaying = !audioElement?.paused;
 </script>
- 
+
 <div class="flex flex-col items-center gap-4 w-full">
     {#if $loadingFile}
         <h1 class="text-center text-5xl font-bold w-min">Loading...</h1>
     {:else}
-        <Button class="text-center text-5xl font-bold w-min z-10" onclick={fetchAudioFileOrPlayPause}>{isPlaying ? 'Pause' : 'Play'}</Button>
+        <Button
+            class="text-center text-5xl font-bold w-min z-10"
+            onclick={fetchAudioFileOrPlayPause}
+            >{isPlaying ? "Pause" : "Play"}</Button
+        >
     {/if}
-    <h1 style={`color: hsl(${$selectedAngle},100%,50%)`} class="text-5xl text-center font-bold">{$selectedAngle}°</h1>
-    
+    <h1
+        style={`color: hsl(${$selectedAngle},100%,50%)`}
+        class="text-5xl text-center font-bold"
+    >
+        {$selectedAngle}°
+    </h1>
+
     {#if error}
         <p class="error">{error}</p>
     {/if}
@@ -184,21 +204,12 @@
                 onended={onEnded}
                 hidden
             >
-                <source
-                    src={audioURL}
-                    type="audio/wav"
-                />
+                <source src={audioURL} type="audio/wav" />
                 Your browser does not support the audio element.
             </audio>
 
             <!-- Download link for the audio -->
-            <a
-                bind:this={downloadLink}
-                href={audioURL}
-                download
-            >
-                Download
-            </a>
+            <a bind:this={downloadLink} href={audioURL} download> Download </a>
         </div>
     {/if}
 </div>

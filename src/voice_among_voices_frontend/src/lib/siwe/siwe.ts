@@ -13,23 +13,23 @@ export const signMessageStatus = writable("");
 
 // Only initialize SIWE in browser
 if (browser) {
-  // Initialize SIWE manager
-  siwe.set(new SiweManager(canisterId));
+    // Initialize SIWE manager
+    siwe.set(new SiweManager(canisterId));
 
-  // Set up subscription
-  siweStateStore.subscribe((snapshot) => {
-    const {
-      prepareLoginStatus: prepLoginStatus,
-      prepareLoginError: prepLoginError,
-      loginStatus: logStatus,
-      loginError: logError,
-      signMessageStatus: signMsgStatus,
-    } = snapshot.context;
+    // Set up subscription
+    siweStateStore.subscribe((snapshot) => {
+        const {
+            prepareLoginStatus: prepLoginStatus,
+            prepareLoginError: prepLoginError,
+            loginStatus: logStatus,
+            loginError: logError,
+            signMessageStatus: signMsgStatus,
+        } = snapshot.context;
 
-    prepareLoginStatus.set(prepLoginStatus);
-    prepareLoginError.set(prepLoginError?.message || null);
-    loginStatus.set(logStatus);
-    loginError.set(logError?.message || null);
-    signMessageStatus.set(signMsgStatus);
-  });
+        prepareLoginStatus.set(prepLoginStatus);
+        prepareLoginError.set(prepLoginError?.message || null);
+        loginStatus.set(logStatus);
+        loginError.set(logError?.message || null);
+        signMessageStatus.set(signMsgStatus);
+    });
 }

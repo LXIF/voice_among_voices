@@ -1,38 +1,48 @@
 <script lang="ts">
-    import {tick} from 'svelte';
-    import {backend} from '$lib/canisters';
-    import {handleBackendAudioData} from '$lib/utils/convUtils';
+    import { tick } from "svelte";
+    import { backend } from "$lib/canisters";
+    import { handleBackendAudioData } from "$lib/utils/convUtils";
     import type {
         HttpStreamingResponse,
         StreamingCallbackHttpResponse,
-    } from '../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did';
+    } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
 
-    let audioURL: string = $state('');
-    let error: string = $state('');
+    let audioURL: string = $state("");
+    let error: string = $state("");
     let isPlaying = $state(false);
     let loadingProgress = $state(0);
 
-    let { externalPlaybackPosition, onPlaybackPosition, onFileAngle, onFileLoaded }: { externalPlaybackPosition: number, onPlaybackPosition: (normalizedPosition: number) => void, onFileAngle: (angle: number) => void, onFileLoaded: (loaded: boolean) => void } = $props();
+    let {
+        externalPlaybackPosition,
+        onPlaybackPosition,
+        onFileAngle,
+        onFileLoaded,
+    }: {
+        externalPlaybackPosition: number;
+        onPlaybackPosition: (normalizedPosition: number) => void;
+        onFileAngle: (angle: number) => void;
+        onFileLoaded: (loaded: boolean) => void;
+    } = $props();
 
     let audioElement: HTMLAudioElement | undefined = $state();
     let downloadLink: HTMLAnchorElement | undefined = $state();
 
     // Fetch audio file based on angle
     async function fetchAudioFile() {
-
         try {
-            error = '';
-            audioURL = '';
+            error = "";
+            audioURL = "";
             const response: HttpStreamingResponse =
                 await backend.get_angle_file(BigInt(0));
             console.log(response);
             if (!response.streaming_strategy) {
-                throw new Error('No streaming strategy provided.');
+                throw new Error("No streaming strategy provided.");
             }
             const chunks = [response.body];
 
             let streamingToken = response.streaming_strategy[0]?.Callback.token;
-            const nTokens = response.streaming_strategy[0]?.Callback.token.chunks;
+            const nTokens =
+                response.streaming_strategy[0]?.Callback.token.chunks;
 
             // while (streamingToken) {
             //     const {body, token} =
@@ -44,10 +54,10 @@
             //     streamingToken = token[0] || undefined;
             // }
 
-            if (nTokens === undefined) throw new Error('No tokens provided.');
+            if (nTokens === undefined) throw new Error("No tokens provided.");
 
             // First chunk is already loaded
-            loadingProgress = 1 / nTokens * 100;
+            loadingProgress = (1 / nTokens) * 100;
 
             // Fetch all remaining chunks in parallel
             const chunkPromises = [];
@@ -56,27 +66,31 @@
                     angle: streamingToken?.angle!,
                     auth_token: streamingToken?.auth_token!,
                     chunk_index: i,
-                    chunks: streamingToken?.chunks!
+                    chunks: streamingToken?.chunks!,
                 };
                 chunkPromises.push(
-                    backend.http_request_streaming_callback(chunkToken)
-                    .then(result => {
+                    backend
+                        .http_request_streaming_callback(chunkToken)
+                        .then((result) => {
                             // Update progress after each chunk loads
-                            loadingProgress = (loadingProgress + (1 / nTokens * 100));
+                            loadingProgress =
+                                loadingProgress + (1 / nTokens) * 100;
                             return result;
-                        })
+                        }),
                 );
             }
 
             // Wait for all chunks and sort them by index
             const chunkResults = await Promise.all(chunkPromises);
-            chunkResults.sort((a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!);
-            
+            chunkResults.sort(
+                (a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!,
+            );
+
             // Add sorted chunks to the chunks array
-            chunks.push(...chunkResults.map(result => result.body));
+            chunks.push(...chunkResults.map((result) => result.body));
 
             const audioData = new Uint8Array(
-                chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+                chunks.reduce((acc, chunk) => acc + chunk.length, 0),
             );
 
             let offset = 0;
@@ -92,7 +106,7 @@
             onFileAngle(0);
             onFileLoaded(true);
         } catch (e) {
-            error = 'Error fetching the audio file.';
+            error = "Error fetching the audio file.";
             console.error(e);
         }
     }
@@ -150,7 +164,7 @@
         <div>
             <!-- Custom Play/Pause Button -->
             <button onclick={togglePlayPause}>
-                {isPlaying ? 'Pause' : 'Play'}
+                {isPlaying ? "Pause" : "Play"}
             </button>
 
             <!-- Hidden audio element (no controls) -->
@@ -159,19 +173,12 @@
                 ontimeupdate={onTimeUpdate}
                 onended={onEnded}
             >
-                <source
-                    src={audioURL}
-                    type="audio/wav"
-                />
+                <source src={audioURL} type="audio/wav" />
                 Your browser does not support the audio element.
             </audio>
 
             <!-- Download link for the audio -->
-            <a
-                bind:this={downloadLink}
-                href={audioURL}
-                download
-            >
+            <a bind:this={downloadLink} href={audioURL} download>
                 Download Audio
             </a>
         </div>

@@ -1,14 +1,14 @@
 <script lang="ts">
-	let {
-		children,
-		class: classes,
-		...others
-	}: { class?: string; children?: any; [key: string]: any } = $props();
+    let {
+        children,
+        class: classes,
+        ...others
+    }: { class?: string; children?: any; [key: string]: any } = $props();
 </script>
 
 <button
-	{...others}
-	class={`${classes} transition-all font-bold hover:scale-110`}
+    {...others}
+    class={`${classes} transition-all font-bold hover:scale-110`}
 >
-	{@render children?.()}
+    {@render children?.()}
 </button>

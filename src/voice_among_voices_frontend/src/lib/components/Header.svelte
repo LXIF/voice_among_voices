@@ -1,5 +1,5 @@
 <script lang="ts">
-  import CombinedLoginButton from "./CombinedLoginButton.svelte";
+    import CombinedLoginButton from "./CombinedLoginButton.svelte";
 </script>
 
 <header class="flex justify-between items-start px-4 pt-4 min-h-24">

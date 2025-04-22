@@ -1,9 +1,20 @@
 <script lang="ts">
-    import { audioParameters, simulationParameters, currentVoiceBlob, dragging, playheadPosition, externalPlaybackPosition, angle, fileLoaded, hoveredAngle, selectedAngle } from "$lib/state/uxState";
+    import {
+        audioParameters,
+        simulationParameters,
+        currentVoiceBlob,
+        dragging,
+        playheadPosition,
+        externalPlaybackPosition,
+        angle,
+        fileLoaded,
+        hoveredAngle,
+        selectedAngle,
+    } from "$lib/state/uxState";
     import DroppableNode from "./DroppableNode.svelte";
     import VoiceRecorder from "./VoiceRecorder.svelte";
     import AngleFileBox from "./AngleFileBox.svelte";
-    import { usableCanvasWidth } from '$lib/config/nodeMap';
+    import { usableCanvasWidth } from "$lib/config/nodeMap";
     import { onMount } from "svelte";
     import { backend } from "$lib/canisters";
     import { identityAgent } from "$lib/canisters";
@@ -21,7 +32,7 @@
         sampleLength: number,
         canvasWidth: number,
         totalLength: number,
-        logicalWidth: number
+        logicalWidth: number,
     ) => {
         const pixelPerMs = canvasWidth / totalLength;
         const logicalPerMs = logicalWidth / totalLength;
@@ -33,21 +44,25 @@
     };
 
     const handleRecordingLength = (length: number) => {
-        if($audioParameters === undefined || $simulationParameters === undefined) throw "invalid params";
+        if (
+            $audioParameters === undefined ||
+            $simulationParameters === undefined
+        )
+            throw "invalid params";
 
-            sampleLength = length;
+        sampleLength = length;
 
-            if(sampleLength > 0) {
-                const nodeWidths = calculateNodeWidth(
-                    length,
-                    usableCanvasWidth,
-                    $audioParameters!.total_length_ms,
-                    $simulationParameters!.logical_radius * 2
-                );
-        
-                nodeWidthPx = nodeWidths.nodeWidthPx;
-                nodeWidthLogical = nodeWidths.nodeWidthLogical;
-            }
+        if (sampleLength > 0) {
+            const nodeWidths = calculateNodeWidth(
+                length,
+                usableCanvasWidth,
+                $audioParameters!.total_length_ms,
+                $simulationParameters!.logical_radius * 2,
+            );
+
+            nodeWidthPx = nodeWidths.nodeWidthPx;
+            nodeWidthLogical = nodeWidths.nodeWidthLogical;
+        }
     };
 
     const handleVoiceRecorded = (blob: Blob) => {
@@ -55,29 +70,31 @@
     };
 </script>
 
-
 <div>
     {#if $selectedAngle && $identityAgent}
-    <div class="absolute bottom-24 flex justify-between items-center w-screen px-8">
-        <VoiceRecorder
-        recordingLength={handleRecordingLength}
-        voiceRecorded={handleVoiceRecorded}
-        audioParameters={$audioParameters}
-        />
-        <DroppableNode
-            {nodeWidthPx}
-            {nodeWidthLogical}
-            ondragstart={() => ($dragging = true)}
-            ondragend={() => ($dragging = false)}
-            nodeId={$selectedAngle}
-            class="z-10"
-        />
-    </div>
+        <div
+            class="absolute bottom-24 flex justify-between items-center w-screen px-8"
+        >
+            <VoiceRecorder
+                recordingLength={handleRecordingLength}
+                voiceRecorded={handleVoiceRecorded}
+                audioParameters={$audioParameters}
+            />
+            <DroppableNode
+                {nodeWidthPx}
+                {nodeWidthLogical}
+                ondragstart={() => ($dragging = true)}
+                ondragend={() => ($dragging = false)}
+                nodeId={$selectedAngle}
+                class="z-10"
+            />
+        </div>
     {/if}
     <AngleFileBox
-        onPlaybackPosition={(position) => {playheadPosition.target = position}}
+        onPlaybackPosition={(position) => {
+            playheadPosition.target = position;
+        }}
         onFileAngle={(newAngle) => ($angle = newAngle)}
         onFileLoaded={(loaded) => ($fileLoaded = loaded)}
     />
-
 </div>
