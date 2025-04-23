@@ -24,7 +24,7 @@
     let nodeY = $derived(nodeWidthPx / 2);
     let handleY = $derived(nodeY + 70);
 
-    function handlePointerDownt(e: PointerEvent) {
+    function handlePointerDown(e: PointerEvent) {
         e.preventDefault();
         if (!draggableElement) throw "should be unreachable";
         draggableElement.style.left = `${e.clientX - (nodeWidthPx / 2 + 25)}px`;
@@ -43,7 +43,9 @@
         if (!draggableElement) throw "should be unreachable";
         $dragging = true;
         draggableElement.classList.add("fixed");
-        draggableElement.onpointermove = pointerMove;
+        const body = document.querySelector("body");
+        if (!body) throw "Help! I have no body!";
+        body.onpointermove = pointerMove;
     }
 
     function handlePointerUp(e: PointerEvent) {
@@ -53,7 +55,9 @@
         draggableElement.classList.remove("fixed");
         draggableElement.style.left = "";
         draggableElement.style.top = "";
-        draggableElement.onpointermove = null;
+        const body = document.querySelector("body");
+        if (!body) throw "Help! I have no body!";
+        body.onpointermove = null;
     }
 </script>
 
@@ -78,9 +82,9 @@
         role="button"
         tabindex="0"
         aria-roledescription="drag this onto the map to place your node"
-        onpointerdown={handlePointerDownt}
+        onpointerdown={handlePointerDown}
         onpointerup={handlePointerUp}
-        class="z-10 cursor-pointer touch-none select-none"
+        class="z-50 cursor-pointer touch-none select-none"
         bind:this={draggableElement}
     >
         <svg

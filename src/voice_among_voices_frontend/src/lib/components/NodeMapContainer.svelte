@@ -46,6 +46,8 @@
         }) => void;
     } = $props();
 
+    let nodeMap = $state();
+
     onMount(async () => {
         $loadingVoices = true;
         $voiceNodes = await withRetry(() => backend.get_voice_nodes(), {
@@ -108,6 +110,18 @@
         }
         $voiceNodes = await backend.get_voice_nodes();
     };
+
+    export async function handleDrop({
+        nodeX,
+        nodeY,
+        nodeRadius,
+    }: {
+        nodeX: number;
+        nodeY: number;
+        nodeRadius: number;
+    }) {
+        nodeMap.handleDrop({ nodeX, nodeY, nodeRadius });
+    }
 </script>
 
 <div class="flex w-screen items-center justify-center">
@@ -126,6 +140,7 @@
                 $externalPlaybackPosition = normalizedPosition;
             }}
             class="h-full w-full lg:max-w-[1200px]"
+            bind:this={nodeMap}
         />
         <NewAngleSelector
             nodes={$voiceNodes}

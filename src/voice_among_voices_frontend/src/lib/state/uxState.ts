@@ -56,7 +56,7 @@ export const resetUxState = () => {
     backendSimulationResult.set([]);
     myAddress.set("");
     myTokens.set([]);
-    mapRotation.set(0);
+    mapRotation.set(180);
     walletAddress.set("");
     loadingFile.set(false);
     loadingProgress.set(0);

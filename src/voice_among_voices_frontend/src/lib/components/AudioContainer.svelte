@@ -74,7 +74,6 @@
                 $audioParameters!.total_length_ms,
                 $simulationParameters!.logical_radius * 2,
             );
-            console.log(nodeWidths);
             nodeWidthPx = nodeWidths.nodeWidthPx;
             nodeWidthLogical = nodeWidths.nodeWidthLogical;
         }
@@ -88,7 +87,7 @@
         onDropNodeWithRadius({
             nodeX: x,
             nodeY: y,
-            nodeRadius: nodeWidthPx / 2,
+            nodeRadius: nodeWidthLogical / 2,
         }); //TODO maybe other node width
     };
 </script>

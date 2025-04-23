@@ -4,6 +4,8 @@
     import NodeMapContainer from "$lib/components/NodeMapContainer.svelte";
     import AudioContainer from "$lib/components/AudioContainer.svelte";
 
+    let nodeMapCont: HTMLDivElement | undefined = $state();
+
     const handleDropNodeWithRadius = ({
         nodeX,
         nodeY,
@@ -13,11 +15,11 @@
         nodeY: number;
         nodeRadius: number;
     }) => {
-        console.log(nodeX, nodeY, nodeRadius);
+        nodeMapCont.handleDrop({ nodeX, nodeY, nodeRadius });
     };
 </script>
 
 <Header />
-<NodeMapContainer bind:handleCoolDrop={handleDropNodeWithRadius} />
+<NodeMapContainer bind:this={nodeMapCont} />
 <AudioContainer onDropNodeWithRadius={handleDropNodeWithRadius} />
 <Footer />

@@ -21,10 +21,12 @@
         audioParameters,
         voiceRecorded,
         recordingLength,
+        class: classes,
     }: {
         audioParameters: AudioParameters | undefined;
         voiceRecorded: (blob: Blob) => void;
         recordingLength: (length: number) => void;
+        class?: string;
     } = $props();
 
     onMount(async () => {
@@ -225,7 +227,8 @@
 > -->
 <button
     onpointerdown={handleRecordDown}
-    class="h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold"
+    class={"h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold " +
+        classes}
     class:recording>Rec</button
 >
 

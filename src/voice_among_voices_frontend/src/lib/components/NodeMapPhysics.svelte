@@ -58,8 +58,8 @@
     let canvas: HTMLCanvasElement | null = null;
     let context: CanvasRenderingContext2D | null = null;
 
-    let canvasDiameter = $state(800);
-    let marginDivisor = 12; // total margin is 50 per default
+    let canvasDiameter = $state(600);
+    let marginDivisor = 12; // margin is 50 per default
     let canvasMargin = $derived(canvasDiameter / marginDivisor);
     let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
@@ -81,7 +81,7 @@
     let scaled = $state(false);
     let fastForward = $state(false);
 
-    let lastAppliedRotation = $state<number | undefined>();
+    let lastAppliedRotation = $state<number | undefined>(180);
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -410,9 +410,6 @@
         magnetismFunction: Function,
         backendBodies: VoiceNodeEgress[],
     ) {
-        // const nodesToDraw = bodies.map((body) => {
-        //     return body.voiceNode;
-        // });
         requestAnimationFrame((timestamp) => {
             if (then === undefined) {
                 then = timestamp;
@@ -441,22 +438,24 @@
                     );
 
                     // Check if rotation needs to be updated
+                    if (lastAppliedRotation === undefined) {
+                        lastAppliedRotation = 0;
+                    }
                     if (lastAppliedRotation !== mapRotation.current) {
-                        if (lastAppliedRotation === undefined) {
-                            lastAppliedRotation = 0;
-                        }
-
                         // Reset previous rotation first
+                        console.log(lastAppliedRotation - mapRotation.current);
                         // Apply new rotation
                         context.rotate(
-                            ((lastAppliedRotation - mapRotation.current) /
-                                180) *
-                                Math.PI +
+                            -(
+                                (lastAppliedRotation - mapRotation.current) /
+                                180
+                            ) *
+                                // Math.PI +
                                 Math.PI,
                         );
 
                         // Update the tracked rotation value
-                        lastAppliedRotation = mapRotation.current + 180;
+                        lastAppliedRotation = mapRotation.current;
                     }
 
                     // Draw the collider
@@ -610,7 +609,7 @@
         e.preventDefault();
     }
 
-    async function handleDrop({
+    export async function handleDrop({
         nodeX,
         nodeY,
         nodeRadius,
@@ -631,10 +630,10 @@
 
         // Adjust for rotation: we need to apply inverse rotation to the mouse coordinates
         // since the canvas itself is rotated
-        const rotationRadians = (mapRotation.current * Math.PI) / 180 + Math.PI; // add pi because the world is upside down
+        const rotationRadians = -(mapRotation.current * Math.PI) / 180; // add pi because the world is upside down
 
         // Calculate position relative to center
-        const relativeToCanvasX = rawMouseX - centerX;
+        const relativeToCanvasX = centerX - rawMouseX;
         const relativeToCanvasY = rawMouseY - centerY;
 
         // Apply inverse rotation
@@ -724,7 +723,7 @@
                 context.scale(
                     ((canvasRatio * canvasDiameter) / logical_radius / 2) *
                         (usableCanvasDiameter / canvasDiameter),
-                    ((-canvasRatio * canvasDiameter) / logical_radius / 2) *
+                    ((canvasRatio * canvasDiameter) / logical_radius / 2) *
                         (usableCanvasDiameter / canvasDiameter),
                 );
             } else {
