@@ -39,6 +39,7 @@
         playHeadAngle = 0,
         dropNewNode,
         movePlayHead,
+        onResetNodes,
         class: classes = "",
     }: {
         nodes: VoiceNodeEgress[];
@@ -49,6 +50,7 @@
         playHeadAngle: number;
         dropNewNode: (voiceNode: VoiceNodeIngress) => void;
         movePlayHead: (normalizedPosition: number) => void;
+        onResetNodes?: () => void;
         class?: string;
     } = $props();
 
@@ -81,7 +83,7 @@
     let scaled = $state(false);
     let fastForward = $state(false);
 
-    let lastAppliedRotation = $state<number | undefined>(180);
+    let lastAppliedRotation = $state<number>(180);
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -99,23 +101,25 @@
         }
     });
 
-    $effect(() => {
-        if (!scaled && context && logical_radius && canvasRatio) {
-            scaled = true;
-            setupContext();
-        }
-    });
+    // $effect(() => {
+    //     if (!scaled && context && logical_radius && canvasRatio) {
+    //         scaled = true;
+    //         setupContext();
+    //     }
+    // });
 
-    function setupContext() {
-        const translateX = (canvasRatio * canvasDiameter) / 2;
-        const translateY = (canvasRatio * canvasDiameter) / 2;
-        context?.translate(translateX, translateY);
+    // function setupContext() {
+    //     const translateX = (canvasRatio * canvasDiameter) / 2;
+    //     const translateY = (canvasRatio * canvasDiameter) / 2;
+    //     context?.translate(translateX, translateY);
 
-        context?.scale(
-            canvasRatio * (usableCanvasDiameter / (2 * logical_radius)),
-            -canvasRatio * (usableCanvasDiameter / (2 * logical_radius)),
-        );
-    }
+    //     context?.scale(
+    //         canvasRatio * (usableCanvasDiameter / (2 * logical_radius)),
+    //         -canvasRatio * (usableCanvasDiameter / (2 * logical_radius)),
+    //     );
+    //     context?.rotate(Math.PI);
+    //     console.log("setting up");
+    // }
 
     onMount(async () => {
         $simulationParameters = await backend.get_simulation_parameters();
@@ -171,6 +175,11 @@
     });
 
     function resetNodes() {
+        if (backendNodes.length > 0) {
+            localNodes = [...backendNodes];
+            onResetNodes?.();
+            return;
+        }
         localNodes = [...nodes];
     }
 
@@ -437,21 +446,13 @@
                         canvasDiameter,
                     );
 
-                    // Check if rotation needs to be updated
-                    if (lastAppliedRotation === undefined) {
-                        lastAppliedRotation = 0;
-                    }
                     if (lastAppliedRotation !== mapRotation.current) {
-                        // Reset previous rotation first
-                        console.log(lastAppliedRotation - mapRotation.current);
                         // Apply new rotation
                         context.rotate(
                             -(
                                 (lastAppliedRotation - mapRotation.current) /
                                 180
-                            ) *
-                                // Math.PI +
-                                Math.PI,
+                            ) * Math.PI,
                         );
 
                         // Update the tracked rotation value
@@ -630,7 +631,8 @@
 
         // Adjust for rotation: we need to apply inverse rotation to the mouse coordinates
         // since the canvas itself is rotated
-        const rotationRadians = -(mapRotation.current * Math.PI) / 180; // add pi because the world is upside down
+        const rotationRadians =
+            -(mapRotation.current * Math.PI) / 180 + Math.PI; // add pi because the world is upside down
 
         // Calculate position relative to center
         const relativeToCanvasX = centerX - rawMouseX;
@@ -716,15 +718,25 @@
                 canvasDiameter > 0 &&
                 canvasDiameter > 0
             ) {
+                context.reset();
                 context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-                const translateX = (canvasRatio * canvasDiameter) / 2;
-                const translateY = (canvasRatio * canvasDiameter) / 2;
+                const scaledCanvasDiameter = canvasRatio * canvasDiameter;
+                const scaledCanvasRadius = scaledCanvasDiameter / 2;
+                const canvasToLogicalRadiusRatio =
+                    scaledCanvasRadius / logical_radius;
+                const usableToTotalDiameterRatio =
+                    usableCanvasDiameter / canvasDiameter;
+                const translateX = scaledCanvasDiameter / 2;
+                const translateY = translateX;
+
                 context.translate(translateX, translateY);
                 context.scale(
-                    ((canvasRatio * canvasDiameter) / logical_radius / 2) *
-                        (usableCanvasDiameter / canvasDiameter),
-                    ((canvasRatio * canvasDiameter) / logical_radius / 2) *
-                        (usableCanvasDiameter / canvasDiameter),
+                    canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
+                    canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
+                );
+                context.rotate(
+                    -((lastAppliedRotation - mapRotation.current) / 180) *
+                        Math.PI,
                 );
             } else {
                 setTimeout(updateCanvasSize, 10);
@@ -810,9 +822,10 @@
         }
     });
 
-    $effect(() => {
-        if (logical_radius) updateCanvasSize();
-    });
+    // $effect(() => {
+    //     console.log("updating");
+    //     if (logical_radius) updateCanvasSize();
+    // });
 </script>
 
 <div

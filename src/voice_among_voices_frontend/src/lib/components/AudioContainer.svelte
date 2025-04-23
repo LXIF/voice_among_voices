@@ -90,6 +90,14 @@
             nodeRadius: nodeWidthLogical / 2,
         }); //TODO maybe other node width
     };
+
+    //TODO: this would require detecting "out"
+    // const resetRecording = () => {
+    //     $currentVoiceBlob = undefined;
+    //     sampleLength = 0;
+    //     nodeWidthPx = 0;
+    //     nodeWidthLogical = 0;
+    // }
 </script>
 
 <div>
