@@ -610,8 +610,15 @@
         e.preventDefault();
     }
 
-    async function handleDrop(e: DragEvent) {
-        e.preventDefault();
+    async function handleDrop({
+        nodeX,
+        nodeY,
+        nodeRadius,
+    }: {
+        nodeX: number;
+        nodeY: number;
+        nodeRadius: number;
+    }) {
         const rect = canvas!.getBoundingClientRect();
 
         // Get center of the canvas
@@ -619,8 +626,8 @@
         const centerY = rect.height / 2;
 
         // Get raw mouse position relative to canvas
-        const rawMouseX = e.clientX - rect.left;
-        const rawMouseY = e.clientY - rect.top;
+        const rawMouseX = nodeX - rect.left;
+        const rawMouseY = nodeY - rect.top - 70; //TODO generalize
 
         // Adjust for rotation: we need to apply inverse rotation to the mouse coordinates
         // since the canvas itself is rotated
@@ -648,10 +655,6 @@
             usableCanvasDiameter,
             canvasMargin,
             logical_radius,
-        );
-
-        const nodeRadius = parseFloat(
-            e.dataTransfer?.getData("nodeRadius") || "5",
         );
 
         const distanceFromCenter = Math.sqrt(logicalX ** 2 + logicalY ** 2);
@@ -823,7 +826,6 @@
         height={canvasDiameter * canvasRatio}
         onclick={handleClick}
         ondragover={handleDragOver}
-        ondrop={handleDrop}
         class={`w-[${canvasDiameter}px] h-[${canvasDiameter}px]`}
     ></canvas>
 </div>

@@ -4,10 +4,20 @@
     import NodeMapContainer from "$lib/components/NodeMapContainer.svelte";
     import AudioContainer from "$lib/components/AudioContainer.svelte";
 
+    const handleDropNodeWithRadius = ({
+        nodeX,
+        nodeY,
+        nodeRadius,
+    }: {
+        nodeX: number;
+        nodeY: number;
+        nodeRadius: number;
+    }) => {
+        console.log(nodeX, nodeY, nodeRadius);
+    };
 </script>
 
-
 <Header />
-<NodeMapContainer />
-<AudioContainer />
+<NodeMapContainer bind:handleCoolDrop={handleDropNodeWithRadius} />
+<AudioContainer onDropNodeWithRadius={handleDropNodeWithRadius} />
 <Footer />

@@ -133,7 +133,8 @@
     let recordingStart: number;
     let recordingInterval: ReturnType<typeof setInterval>;
 
-    function handleRecordDown() {
+    function handleRecordDown(e: PointerEvent) {
+        e.preventDefault();
         if (!audioParameters) throw "no parameters";
 
         handleActivateMicrophone();
@@ -224,8 +225,8 @@
 > -->
 <button
     onpointerdown={handleRecordDown}
-    class="bg-red-600 rounded-full w-20 h-20 font-semibold"
-    class:recording>Record</button
+    class="h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold"
+    class:recording>Rec</button
 >
 
 <style lang="postcss">

@@ -118,7 +118,7 @@
         closeOnOutsideClick
     >
         Not connecting automatically?
-        <div class="mt-4 flex w-full justify-between">
+        <div class="m-2 mt-4 flex justify-between lg:min-w-96">
             <Button
                 class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
                 onclick={handleLogout}>Disconnect</Button

@@ -30,7 +30,21 @@
     import { untrack } from "svelte";
     import { withRetry } from "$lib/utils/commsUtils";
 
-    let { class: classes }: { class?: string } = $props();
+    let {
+        class: classes,
+        handleCoolDrop = $bindable(),
+    }: {
+        class?: string;
+        handleCoolDrop: ({
+            nodeX,
+            nodeY,
+            nodeRadius,
+        }: {
+            nodeX: number;
+            nodeY: number;
+            nodeRadius: number;
+        }) => void;
+    } = $props();
 
     onMount(async () => {
         $loadingVoices = true;

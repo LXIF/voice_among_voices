@@ -19,6 +19,20 @@
     import { backend } from "$lib/canisters";
     import { identityAgent } from "$lib/canisters";
 
+    const {
+        onDropNodeWithRadius,
+    }: {
+        onDropNodeWithRadius: ({
+            nodeX,
+            nodeY,
+            nodeRadius,
+        }: {
+            nodeX: number;
+            nodeY: number;
+            nodeRadius: number;
+        }) => void;
+    } = $props();
+
     let sampleLength = $state(0);
     let nodeWidthPx = $state(0);
     let nodeWidthLogical = $state(0);
@@ -54,12 +68,13 @@
 
         if (sampleLength > 0) {
             const nodeWidths = calculateNodeWidth(
+                //TODO: make sveltier
                 length,
                 usableCanvasWidth,
                 $audioParameters!.total_length_ms,
                 $simulationParameters!.logical_radius * 2,
             );
-
+            console.log(nodeWidths);
             nodeWidthPx = nodeWidths.nodeWidthPx;
             nodeWidthLogical = nodeWidths.nodeWidthLogical;
         }
@@ -68,12 +83,20 @@
     const handleVoiceRecorded = (blob: Blob) => {
         $currentVoiceBlob = blob;
     };
+
+    const handleDropNode = ({ x, y }: { x: number; y: number }) => {
+        onDropNodeWithRadius({
+            nodeX: x,
+            nodeY: y,
+            nodeRadius: nodeWidthPx / 2,
+        }); //TODO maybe other node width
+    };
 </script>
 
 <div>
     {#if $selectedAngle && $identityAgent}
         <div
-            class="absolute bottom-24 flex justify-between items-center w-screen px-8"
+            class="absolute bottom-24 flex min-h-32 w-screen items-center justify-between px-8"
         >
             <VoiceRecorder
                 recordingLength={handleRecordingLength}
@@ -83,10 +106,9 @@
             <DroppableNode
                 {nodeWidthPx}
                 {nodeWidthLogical}
-                ondragstart={() => ($dragging = true)}
-                ondragend={() => ($dragging = false)}
                 nodeId={$selectedAngle}
                 class="z-10"
+                ondropnode={handleDropNode}
             />
         </div>
     {/if}
