@@ -451,10 +451,13 @@
             opacity="0"
             onpointerdown={handleCirclePointerDown}
             pointer-events={!!$identityAgent ? "auto" : "none"}
-            class={!!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}
+            class={!!$identityAgent
+                ? "z-20 cursor-grab active:cursor-grabbing"
+                : "z-20"}
         />
         <g
             style={`transform-origin: center; transform: rotate(${mapRotation.current + 180}deg);`}
+            class="z-20"
         >
             <!-- Draw lines for all angles -->
             {#each Array.from({ length: 360 }, (_, i) => i + 1) as angle}
@@ -481,7 +484,7 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
                     onmouseover={() =>
                         isAngleAvailable(angle) && (hoveredAngle = angle)}
                     onmouseleave={() => (hoveredAngle = null)}
@@ -517,6 +520,7 @@
     {#if $isTouch}
         <g
             style={`transform-origin: center; transform: rotate(${mapRotation.current + 180}deg);`}
+            class="z-20"
         >
             <!-- Draw lines for all angles -->
             {#each Array.from({ length: 360 }, (_, i) => i + 1) as angle}
@@ -543,7 +547,7 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
                     stroke={getLineColor(angle, isAngleAvailable(angle))}
                     stroke-width={hoveredAngle === angle ? 2.2 : 0.5}
                     pointer-events="none"
@@ -562,7 +566,9 @@
             opacity="0"
             onpointerdown={handleCirclePointerDown}
             pointer-events={!!$identityAgent ? "auto" : "none"}
-            class={!!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}
+            class={!!$identityAgent
+                ? "z-20 cursor-grab active:cursor-grabbing"
+                : "z-20"}
         />
     {/if}
 </svg>
