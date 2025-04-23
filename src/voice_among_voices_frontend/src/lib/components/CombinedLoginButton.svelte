@@ -8,7 +8,7 @@
     import { walletAddress, resetUxState } from "$lib/state/uxState";
     import { siwe } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
-    // import { getWalletClient } from "@wagmi/core";
+    import { getWalletClient, type Config } from "@wagmi/core";
 
     let walletConnected = $state(false);
     let isLoggingIn = $state(false);
@@ -17,34 +17,40 @@
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
 
-        $appkitModal.subscribeState(async (newState) => {
-            if (newState.initialized) {
-                //TODO
-                // console.log($wagmiConfig);
+        // $appkitModal.subscribeState(async (newState) => {
+        //     if (newState.initialized) {
+        //         walletConnected = $appkitModal.getIsConnectedState();
 
-                // const walletClient = await getWalletClient($wagmiConfig);
-                // console.log(walletClient);
+        //         if (walletConnected && !$identityAgent && !isLoggingIn) {
 
-                walletConnected = $appkitModal.getIsConnectedState();
-                if (walletConnected && !$identityAgent && !isLoggingIn) {
-                    // TODO: handle better
-                    isLoggingIn = true;
-                    $siwe!.login().then(async (response) => {
-                        setIdentityAgent(response);
-                        isLoggingIn = false;
-                    });
-                }
-            }
-        });
+        //             isLoggingIn = true;
+        //             $siwe!.login().then(async (response) => {
+        //                 setIdentityAgent(response);
+        //                 isLoggingIn = false;
+        //             });
+        //         }
+        //     }
+        // });
     });
 
     async function handleLogin() {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
         $appkitModal.open();
 
-        $appkitModal.subscribeAccount((newState) => {
+        $appkitModal.subscribeAccount(async (newState) => {
             walletConnected = newState.isConnected;
             $walletAddress = newState.address ?? "";
+
+            // TODO: doing this here because in store doesnt work - throws some errors but works
+            const client = await getWalletClient(
+                (
+                    $appkitModal.chainAdapters?.eip155 as any as {
+                        wagmiConfig: Config;
+                    }
+                ).wagmiConfig,
+            );
+            $siwe?.setWalletClient(client);
+
             if (walletConnected && !$identityAgent && !isLoggingIn) {
                 isLoggingIn = true;
                 loginSiwe();

@@ -4,7 +4,7 @@ import {
     WagmiAdapter,
     type WagmiAdapter as WagmiAdapterType,
 } from "@reown/appkit-adapter-wagmi";
-import { derived, get, readable, type Readable } from "svelte/store";
+import { derived, get, readable } from "svelte/store";
 import { browser } from "$app/environment";
 import { getWalletClient, type Config } from "@wagmi/core";
 
@@ -63,17 +63,10 @@ const initializeStores = () => {
         }
     });
 
-    // const wagmiConfig: Readable<Config> = derived(appkitModal, ($modal) => {
-    //     console.log("[Debug] Deriving wagmiConfig");
-    //     return $modal?.chainAdapters?.eip155?.wagmiConfig; //TODO
-    // });
-
-
     const wagmiConfig = derived(wagmiAdapter, ($adapter) => {
         console.log("[Debug] Deriving wagmiConfig");
         return $adapter?.wagmiConfig;
     });
-
 
     return { wagmiAdapter, appkitModal, wagmiConfig };
 };
