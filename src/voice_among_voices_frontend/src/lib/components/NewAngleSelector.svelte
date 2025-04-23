@@ -269,6 +269,10 @@
         //prevent body scroll
         document.querySelector("body")?.classList.add("touch-none");
         document.querySelector("body")?.classList.add("overflow-hidden");
+        document.querySelector("body")?.classList.add("overflow-x-hidden");
+        document.querySelector("html")?.classList.add("touch-none");
+        document.querySelector("html")?.classList.add("overflow-hidden");
+        document.querySelector("html")?.classList.add("overflow-x-hidden");
 
         e.preventDefault();
         e.stopPropagation();
@@ -294,6 +298,9 @@
 
         // Handle pointer movement
         function handlePointerMove(moveEvent: PointerEvent) {
+            moveEvent.preventDefault();
+            moveEvent.stopPropagation();
+            window.scrollTo(0, 0);
             // Calculate current angle
             const currentAngle =
                 Math.atan2(
@@ -323,6 +330,14 @@
         async function handlePointerUp(_upEvent: PointerEvent) {
             document.querySelector("body")?.classList.remove("touch-none");
             document.querySelector("body")?.classList.remove("overflow-hidden");
+            document
+                .querySelector("body")
+                ?.classList.remove("overflow-x-hidden");
+            document.querySelector("html")?.classList.remove("touch-none");
+            document.querySelector("html")?.classList.remove("overflow-hidden");
+            document
+                .querySelector("html")
+                ?.classList.remove("overflow-x-hidden");
             // Clean up event listeners
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
