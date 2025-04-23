@@ -17,20 +17,20 @@
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
 
-        // $appkitModal.subscribeState(async (newState) => {
-        //     if (newState.initialized) {
-        //         walletConnected = $appkitModal.getIsConnectedState();
+        $appkitModal.subscribeState(async (newState) => {
+            if (newState.initialized) {
+                walletConnected = $appkitModal.getIsConnectedState();
 
-        //         if (walletConnected && !$identityAgent && !isLoggingIn) {
-
-        //             isLoggingIn = true;
-        //             $siwe!.login().then(async (response) => {
-        //                 setIdentityAgent(response);
-        //                 isLoggingIn = false;
-        //             });
-        //         }
-        //     }
-        // });
+                if (walletConnected && !$identityAgent && !isLoggingIn) {
+                    isLoggingIn = true;
+                    setSiweWalletClient();
+                    $siwe!.login().then(async (response) => {
+                        setIdentityAgent(response);
+                        isLoggingIn = false;
+                    });
+                }
+            }
+        });
     });
 
     async function handleLogin() {
@@ -41,15 +41,7 @@
             walletConnected = newState.isConnected;
             $walletAddress = newState.address ?? "";
 
-            // TODO: doing this here because in store doesnt work - throws some errors but works
-            const client = await getWalletClient(
-                (
-                    $appkitModal.chainAdapters?.eip155 as any as {
-                        wagmiConfig: Config;
-                    }
-                ).wagmiConfig,
-            );
-            $siwe?.setWalletClient(client);
+            setSiweWalletClient();
 
             if (walletConnected && !$identityAgent && !isLoggingIn) {
                 isLoggingIn = true;
@@ -88,6 +80,19 @@
         resetUxState();
         isLoggingOut = false;
         isLoggingIn = false;
+    }
+
+    async function setSiweWalletClient() {
+        if (!$appkitModal) throw "AppkitModal not initialized";
+
+        const client = await getWalletClient(
+            (
+                $appkitModal.chainAdapters?.eip155 as any as {
+                    wagmiConfig: Config;
+                }
+            ).wagmiConfig,
+        );
+        $siwe?.setWalletClient(client);
     }
 </script>
 
