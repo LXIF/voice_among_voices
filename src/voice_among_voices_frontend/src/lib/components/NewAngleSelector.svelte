@@ -267,15 +267,32 @@
 
     function handleCirclePointerDown(e: PointerEvent) {
         //prevent body scroll
-        document.querySelector("body")?.classList.add("touch-none");
-        document.querySelector("body")?.classList.add("overflow-hidden");
-        document.querySelector("body")?.classList.add("overflow-x-hidden");
-        document.querySelector("html")?.classList.add("touch-none");
-        document.querySelector("html")?.classList.add("overflow-hidden");
-        document.querySelector("html")?.classList.add("overflow-x-hidden");
-
         e.preventDefault();
         e.stopPropagation();
+        document
+            .querySelector("body")
+            ?.classList.add(
+                "touch-none",
+                "overflow-hidden",
+                "overflow-x-hidden",
+                "overscroll-none",
+                "scrolling-auto",
+                "fixed",
+                "w-full",
+                "h-full",
+            );
+        document
+            .querySelector("html")
+            ?.classList.add(
+                "touch-none",
+                "overflow-hidden",
+                "overflow-x-hidden",
+                "overscroll-none",
+                "scrolling-auto",
+                "fixed",
+                "w-full",
+                "h-full",
+            );
 
         // Capture the starting point of the interaction
         const startX = e.clientX;
@@ -328,16 +345,30 @@
 
         // Handle pointer up
         async function handlePointerUp(_upEvent: PointerEvent) {
-            document.querySelector("body")?.classList.remove("touch-none");
-            document.querySelector("body")?.classList.remove("overflow-hidden");
             document
                 .querySelector("body")
-                ?.classList.remove("overflow-x-hidden");
-            document.querySelector("html")?.classList.remove("touch-none");
-            document.querySelector("html")?.classList.remove("overflow-hidden");
+                ?.classList.remove(
+                    "touch-none",
+                    "overflow-hidden",
+                    "overflow-x-hidden",
+                    "overscroll-none",
+                    "scrolling-auto",
+                    "fixed",
+                    "w-full",
+                    "h-full",
+                );
             document
                 .querySelector("html")
-                ?.classList.remove("overflow-x-hidden");
+                ?.classList.remove(
+                    "touch-none",
+                    "overflow-hidden",
+                    "overflow-x-hidden",
+                    "overscroll-none",
+                    "scrolling-auto",
+                    "fixed",
+                    "w-full",
+                    "h-full",
+                );
             // Clean up event listeners
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
