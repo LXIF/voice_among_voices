@@ -103,7 +103,7 @@
 <div>
     {#if $selectedAngle && $identityAgent}
         <div
-            class="absolute bottom-24 flex min-h-32 w-screen items-center justify-between px-8"
+            class="absolute bottom-12 flex min-h-32 w-screen items-center justify-between px-8 md:bottom-24 lg:bottom-24"
         >
             <VoiceRecorder
                 recordingLength={handleRecordingLength}
