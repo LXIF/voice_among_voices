@@ -4,8 +4,9 @@
     import { browser } from "$app/environment";
     import { encodeWav } from "$lib/utils/convUtils";
     import type { AudioParameters } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    // import { MediaRecorder as ImportedMediaRecorder } from 'extendable-media-recorder';
-    // import { connect as ImportedConnect } from "extendable-media-recorder-wav-encoder";
+
+    // time the rec button needs to be held to be push-action
+    const recordActionTimingCutoff = 200;
 
     let localStream: MediaStream | undefined = $state();
     let audioElement: HTMLAudioElement | undefined = $state();
@@ -137,6 +138,11 @@
 
     function handleRecordDown(e: PointerEvent) {
         e.preventDefault();
+        // if we're still recording, we used toggle action
+        if (recording) {
+            handleRecordUp();
+            return;
+        }
         if (!audioParameters) throw "no parameters";
 
         handleActivateMicrophone();
@@ -159,6 +165,11 @@
     }
 
     function handleRecordUp() {
+        // if it's just a tap, we use toggle.
+        if (Date.now() - recordingStart < recordActionTimingCutoff) {
+            return;
+        }
+
         clearInterval(recordingInterval);
         recording = false;
         window.removeEventListener("pointerup", handleRecordUp);
@@ -221,10 +232,7 @@
 </script>
 
 <audio hidden bind:this={audioElement}></audio>
-<!-- <button
-    class="px-4 py-2 bg-slate-500 rounded-full"
-    onclick={handleActivateMicrophone}>activate microphone</button
-> -->
+
 <button
     onpointerdown={handleRecordDown}
     class={"h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold " +
