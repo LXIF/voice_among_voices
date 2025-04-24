@@ -29,7 +29,7 @@
         mapRotation,
     } from "$lib/state/uxState";
     import { isDarkMode } from "$lib/utils/uxUtils";
-    import { nonNullish } from "@dfinity/utils";
+
     let {
         nodes,
         backendNodes,

@@ -21,10 +21,13 @@
 
     let draggableElement = $state<HTMLDivElement>();
 
+    let scaledNodeWidthPx = $derived(
+        (document.querySelector("canvas")?.width! / 600) * nodeWidthPx,
+    );
     const handleWidth = 50;
     const pointOffset = 7;
-    let nodeX = $derived(nodeWidthPx / 2 + handleWidth / 2);
-    let nodeY = $derived(nodeWidthPx / 2);
+    let nodeX = $derived(handleWidth / 2);
+    let nodeY = $derived(scaledNodeWidthPx / 2);
     let handleY = $derived(nodeY + 70);
 
     function handlePointerDown(e: PointerEvent) {
@@ -94,14 +97,11 @@
             easing: elasticOut,
         }}
     >
-        <svg
-            width={nodeWidthPx + handleWidth}
-            height={nodeWidthPx + 2 * handleWidth}
-        >
+        <svg width={handleWidth} height={scaledNodeWidthPx + 2 * handleWidth}>
             <!-- Drag handle -->
             <circle
-                cx={nodeWidthPx / 2 + 25}
-                cy={nodeWidthPx / 2 + 70}
+                cx={handleWidth / 2}
+                cy={handleY}
                 r={25}
                 class="fill-slate-950 dark:fill-slate-50"
             />
@@ -158,7 +158,7 @@
             <circle
                 cx={nodeX}
                 cy={nodeY}
-                r={nodeWidthPx / 2}
+                r={scaledNodeWidthPx / 2}
                 fill={`hsl(${nodeId % 360}, 100%, 50%)`}
             />
         </svg>
