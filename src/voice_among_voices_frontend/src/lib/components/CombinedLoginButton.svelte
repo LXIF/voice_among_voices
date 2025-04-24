@@ -18,24 +18,24 @@
 
         setAddress();
 
-        $appkitModal.subscribeState(async (newState) => {
-            if (newState.initialized) {
-                walletConnected = $appkitModal.getIsConnectedState();
-                $walletAddress = $appkitModal?.getAddress() ?? "";
+        // $appkitModal.subscribeState(async (newState) => {
+        //     if (newState.initialized) {
+        //         walletConnected = $appkitModal.getIsConnectedState();
+        //         $walletAddress = $appkitModal?.getAddress() ?? "";
 
-                if (
-                    walletConnected &&
-                    !$identityAgent &&
-                    !isLoggingIn &&
-                    !!$walletAddress
-                ) {
-                    isLoggingIn = true;
-                    $siwe!.login().then(() => {
-                        isLoggingIn = false;
-                    });
-                }
-            }
-        });
+        //         if (
+        //             walletConnected &&
+        //             !$identityAgent &&
+        //             !isLoggingIn &&
+        //             !!$walletAddress
+        //         ) {
+        //             isLoggingIn = true;
+        //             $siwe!.login().then(() => {
+        //                 isLoggingIn = false;
+        //             });
+        //         }
+        //     }
+        // });
     });
 
     // less elegant, but subscribestate is insufficient apparently
