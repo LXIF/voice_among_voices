@@ -17,6 +17,7 @@
     let register: any = $state();
     let connect: any = $state();
     let recordingTimeout: ReturnType<typeof setTimeout> | undefined = $state();
+    let encoderInitialized = $state(false);
 
     let {
         audioParameters,
@@ -191,13 +192,15 @@
     }
 
     async function setupMediaRecorder() {
-        if (!browser || !audioParameters || !localStream) return;
+        if (!browser || !audioParameters || !localStream || encoderInitialized)
+            return;
 
         const { MediaRecorder: ImportedMediaRecorder } = await import(
             "extendable-media-recorder"
         );
 
         await register(await connect());
+        encoderInitialized = true;
 
         const audioContext = new AudioContext({ sampleRate: 44100 });
         const mediaStreamAudioSourceNode = new MediaStreamAudioSourceNode(

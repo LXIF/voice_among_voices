@@ -75,30 +75,34 @@
     }
 
     const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
-        const sample = await blobToUint8Array($currentVoiceBlob!);
-        const { x, y, id } = voiceNode;
+        try {
+            const sample = await blobToUint8Array($currentVoiceBlob!);
+            const { x, y, id } = voiceNode;
 
-        let backend_simulation_result = await backend.update_voice_node({
-            id,
-            x,
-            y,
-            sample,
-        });
+            let backend_simulation_result = await backend.update_voice_node({
+                id,
+                x,
+                y,
+                sample,
+            });
 
-        if ("Ok" in backend_simulation_result) {
-            $backendSimulationResult = backend_simulation_result.Ok;
-        } else {
-            if ("NotValidAudioFileError" in backend_simulation_result.Err) {
-                console.log(
-                    backend_simulation_result.Err.NotValidAudioFileError,
-                );
-            } else if (
-                "NotWithinCircleError" in backend_simulation_result.Err
-            ) {
-                console.log("Not within circle error");
+            if ("Ok" in backend_simulation_result) {
+                $backendSimulationResult = backend_simulation_result.Ok;
+            } else {
+                if ("NotValidAudioFileError" in backend_simulation_result.Err) {
+                    console.log(
+                        backend_simulation_result.Err.NotValidAudioFileError,
+                    );
+                } else if (
+                    "NotWithinCircleError" in backend_simulation_result.Err
+                ) {
+                    console.log("Not within circle error");
+                }
             }
+            $voiceNodes = await backend.get_voice_nodes();
+        } catch (e) {
+            console.error("Failed to drop new node, got this: ", e);
         }
-        $voiceNodes = await backend.get_voice_nodes();
     };
 
     export async function handleDrop({
