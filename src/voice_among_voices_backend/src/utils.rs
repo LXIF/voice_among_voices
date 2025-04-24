@@ -26,19 +26,9 @@ pub fn split_into_chunks(data: Vec<u8>, audio_params: &AudioParameters) -> Vec<V
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::storage::SIMULATION_PARAMETERS;
 
-    const TEST_SIM_PARAMS: SimulationParameters = SimulationParameters {
-        velocity_cutoff: 0.2,
-        force_cutoff: 100.,
-        max_distance: 20.,
-        force_strength: 3000.,
-        linear_damping: 10.,
-        logical_radius: 50.,
-        n_collider_vertices: 360,
-        friction: 0.5,
-        density: 2.,
-    };
+    use super::*;
 
     #[test]
     fn allows_within_circle() {
@@ -50,7 +40,7 @@ mod tests {
                 sample: vec![],
             };
 
-            assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
+            assert!(node_within_circle(&test_node, &SIMULATION_PARAMETERS, 2.));
         }
         {
             let test_node: VoiceNodeIngress = VoiceNodeIngress {
@@ -60,7 +50,7 @@ mod tests {
                 sample: vec![],
             };
 
-            assert!(node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
+            assert!(node_within_circle(&test_node, &SIMULATION_PARAMETERS, 2.));
         }
     }
 
@@ -73,7 +63,7 @@ mod tests {
             sample: vec![],
         };
 
-        assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
+        assert!(!node_within_circle(&test_node, &SIMULATION_PARAMETERS, 2.));
     }
 
     #[test]
@@ -85,6 +75,6 @@ mod tests {
             sample: vec![],
         };
 
-        assert!(!node_within_circle(&test_node, &TEST_SIM_PARAMS, 2.));
+        assert!(!node_within_circle(&test_node, &SIMULATION_PARAMETERS, 2.));
     }
 }

@@ -290,6 +290,7 @@ fn signed_distance_from_center_line(angle: f64, x: f64, y: f64, x_c: f64, y_c: f
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::SIMULATION_PARAMETERS;
     use crate::test_functions::*;
     use crate::{VoiceNodeLocal, SAMPLES_MEMORY, VOICE_NODES_MEMORY};
     use core::f64;
@@ -396,10 +397,10 @@ mod tests {
             for node in generate_test_nodes(vec![(-25., 0.), (0., -25.)]).iter() {
                 nodes.push(node).unwrap();
             }
-            let sim_params = generate_test_simulation_params();
 
             let angle = 0.0;
-            let sample_positions = generate_normalized_sample_positions(nodes, &sim_params, angle);
+            let sample_positions =
+                generate_normalized_sample_positions(nodes, &SIMULATION_PARAMETERS, angle);
 
             // There should be 2 sample positions generated since there are 2 nodes
             assert_eq!(sample_positions.len(), 2);
@@ -431,10 +432,9 @@ mod tests {
             }
             println!("{:#?}", nodes);
 
-            let sim_params = generate_test_simulation_params();
-
             let angle = 0.0;
-            let sample_positions = generate_normalized_sample_positions(nodes, &sim_params, angle);
+            let sample_positions =
+                generate_normalized_sample_positions(nodes, &SIMULATION_PARAMETERS, angle);
 
             // There should be 3 sample positions generated since there are 3 nodes
             assert_eq!(sample_positions.len(), 3);
@@ -477,10 +477,9 @@ mod tests {
                 })
                 .unwrap();
 
-            let sim_params = generate_test_simulation_params();
-
             let angle = 45.0; // Diagonal angle
-            let sample_positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
+            let sample_positions =
+                generate_normalized_sample_positions(&nodes, &SIMULATION_PARAMETERS, angle);
 
             assert_eq!(sample_positions.len(), 1);
             let sample_position = &sample_positions[0];
@@ -495,10 +494,9 @@ mod tests {
     #[test]
     fn test_generate_sample_positions_no_samples() {
         VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
-            let sim_params = generate_test_simulation_params();
-
             let angle = 0.0;
-            let sample_positions = generate_normalized_sample_positions(nodes, &sim_params, angle);
+            let sample_positions =
+                generate_normalized_sample_positions(nodes, &SIMULATION_PARAMETERS, angle);
 
             // No sample positions should be generated
             assert_eq!(sample_positions.len(), 0);
@@ -511,19 +509,20 @@ mod tests {
             for node in generate_test_nodes(vec![(25., 50.), (50., 25.)]).iter() {
                 nodes.push(node).unwrap();
             }
-            let sim_params = generate_test_simulation_params();
 
             let angle_0 = 0.0;
             let angle_90 = 90.0;
             let angle_180 = 180.0;
             let angle_270 = 270.0;
 
-            let positions_0 = generate_normalized_sample_positions(&nodes, &sim_params, angle_0);
-            let positions_90 = generate_normalized_sample_positions(&nodes, &sim_params, angle_90);
+            let positions_0 =
+                generate_normalized_sample_positions(&nodes, &SIMULATION_PARAMETERS, angle_0);
+            let positions_90 =
+                generate_normalized_sample_positions(&nodes, &SIMULATION_PARAMETERS, angle_90);
             let positions_180 =
-                generate_normalized_sample_positions(&nodes, &sim_params, angle_180);
+                generate_normalized_sample_positions(&nodes, &SIMULATION_PARAMETERS, angle_180);
             let positions_270 =
-                generate_normalized_sample_positions(&nodes, &sim_params, angle_270);
+                generate_normalized_sample_positions(&nodes, &SIMULATION_PARAMETERS, angle_270);
 
             // There should always be 2 sample positions, but their properties (position, pan) should vary
             assert_eq!(positions_0.len(), 2);
@@ -549,23 +548,13 @@ mod tests {
             }
 
             let angle = 0.;
-            let sim_params = SimulationParameters {
-                velocity_cutoff: 0.2,
-                force_cutoff: 100.,
-                max_distance: 20.,
-                force_strength: 3000.,
-                linear_damping: 10.,
-                logical_radius: 50.,
-                n_collider_vertices: 360,
-                friction: 0.5,
-                density: 2.,
-            };
 
             for node in nodes.iter() {
                 println!("{:#?}", node);
             }
 
-            let positions = generate_normalized_sample_positions(&nodes, &sim_params, angle);
+            let positions =
+                generate_normalized_sample_positions(&nodes, &SIMULATION_PARAMETERS, angle);
 
             for position in positions.iter() {
                 println!("{:#?}", position);
@@ -618,18 +607,6 @@ mod tests {
             chunk_size: 1024 * 1024,
         };
 
-        let sim_params = SimulationParameters {
-            velocity_cutoff: 0.2,
-            force_cutoff: 100.,
-            max_distance: 20.,
-            force_strength: 3000.,
-            linear_damping: 10.,
-            logical_radius: 50.,
-            n_collider_vertices: 360,
-            friction: 0.5,
-            density: 2.,
-        };
-
         SAMPLES_MEMORY.with_borrow_mut(|samples_memory| {
             VOICE_NODES_MEMORY.with_borrow_mut(|nodes| {
                 for node in generate_short_test_nodes(vec![(0., 50.), (0., 0.), (0., -50.)]).iter()
@@ -643,7 +620,7 @@ mod tests {
                 }
 
                 let sample_positions =
-                    generate_normalized_sample_positions(&nodes, &sim_params, 0.);
+                    generate_normalized_sample_positions(&nodes, &SIMULATION_PARAMETERS, 0.);
 
                 let (left_channel, right_channel) =
                     generate_audio_vectors(&sample_positions, &audio_params, &samples_memory);
@@ -827,15 +804,16 @@ mod tests {
 
             // Test with left pan (-1.0), center (0.0), and right pan (1.0)
 
-            let (left_channel, right_channel) =
-                generate_audio_vectors(&vec![
-                    SamplePosition {
-                        begins_at: 0.0,
-                        sample_id: 0,
-                        sample_length_samples: 44100,
-                        pan_position: -1.0, // Full left pan
-                    },
-                ], &audio_params, samples);
+            let (left_channel, right_channel) = generate_audio_vectors(
+                &vec![SamplePosition {
+                    begins_at: 0.0,
+                    sample_id: 0,
+                    sample_length_samples: 44100,
+                    pan_position: -1.0, // Full left pan
+                }],
+                &audio_params,
+                samples,
+            );
 
             // Left pan should result in higher values in the left channel
             for (left, right) in left_channel.iter().zip(right_channel.iter()) {

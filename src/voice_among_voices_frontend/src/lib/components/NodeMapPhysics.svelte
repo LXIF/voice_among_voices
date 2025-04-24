@@ -71,10 +71,13 @@
 
     let max_distance: number = $state(0);
     let force_strength: number = $state(0);
-    let force_cutoff: number = $state(0);
     let linear_damping: number = $state(0);
     let logical_radius: number = $state(0);
     let friction: number = $state(0);
+    let density: number = $state(0);
+    let max_steps: number = $state(0);
+
+    let steps: number = $state(0);
 
     let physicsActive = $state(false);
     let rendering = $state(false);
@@ -101,26 +104,6 @@
         }
     });
 
-    // $effect(() => {
-    //     if (!scaled && context && logical_radius && canvasRatio) {
-    //         scaled = true;
-    //         setupContext();
-    //     }
-    // });
-
-    // function setupContext() {
-    //     const translateX = (canvasRatio * canvasDiameter) / 2;
-    //     const translateY = (canvasRatio * canvasDiameter) / 2;
-    //     context?.translate(translateX, translateY);
-
-    //     context?.scale(
-    //         canvasRatio * (usableCanvasDiameter / (2 * logical_radius)),
-    //         -canvasRatio * (usableCanvasDiameter / (2 * logical_radius)),
-    //     );
-    //     context?.rotate(Math.PI);
-    //     console.log("setting up");
-    // }
-
     onMount(async () => {
         $simulationParameters = await backend.get_simulation_parameters();
         colliderCoordinates = await backend.get_collider_coordinates();
@@ -130,10 +113,11 @@
 
         max_distance = $simulationParameters!.max_distance;
         force_strength = $simulationParameters!.force_strength;
-        force_cutoff = $simulationParameters!.force_cutoff;
         linear_damping = $simulationParameters!.linear_damping;
         logical_radius = $simulationParameters!.logical_radius;
         friction = $simulationParameters!.friction;
+        density = $simulationParameters!.density;
+        max_steps = Number($simulationParameters.max_steps);
     });
 
     $effect(() => {
@@ -282,7 +266,7 @@
                         .setTranslation(Number(node.x), Number(node.y))
                         .setUserData(node);
                     let colliderDesc = RAPIER.ColliderDesc.ball(node.radius) //ts glitching here lol
-                        .setDensity(2.0)
+                        .setDensity(density)
                         .setFriction(friction);
 
                     const rigidBody = world.createRigidBody(rigidBodyDesc);
@@ -432,6 +416,11 @@
                 then = now - (elapsed % interval);
 
                 if (world && physicsActive) {
+                    steps++;
+
+                    if (steps > max_steps) {
+                        physicsActive = false;
+                    }
                     magnetismFunction();
                     world.step();
                     checkIfStillMoving(bodies);
@@ -594,6 +583,8 @@
     function resetPhysics() {
         resetting = true;
         rendering = false;
+
+        steps = 0;
 
         setTimeout(() => {
             //let last frame play out

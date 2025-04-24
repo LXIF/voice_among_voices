@@ -1,6 +1,5 @@
 use crate::{
-    audio::SamplePosition, AudioParameters, AudioSample, SimulationParameters, VoiceNodeLocal,
-    VoiceNodeLocalStore,
+    audio::SamplePosition, AudioParameters, AudioSample, VoiceNodeLocal, VoiceNodeLocalStore,
 };
 use hound::{WavSpec, WavWriter};
 use std::io::Cursor;
@@ -48,20 +47,6 @@ pub fn generate_audio_params(sample_rate: u32) -> AudioParameters {
         total_length_ms: 1000, // 1 second
         fade_ms: 0,            // No fade
         chunk_size: 1024 * 1024,
-    }
-}
-
-pub fn generate_test_simulation_params() -> SimulationParameters {
-    SimulationParameters {
-        velocity_cutoff: 1.0,
-        force_cutoff: 1.0,
-        max_distance: 100.0,
-        force_strength: 1.0,
-        linear_damping: 1.0,
-        logical_radius: 50.,
-        n_collider_vertices: 10,
-        friction: 0.1,
-        density: 1.0,
     }
 }
 

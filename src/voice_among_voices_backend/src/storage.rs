@@ -57,12 +57,13 @@ pub const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
     force_cutoff: 100.,
     max_distance: 20.,
-    force_strength: 3000.,
+    force_strength: 4000.,
     linear_damping: 10.,
     logical_radius: 50.,
     n_collider_vertices: 360,
     friction: 0.5,
-    density: 2.,
+    density: 3.,
+    max_steps: 10_000,
 };
 
 pub fn get_stored_audio_parameters() -> AudioParameters {

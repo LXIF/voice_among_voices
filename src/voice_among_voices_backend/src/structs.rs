@@ -101,6 +101,7 @@ pub struct SimulationParameters {
     pub n_collider_vertices: u64,
     pub friction: f64,
     pub density: f64,
+    pub max_steps: u64,
 }
 
 #[derive(Debug, Clone, Copy, CandidType)]

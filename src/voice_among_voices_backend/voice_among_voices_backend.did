@@ -27,6 +27,7 @@ type SimulationParameters = record {
   density : float64;
   velocity_cutoff : float64;
   n_collider_vertices : nat64;
+  max_steps : nat64;
   force_cutoff : float64;
   friction : float64;
   force_strength : float64;

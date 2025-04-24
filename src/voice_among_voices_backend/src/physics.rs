@@ -1,3 +1,4 @@
+use crate::storage::SIMULATION_PARAMETERS;
 use crate::{SimulationParameters, VoiceNodeLocalMemory};
 use candid::CandidType;
 use nalgebra::{distance, Const, OPoint, Point2, Vector2};
@@ -108,7 +109,6 @@ pub fn simulate_until_stopped(
     // apply force
     // step until no more forces
 
-    let max_steps = 10_000;
     let mut steps = 0;
 
     loop {
@@ -162,7 +162,7 @@ pub fn simulate_until_stopped(
         //     break;
         // }
 
-        if (!still_moving && steps > 50) || steps >= max_steps {
+        if (!still_moving && steps > 50) || steps >= SIMULATION_PARAMETERS.max_steps {
             // if steps >= max_steps {
             for physics_body in bodies.iter() {
                 let position = rigid_body_set
