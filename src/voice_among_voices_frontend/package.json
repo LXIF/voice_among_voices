@@ -27,6 +27,7 @@
     "@reown/appkit-adapter-wagmi": "^1.7.3",
     "@wagmi/connectors": "^5.7.4",
     "@wagmi/core": "^2.16.7",
+    "audio-recorder-polyfill": "^0.4.1",
     "extendable-media-recorder": "^9.2.11",
     "extendable-media-recorder-wav-encoder": "^7.0.115",
     "ic-siwe-js": "^0.2.4",
