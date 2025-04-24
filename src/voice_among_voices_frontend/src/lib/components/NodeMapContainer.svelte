@@ -36,7 +36,7 @@
         class?: string;
     } = $props();
 
-    let nodeMap = $state();
+    let nodeMap = $state<NodeMapPhysics>();
 
     onMount(async () => {
         $loadingVoices = true;
@@ -110,7 +110,9 @@
         nodeY: number;
         nodeRadius: number;
     }) {
-        nodeMap.handleDrop({ nodeX, nodeY, nodeRadius });
+        if (nodeMap) {
+            nodeMap.handleDrop({ nodeX, nodeY, nodeRadius });
+        }
     }
 </script>
 
