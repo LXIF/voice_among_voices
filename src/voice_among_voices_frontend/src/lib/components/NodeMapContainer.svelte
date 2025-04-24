@@ -32,18 +32,8 @@
 
     let {
         class: classes,
-        handleCoolDrop = $bindable(),
     }: {
         class?: string;
-        handleCoolDrop: ({
-            nodeX,
-            nodeY,
-            nodeRadius,
-        }: {
-            nodeX: number;
-            nodeY: number;
-            nodeRadius: number;
-        }) => void;
     } = $props();
 
     let nodeMap = $state();
@@ -62,11 +52,11 @@
         $simulationParameters = await backend.get_simulation_parameters();
     });
 
-    $effect(() => {
-        if ($identityAgent) {
-            $walletAddress = $appkitModal!.getAddress()!;
-        }
-    });
+    // $effect(() => {
+    //     if ($identityAgent) {
+    //         $walletAddress = $appkitModal!.getAddress()!;
+    //     }
+    // });
 
     $effect(() => {
         if ($walletAddress !== "") {

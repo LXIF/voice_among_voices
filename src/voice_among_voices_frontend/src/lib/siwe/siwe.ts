@@ -1,7 +1,8 @@
 import { canisterId } from "../../../../declarations/ic_siwe_provider";
 import { SiweManager, siweStateStore } from "ic-siwe-js";
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 import { browser } from "$app/environment";
+import { type Identity } from "@dfinity/agent";
 
 // Initialize stores with null for SSR
 export const siwe = writable<SiweManager | null>(null);
@@ -10,12 +11,10 @@ export const prepareLoginError = writable<string | null>(null);
 export const loginStatus = writable("");
 export const loginError = writable<string | null>(null);
 export const signMessageStatus = writable("");
+export const siweIdentity = writable<Identity | undefined>();
 
 // Only initialize SIWE in browser
 if (browser) {
-    // Initialize SIWE manager
-    siwe.set(new SiweManager(canisterId));
-
     // Set up subscription
     siweStateStore.subscribe((snapshot) => {
         const {
@@ -24,6 +23,7 @@ if (browser) {
             loginStatus: logStatus,
             loginError: logError,
             signMessageStatus: signMsgStatus,
+            identity
         } = snapshot.context;
 
         prepareLoginStatus.set(prepLoginStatus);
@@ -31,5 +31,9 @@ if (browser) {
         loginStatus.set(logStatus);
         loginError.set(logError?.message || null);
         signMessageStatus.set(signMsgStatus);
+        siweIdentity.set(identity);
     });
+
+    // Initialize SIWE manager
+    siwe.set(new SiweManager(canisterId));
 }

@@ -6,6 +6,7 @@ import { HttpAgent, SignIdentity } from "@dfinity/agent";
 import { building } from "$app/environment";
 
 import { writable, type Writable } from "svelte/store";
+import { siweIdentity } from "./siwe/siwe";
 
 type ActorType = ReturnType<typeof createActor>;
 
@@ -36,14 +37,12 @@ identityAgent.subscribe((agent) => {
     }
 });
 
-export { backend };
-
-export const setIdentityAgent = async (
-    newIdentity: SignIdentity | undefined,
-) => {
-    if (newIdentity) {
-        identityAgent.set(await HttpAgent.create({ identity: newIdentity }));
+siweIdentity.subscribe(async (identity) => {
+    if (!!identity) {
+        identityAgent.set(await HttpAgent.create({ identity }));
     } else {
-        identityAgent.set(newIdentity);
+        identityAgent.set(undefined);
     }
-};
+});
+
+export { backend };

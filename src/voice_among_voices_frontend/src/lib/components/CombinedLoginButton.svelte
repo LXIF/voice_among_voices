@@ -1,18 +1,11 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { setIdentityAgent } from "$lib/canisters";
     import Button from "./Button.svelte";
     import { appkitModal, wagmiConfig } from "$lib/appKit";
     import { identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
     import { walletAddress, resetUxState } from "$lib/state/uxState";
-    import {
-        siwe,
-        prepareLoginError,
-        prepareLoginStatus,
-        loginError,
-        loginStatus,
-    } from "$lib/siwe/siwe";
+    import { siwe } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
     import { getWalletClient, type Config } from "@wagmi/core";
 
@@ -22,6 +15,8 @@
 
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
+
+        setAddress();
 
         $appkitModal.subscribeState(async (newState) => {
             if (newState.initialized) {
@@ -35,9 +30,7 @@
                     !!$walletAddress
                 ) {
                     isLoggingIn = true;
-                    setSiweWalletClient();
-                    $siwe!.login().then(async (response) => {
-                        setIdentityAgent(response);
+                    $siwe!.login().then(() => {
                         isLoggingIn = false;
                     });
                 }
@@ -45,21 +38,15 @@
         });
     });
 
-    $effect(() => {
-        console.log($prepareLoginStatus);
-    });
-
-    $effect(() => {
-        console.log($prepareLoginError);
-    });
-
-    $effect(() => {
-        console.log($loginStatus);
-    });
-
-    $effect(() => {
-        console.log($loginError);
-    });
+    // less elegant, but subscribestate is insufficient apparently
+    function setAddress() {
+        const address = $appkitModal?.getAddress();
+        if (address === undefined) {
+            setTimeout(setAddress, 50);
+        } else {
+            $walletAddress = address;
+        }
+    }
 
     async function handleLogin() {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
@@ -90,8 +77,7 @@
         $siwe!.clear();
         $siwe!
             .login()
-            .then(async (response) => {
-                setIdentityAgent(response);
+            .then(() => {
                 isLoggingIn = false;
             })
             .then(() => {
@@ -103,7 +89,6 @@
         isLoggingOut = true;
         if (!$appkitModal) throw "Appkit Modal not initialized!";
         await $appkitModal.disconnect();
-        setIdentityAgent(undefined);
         $siwe!.clear();
         resetUxState();
         isLoggingOut = false;

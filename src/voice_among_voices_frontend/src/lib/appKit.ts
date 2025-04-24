@@ -6,13 +6,10 @@ import {
 } from "@reown/appkit-adapter-wagmi";
 import { derived, get, readable } from "svelte/store";
 import { browser } from "$app/environment";
-import { getWalletClient, type Config } from "@wagmi/core";
 
-console.log("[Debug] Module initialization start");
 
 // Force immediate execution
 const initializeStores = () => {
-    console.log("[Debug] Initializing stores");
 
     const projectId = "da65f4e00cada14e87d84160b45060f5";
     const networks = [base];
@@ -21,7 +18,6 @@ const initializeStores = () => {
     const wagmiAdapter = readable<WagmiAdapterType | undefined>(
         undefined,
         (set) => {
-            console.log("[Debug] Setting up wagmiAdapter");
             if (browser) {
                 try {
                     const adapter = new WagmiAdapter({ projectId, networks });
@@ -37,7 +33,6 @@ const initializeStores = () => {
     );
 
     const appkitModal = readable<AppKit | undefined>(undefined, (set) => {
-        console.log("[Debug] Setting up appkitModal");
         if (browser) {
             try {
                 const modal = createAppKit({
@@ -64,7 +59,6 @@ const initializeStores = () => {
     });
 
     const wagmiConfig = derived(wagmiAdapter, ($adapter) => {
-        console.log("[Debug] Deriving wagmiConfig");
         return $adapter?.wagmiConfig;
     });
 
@@ -73,7 +67,5 @@ const initializeStores = () => {
 
 // Force immediate initialization
 const { wagmiAdapter, appkitModal, wagmiConfig } = initializeStores();
-
-console.log("[Debug] Module initialization complete");
 
 export { wagmiAdapter, appkitModal, wagmiConfig };
