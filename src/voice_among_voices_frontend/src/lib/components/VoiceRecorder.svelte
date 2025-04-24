@@ -235,7 +235,7 @@
 
 <button
     onpointerdown={handleRecordDown}
-    class={"h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold " +
+    class={"pointer-events-auto h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold transition-all " +
         classes}
     class:recording>Rec</button
 >

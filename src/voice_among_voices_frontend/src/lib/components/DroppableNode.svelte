@@ -1,5 +1,8 @@
 <script lang="ts">
     import { dragging } from "$lib/state/uxState";
+    import { scale } from "svelte/transition";
+    import { elasticOut } from "svelte/easing";
+
     let {
         ondropnode,
         nodeWidthPx,
@@ -84,8 +87,12 @@
         aria-roledescription="drag this onto the map to place your node"
         onpointerdown={handlePointerDown}
         onpointerup={handlePointerUp}
-        class="z-50 cursor-pointer touch-none select-none"
+        class="pointer-events-auto z-50 cursor-pointer touch-none select-none"
         bind:this={draggableElement}
+        transition:scale={{
+            duration: 500,
+            easing: elasticOut,
+        }}
     >
         <svg
             width={nodeWidthPx + handleWidth}
