@@ -559,8 +559,8 @@
             role="button"
             cx={centerX}
             cy={centerY}
-            r={radius * 1.05}
-            stroke-width="15"
+            r={radius * 1.1}
+            stroke-width="35"
             fill="none"
             stroke="red"
             opacity="0"
