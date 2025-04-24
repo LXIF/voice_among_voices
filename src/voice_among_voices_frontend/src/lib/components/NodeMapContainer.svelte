@@ -76,7 +76,6 @@
 
     const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
         try {
-            console.log(typeof $currentVoiceBlob);
             const sample = await blobToUint8Array($currentVoiceBlob!);
             const { x, y, id } = voiceNode;
 
