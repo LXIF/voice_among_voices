@@ -82,85 +82,89 @@
     <div class="relative top-14 bg-black dark:bg-white text-white dark:text-black min-w-10 min-h-10 rounded-full text-center flex justify-center items-center text-3xl">drag</div>
 </div> -->
 <!-- </div> -->
-<!-- TODO: generalize -->
-{#if nodeWidthPx > 0}
-    <div
-        role="button"
-        tabindex="0"
-        aria-roledescription="drag this onto the map to place your node"
-        onpointerdown={handlePointerDown}
-        onpointerup={handlePointerUp}
-        class="pointer-events-auto z-50 cursor-pointer touch-none select-none"
-        bind:this={draggableElement}
-        transition:scale={{
-            duration: 500,
-            easing: elasticOut,
-        }}
-    >
-        <svg width={handleWidth} height={scaledNodeWidthPx + 2 * handleWidth}>
-            <!-- Drag handle -->
-            <circle
-                cx={handleWidth / 2}
-                cy={handleY}
-                r={25}
-                class="fill-slate-950 dark:fill-slate-50"
-            />
+<div class="flex w-20 items-center justify-center">
+    {#if nodeWidthPx > 0}
+        <div
+            role="button"
+            tabindex="0"
+            aria-roledescription="drag this onto the map to place your node"
+            onpointerdown={handlePointerDown}
+            onpointerup={handlePointerUp}
+            class="pointer-events-auto z-50 cursor-pointer touch-none select-none"
+            bind:this={draggableElement}
+            transition:scale={{
+                duration: 500,
+                easing: elasticOut,
+            }}
+        >
+            <svg
+                width={handleWidth}
+                height={scaledNodeWidthPx + 2 * handleWidth}
+            >
+                <!-- Drag handle -->
+                <circle
+                    cx={handleWidth / 2}
+                    cy={handleY}
+                    r={25}
+                    class="fill-slate-950 dark:fill-slate-50"
+                />
 
-            <!-- Drag handle line -->
-            <line
-                x1={nodeX}
-                y1={handleY}
-                x2={nodeX}
-                y2={nodeY}
-                stroke-width="2"
-                class="stroke-slate-950 dark:stroke-slate-50"
-            />
+                <!-- Drag handle line -->
+                <line
+                    x1={nodeX}
+                    y1={handleY}
+                    x2={nodeX}
+                    y2={nodeY}
+                    stroke-width="2"
+                    class="stroke-slate-950 dark:stroke-slate-50"
+                />
 
-            <!-- Drag handle dots -->
-            <circle
-                cx={nodeX - pointOffset}
-                cy={handleY - pointOffset / 2}
-                r={2}
-                class="fill-slate-200 dark:fill-slate-500"
-            />
-            <circle
-                cx={nodeX}
-                cy={handleY - pointOffset / 2}
-                r={2}
-                class="fill-slate-200 dark:fill-slate-500"
-            />
-            <circle
-                cx={nodeX + pointOffset}
-                cy={handleY - pointOffset / 2}
-                r={2}
-                class="fill-slate-200 dark:fill-slate-500"
-            />
-            <circle
-                cx={nodeX - pointOffset}
-                cy={handleY + pointOffset / 2}
-                r={2}
-                class="fill-slate-200 dark:fill-slate-500"
-            />
-            <circle
-                cx={nodeX}
-                cy={handleY + pointOffset / 2}
-                r={2}
-                class="fill-slate-200 dark:fill-slate-500"
-            />
-            <circle
-                cx={nodeX + pointOffset}
-                cy={handleY + pointOffset / 2}
-                r={2}
-                class="fill-slate-200 dark:fill-slate-500"
-            />
+                <!-- Drag handle dots -->
+                <circle
+                    cx={nodeX - pointOffset}
+                    cy={handleY - pointOffset / 2}
+                    r={2}
+                    class="fill-slate-200 dark:fill-slate-500"
+                />
+                <circle
+                    cx={nodeX}
+                    cy={handleY - pointOffset / 2}
+                    r={2}
+                    class="fill-slate-200 dark:fill-slate-500"
+                />
+                <circle
+                    cx={nodeX + pointOffset}
+                    cy={handleY - pointOffset / 2}
+                    r={2}
+                    class="fill-slate-200 dark:fill-slate-500"
+                />
+                <circle
+                    cx={nodeX - pointOffset}
+                    cy={handleY + pointOffset / 2}
+                    r={2}
+                    class="fill-slate-200 dark:fill-slate-500"
+                />
+                <circle
+                    cx={nodeX}
+                    cy={handleY + pointOffset / 2}
+                    r={2}
+                    class="fill-slate-200 dark:fill-slate-500"
+                />
+                <circle
+                    cx={nodeX + pointOffset}
+                    cy={handleY + pointOffset / 2}
+                    r={2}
+                    class="fill-slate-200 dark:fill-slate-500"
+                />
 
-            <!-- Recorded Node -->
-            <circle
-                cx={nodeX}
-                cy={nodeY}
-                r={scaledNodeWidthPx / 2}
-                fill={`hsl(${nodeId % 360}, 100%, 50%)`}
-            />
-        </svg>
-    </div>
-{/if}
+                <!-- Recorded Node -->
+                <circle
+                    cx={nodeX}
+                    cy={nodeY}
+                    r={scaledNodeWidthPx / 2}
+                    fill={`hsl(${nodeId % 360}, 100%, 50%)`}
+                />
+            </svg>
+        </div>
+    {/if}
+</div>

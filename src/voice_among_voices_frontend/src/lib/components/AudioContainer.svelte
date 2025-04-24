@@ -100,10 +100,10 @@
     // }
 </script>
 
-<div>
+<div class="w-full">
     {#if $selectedAngle && $identityAgent}
         <div
-            class="pointer-events-none absolute bottom-12 flex min-h-32 w-screen items-center justify-between px-8 md:bottom-24 lg:bottom-24"
+            class="pointer-events-none absolute bottom-12 flex min-h-32 w-screen items-center justify-center gap-36 px-8 md:gap-56"
         >
             <VoiceRecorder
                 recordingLength={handleRecordingLength}
