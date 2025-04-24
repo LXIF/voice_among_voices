@@ -6,7 +6,13 @@
     import { identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
     import { walletAddress, resetUxState } from "$lib/state/uxState";
-    import { siwe } from "$lib/siwe/siwe";
+    import {
+        siwe,
+        prepareLoginError,
+        prepareLoginStatus,
+        loginError,
+        loginStatus,
+    } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
     import { getWalletClient, type Config } from "@wagmi/core";
 
@@ -20,8 +26,14 @@
         $appkitModal.subscribeState(async (newState) => {
             if (newState.initialized) {
                 walletConnected = $appkitModal.getIsConnectedState();
+                $walletAddress = $appkitModal?.getAddress() ?? "";
 
-                if (walletConnected && !$identityAgent && !isLoggingIn) {
+                if (
+                    walletConnected &&
+                    !$identityAgent &&
+                    !isLoggingIn &&
+                    !!$walletAddress
+                ) {
                     isLoggingIn = true;
                     setSiweWalletClient();
                     $siwe!.login().then(async (response) => {
@@ -31,6 +43,22 @@
                 }
             }
         });
+    });
+
+    $effect(() => {
+        console.log($prepareLoginStatus);
+    });
+
+    $effect(() => {
+        console.log($prepareLoginError);
+    });
+
+    $effect(() => {
+        console.log($loginStatus);
+    });
+
+    $effect(() => {
+        console.log($loginError);
     });
 
     async function handleLogin() {
