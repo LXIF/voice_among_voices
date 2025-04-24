@@ -234,6 +234,6 @@
 
 <style lang="postcss">
     .recording {
-        @apply bg-red-600;
+        @apply bg-slate-950 text-slate-50 dark:bg-slate-50 dark:text-slate-950;
     }
 </style>

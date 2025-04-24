@@ -174,19 +174,21 @@
     // $: isPlaying = !audioElement?.paused;
 </script>
 
-<div class="flex flex-col items-center gap-4 w-full">
+<div class="flex w-full flex-col items-center gap-4">
     {#if $loadingFile}
-        <h1 class="text-center text-5xl font-bold w-min">Loading...</h1>
+        <h1 class="w-min text-center text-5xl font-bold sm:text-2xl">
+            Loading...
+        </h1>
     {:else}
         <Button
-            class="text-center text-5xl font-bold w-min z-10"
+            class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
             onclick={fetchAudioFileOrPlayPause}
             >{isPlaying ? "Pause" : "Play"}</Button
         >
     {/if}
     <h1
         style={`color: hsl(${$selectedAngle},100%,50%)`}
-        class="text-5xl text-center font-bold"
+        class="text-center text-5xl font-bold"
     >
         {$selectedAngle}°
     </h1>
