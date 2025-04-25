@@ -57,12 +57,12 @@ pub const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
     force_cutoff: 100.,
     max_distance: 20.,
-    force_strength: 4000.,
+    force_strength: 3000.,
     linear_damping: 10.,
     logical_radius: 50.,
     n_collider_vertices: 360,
     friction: 0.5,
-    density: 3.,
+    density: 2.,
     max_steps: 10_000,
 };
 
