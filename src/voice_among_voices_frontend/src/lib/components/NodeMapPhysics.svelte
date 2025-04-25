@@ -517,26 +517,28 @@
                         context!.closePath();
                     });
 
-                    backendBodies?.forEach((body) => {
-                        context!.beginPath();
-                        context!.ellipse(
-                            body.x,
-                            body.y,
-                            body.radius + 1,
-                            body.radius + 1,
-                            0,
-                            0,
-                            Math.PI * 2,
-                        );
+                    if ($justDropped) {
+                        backendBodies?.forEach((body) => {
+                            context!.beginPath();
+                            context!.ellipse(
+                                body.x,
+                                body.y,
+                                body.radius + 1,
+                                body.radius + 1,
+                                0,
+                                0,
+                                Math.PI * 2,
+                            );
 
-                        context!.strokeStyle = isDarkMode()
-                            ? `hsl(0, 0%, 100%)`
-                            : `hsl(0, 0%, 0%)`; // Color of the playhead line
+                            context!.strokeStyle = isDarkMode()
+                                ? `hsl(0, 0%, 100%)`
+                                : `hsl(0, 0%, 0%)`; // Color of the playhead line
 
-                        context!.lineWidth = 0.3;
-                        context!.stroke();
-                        context!.closePath();
-                    });
+                            context!.lineWidth = 0.3;
+                            context!.stroke();
+                            context!.closePath();
+                        });
+                    }
                     if (showPlayHead) {
                         drawPlayHead(context);
                     }
