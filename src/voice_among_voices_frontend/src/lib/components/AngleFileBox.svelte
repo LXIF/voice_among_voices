@@ -123,7 +123,7 @@
             audioURL = await handleBackendAudioData(audioData);
             await tick();
             downloadLink!.href = audioURL;
-            downloadLink!.download = `voice_among_voices_${$selectedAngle}_${Date.now()}.wav`;
+            downloadLink!.download = `voice_among_voices_${$selectedAngle}°_${Date.now()}.wav`;
             setTimeout(() => {
                 $loadingFile = false;
             }, 750);
@@ -222,8 +222,7 @@
             </audio>
 
             <!-- Download link for the audio -->
-            <Button
-                class="z-10 w-min text-center text-lg md:text-4xl lg:text-5xl"
+            <Button class="z-10 w-min text-center text-lg "
                 ><a bind:this={downloadLink} href={audioURL} download>
                     Download
                 </a>
