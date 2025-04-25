@@ -89,7 +89,9 @@
             });
 
             if ("Ok" in backend_simulation_result) {
-                $backendSimulationResult = backend_simulation_result.Ok;
+                if ($justDropped) {
+                    $backendSimulationResult = backend_simulation_result.Ok;
+                }
             } else {
                 if ("NotValidAudioFileError" in backend_simulation_result.Err) {
                     console.log(

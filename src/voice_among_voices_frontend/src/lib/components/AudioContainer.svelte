@@ -10,6 +10,7 @@
         fileLoaded,
         hoveredAngle,
         selectedAngle,
+        backendSimulationResult,
     } from "$lib/state/uxState";
     import DroppableNode from "./DroppableNode.svelte";
     import VoiceRecorder from "./VoiceRecorder.svelte";
@@ -128,6 +129,7 @@
         onPressPlay={() => {
             nodeWidthPx = 0;
             nodeWidthLogical = 0;
+            $backendSimulationResult = [];
         }}
     />
 </div>
