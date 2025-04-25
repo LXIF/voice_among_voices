@@ -20,10 +20,12 @@
         onPlaybackPosition,
         onFileAngle,
         onFileLoaded,
+        onPressPlay,
     }: {
         onPlaybackPosition: (normalizedPosition: number) => void;
         onFileAngle: (angle: number) => void;
         onFileLoaded: (loaded: boolean) => void;
+        onPressPlay: () => void;
     } = $props();
 
     let audioURL: string = $state("");
@@ -34,7 +36,8 @@
     let downloadLink: HTMLAnchorElement | undefined = $state();
 
     // Fetch audio file based on angle
-    async function fetchAudioFileOrPlayPause(angle: number) {
+    async function fetchAudioFileOrPlayPause() {
+        onPressPlay();
         if (isPlaying) {
             togglePlayPause();
             return;

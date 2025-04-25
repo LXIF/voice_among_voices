@@ -125,5 +125,9 @@
         }}
         onFileAngle={(newAngle) => ($angle = newAngle)}
         onFileLoaded={(loaded) => ($fileLoaded = loaded)}
+        onPressPlay={() => {
+            nodeWidthPx = 0;
+            nodeWidthLogical = 0;
+        }}
     />
 </div>
