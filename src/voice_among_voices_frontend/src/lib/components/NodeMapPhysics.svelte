@@ -27,6 +27,7 @@
         selectedAngle,
         hoveredAngle,
         mapRotation,
+        justDropped,
     } from "$lib/state/uxState";
     import { isDarkMode } from "$lib/utils/uxUtils";
 
@@ -415,7 +416,7 @@
             if (elapsed > interval) {
                 then = now - (elapsed % interval);
 
-                if (world && physicsActive) {
+                if (world && physicsActive && $justDropped) {
                     steps++;
 
                     if (steps > max_steps) {
