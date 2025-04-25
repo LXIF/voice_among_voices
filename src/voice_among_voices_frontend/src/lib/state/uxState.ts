@@ -43,6 +43,7 @@ export const loadingProgress = new Tween(0, {
     duration: 500,
 });
 export const loadingVoices = writable<boolean>(true); // start with loading animation active
+export const justDropped = writable<boolean>(false);
 
 export const resetUxState = () => {
     selectedAngle.set(0);
@@ -61,4 +62,5 @@ export const resetUxState = () => {
     loadingFile.set(false);
     loadingProgress.set(0);
     loadingVoices.set(false);
+    justDropped.set(false);
 };

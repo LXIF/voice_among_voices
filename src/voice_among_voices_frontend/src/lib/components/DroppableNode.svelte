@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { dragging } from "$lib/state/uxState";
+    import { dragging, justDropped } from "$lib/state/uxState";
     import { scale } from "svelte/transition";
     import { elasticOut } from "svelte/easing";
 
@@ -55,15 +55,17 @@
     }
 
     function handlePointerUp(e: PointerEvent) {
-        if (!draggableElement) throw "should be unreachable";
         ondropnode({ x: e.clientX, y: e.clientY });
-        $dragging = false;
-        draggableElement.classList.remove("fixed");
-        draggableElement.style.left = "";
-        draggableElement.style.top = "";
-        const body = document.querySelector("body");
-        if (!body) throw "Help! I have no body!";
-        body.onpointermove = null;
+        setTimeout(() => {
+            if (!draggableElement) throw "should be unreachable";
+            $dragging = false;
+            draggableElement.classList.remove("fixed");
+            draggableElement.style.left = "";
+            draggableElement.style.top = "";
+            const body = document.querySelector("body");
+            if (!body) throw "Help! I have no body!";
+            body.onpointermove = null;
+        }, 100);
     }
 </script>
 
@@ -83,7 +85,7 @@
 </div> -->
 <!-- </div> -->
 <div class="flex w-20 items-center justify-center">
-    {#if nodeWidthPx > 0}
+    {#if nodeWidthPx > 0 && !$justDropped}
         <div
             role="button"
             tabindex="0"

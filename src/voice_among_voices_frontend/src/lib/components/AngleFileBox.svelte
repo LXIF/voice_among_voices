@@ -3,7 +3,13 @@
     import { backend } from "$lib/canisters";
     import { handleBackendAudioData } from "$lib/utils/convUtils";
     import type { HttpStreamingResponse } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    import { loadingProgress, loadingFile } from "$lib/state/uxState";
+    import {
+        loadingProgress,
+        loadingFile,
+        justDropped,
+        backendSimulationResult,
+        voiceNodes,
+    } from "$lib/state/uxState";
     import {
         selectedAngle,
         externalPlaybackPosition,
@@ -40,6 +46,11 @@
             error = "Please input an angle between 0 and 359.";
             return;
         }
+
+        // reset the map
+        $justDropped = false;
+        $backendSimulationResult = [];
+        $voiceNodes = await backend.get_voice_nodes();
 
         try {
             loadingProgress.set(0, {
@@ -176,7 +187,7 @@
 
 <div class="flex w-full flex-col items-center gap-4">
     {#if $loadingFile}
-        <h1 class="w-min text-center text-5xl font-bold sm:text-2xl">
+        <h1 class="w-min text-center text-2xl font-bold lg:text-5xl">
             Loading...
         </h1>
     {:else}
@@ -211,7 +222,12 @@
             </audio>
 
             <!-- Download link for the audio -->
-            <a bind:this={downloadLink} href={audioURL} download> Download </a>
+            <Button
+                class="z-10 w-min text-center text-lg md:text-4xl lg:text-5xl"
+                ><a bind:this={downloadLink} href={audioURL} download>
+                    Download
+                </a>
+            </Button>
         </div>
     {/if}
 </div>

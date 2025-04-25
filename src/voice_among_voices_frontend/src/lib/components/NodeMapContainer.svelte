@@ -24,6 +24,7 @@
         angle,
         fileLoaded,
         loadingVoices,
+        justDropped,
     } from "$lib/state/uxState";
     import { blur } from "svelte/transition";
     import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
@@ -76,6 +77,7 @@
 
     const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
         try {
+            $justDropped = true;
             const sample = await blobToUint8Array($currentVoiceBlob!);
             const { x, y, id } = voiceNode;
 

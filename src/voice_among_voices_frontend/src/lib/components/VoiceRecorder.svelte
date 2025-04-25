@@ -4,6 +4,14 @@
     import { browser } from "$app/environment";
     import { encodeWav } from "$lib/utils/convUtils";
     import type { AudioParameters } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+    import { scale } from "svelte/transition";
+    import { elasticOut } from "svelte/easing";
+    import {
+        backendSimulationResult,
+        justDropped,
+        voiceNodes,
+    } from "$lib/state/uxState";
+    import { backend } from "$lib/canisters";
 
     // time the rec button needs to be held to be push-action
     const recordActionTimingCutoff = 200;
@@ -124,7 +132,7 @@
     let recordingStart: number;
     let recordingInterval: ReturnType<typeof setInterval>;
 
-    function handleRecordDown(e: PointerEvent) {
+    async function handleRecordDown(e: PointerEvent) {
         e.preventDefault();
         // if we're still recording, we used toggle action
         if (recording) {
@@ -134,6 +142,11 @@
         if (!audioParameters) throw "no parameters";
 
         handleActivateMicrophone();
+
+        // reset the map
+        $justDropped = false;
+        $backendSimulationResult = [];
+        $voiceNodes = await backend.get_voice_nodes();
 
         recording = true;
         window.addEventListener("pointerup", handleRecordUp);
@@ -207,7 +220,11 @@
     onpointerdown={handleRecordDown}
     class={"pointer-events-auto h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold transition-all " +
         classes}
-    class:recording>Rec</button
+    class:recording
+    transition:scale={{
+        duration: 500,
+        easing: elasticOut,
+    }}>Rec</button
 >
 
 <style lang="postcss">
