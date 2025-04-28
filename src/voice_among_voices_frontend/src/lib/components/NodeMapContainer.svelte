@@ -101,9 +101,17 @@
             if ("Ok" in backend_simulation_result) {
                 $backendSimulationResult = backend_simulation_result.Ok;
                 $applicationState = applicationStates.loggedInIdle;
+                $currentVoiceBlob = null;
+                $sampleLength = 0;
+                $nodeWidthPx = 0;
+                $nodeWidthLogical = 0;
             } else {
                 $applicationState = applicationStates.loggedInIdle;
                 $toastMessage = "Failed to drop new node";
+                $currentVoiceBlob = null;
+                $sampleLength = 0;
+                $nodeWidthPx = 0;
+                $nodeWidthLogical = 0;
                 if ("NotValidAudioFileError" in backend_simulation_result.Err) {
                     console.log(
                         backend_simulation_result.Err.NotValidAudioFileError,
@@ -114,11 +122,6 @@
                     console.log("Not within circle error");
                 }
             }
-            $voiceNodes = await getVoiceNodes();
-            $currentVoiceBlob = null;
-            $sampleLength = 0;
-            $nodeWidthPx = 0;
-            $nodeWidthLogical = 0;
         } catch (e) {
             $toastMessage = "Failed to drop new node";
             console.error("Failed to drop new node, got this: ", e);
