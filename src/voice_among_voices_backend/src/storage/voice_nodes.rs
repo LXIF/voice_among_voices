@@ -1,4 +1,3 @@
-use futures::FutureExt;
 use ic_cdk::api::canister_self;
 
 use crate::physics::simulate_until_stopped;
@@ -81,13 +80,6 @@ pub fn update_stored_voice_node(
         });
     });
 
-    spawn(async {
-        Call::unbounded_wait(canister_self(), "update_zero_cache")
-            .await
-            .map(|_| ())
-            .map_err(|_| ())
-            .unwrap() // TODO: this might need logging or so.
-    });
     Ok(returnable_nodes)
 }
 

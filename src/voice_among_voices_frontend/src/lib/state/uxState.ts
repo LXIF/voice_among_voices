@@ -148,7 +148,7 @@ export const applicationStates = {
     },
     loggedInIdle: {
         state: "loggedInIdle" as const,
-        physicsActive: false,
+        physicsActive: true,
         wheelActive: true,
         recorderActive: true,
         recorderVisible: true,

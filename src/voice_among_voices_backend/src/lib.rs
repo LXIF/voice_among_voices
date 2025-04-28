@@ -9,13 +9,16 @@ mod utils;
 use audio::*;
 use candid::Principal;
 use ic_cdk::{
-    api::{msg_caller, performance_counter},
-    export_candid, init, post_upgrade, query, update,
+    api::{canister_self, msg_caller, performance_counter},
+    call::Call,
+    export_candid,
+    futures::spawn,
+    init, post_upgrade, query, update,
 };
 use ic_cdk_timers::set_timer;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{time::Duration, u64};
+use std::{panic::RefUnwindSafe, time::Duration, u64};
 use storage::{
     files_and_voices::{get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk},
     init::*,
@@ -49,7 +52,9 @@ async fn update_voice_node(
     node: VoiceNodeIngress,
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     check_auth_for_single_node_id(node.id).await; // traps if not authorized
-    update_stored_voice_node(node)
+    let result = update_stored_voice_node(node);
+    ic_cdk_timers::set_timer(Duration::from_millis(0), || zero_cache_update());
+    result
 }
 
 #[query]
@@ -71,10 +76,10 @@ fn get_zero_file() -> HttpStreamingResponse {
     get_file_for_zero_angle()
 }
 
-#[update]
-fn update_zero_cache() {
-    zero_cache_update();
-}
+// #[update]
+// fn update_zero_cache() {
+//     zero_cache_update();
+// }
 
 #[query]
 fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
