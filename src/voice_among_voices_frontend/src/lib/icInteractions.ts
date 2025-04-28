@@ -148,18 +148,7 @@ export const getTokenAddress = async () => {
 
 export const updateVoiceNode = async (voiceNode: VoiceNodeIngress) => {
     try {
-        const response = await withRetry(
-            () => backend.update_voice_node(voiceNode),
-            {
-                maxRetries: 10,
-                delayMs: 150,
-                validate: (response) => "Ok" in response,
-                onRetry: (attempt) =>
-                    console.log(
-                        `Retrying update voice node, attempt ${attempt}...`,
-                    ),
-            },
-        );
+        const response = backend.update_voice_node(voiceNode);
         return response;
     } catch (error) {
         toastMessage.set("Error updating voice node, please reload the page.");
