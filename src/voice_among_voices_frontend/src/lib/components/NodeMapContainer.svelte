@@ -73,7 +73,11 @@
             $applicationState = applicationStates.loadingTokens;
         }
 
-        $myTokens = await fetchTokens();
+        if (!!$walletAddress) {
+            $myTokens = await fetchTokens();
+        } else {
+            setTimeout(fetchOwnedTokens, 500);
+        }
         $applicationState = applicationStates.loggedInIdle;
     }
 

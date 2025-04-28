@@ -7,6 +7,7 @@ import { writable, type Subscriber, type Updater } from "svelte/store";
 import { Tween } from "svelte/motion";
 import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
 import { browser } from "$app/environment";
+import { getVoiceNodes } from "$lib/icInteractions";
 
 if (browser) {
     console.log("[Debug] uxState.svelte.ts module initialization");
@@ -204,25 +205,11 @@ const createApplicationState = () => {
     const customSet = (value: ApplicationState) => {
         set(value);
 
-        console.log("[Debug] applicationState changed", value.state);
-        if (value.state === "playingFile") {
-            backendSimulationResult.set([]);
-        }
-        if (value.state === "loadingFile") {
-            backendSimulationResult.set([]);
-        }
         if (value.state === "recordingVoice") {
             backendSimulationResult.set([]);
         }
-        if (value.state === "draggingVoice") {
-            backendSimulationResult.set([]);
-        }
-        if (value.state === "loggedOut") {
-            backendSimulationResult.set([]);
-        }
-        if (value.state === "rotatingMap") {
-            backendSimulationResult.set([]);
-        }
+
+        console.log("[Debug] applicationState changed", value.state);
     };
 
     return {

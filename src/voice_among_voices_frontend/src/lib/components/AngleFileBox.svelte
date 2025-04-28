@@ -58,7 +58,6 @@
 
         // reset the map
         $applicationState = applicationStates.loadingFile;
-        $backendSimulationResult = [];
         $voiceNodes = await getVoiceNodes();
 
         try {

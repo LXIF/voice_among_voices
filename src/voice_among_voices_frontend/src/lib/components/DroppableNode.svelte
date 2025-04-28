@@ -1,7 +1,12 @@
 <script lang="ts">
-    import { applicationState, applicationStates } from "$lib/state/uxState";
+    import {
+        applicationState,
+        applicationStates,
+        voiceNodes,
+    } from "$lib/state/uxState";
     import { scale } from "svelte/transition";
     import { elasticOut } from "svelte/easing";
+    import { getVoiceNodes } from "$lib/icInteractions";
 
     let {
         ondropnode,
@@ -30,13 +35,14 @@
     let nodeY = $derived(scaledNodeWidthPx / 2);
     let handleY = $derived(nodeY + 70);
 
-    function handlePointerDown(e: PointerEvent) {
+    async function handlePointerDown(e: PointerEvent) {
         e.preventDefault();
         if (!draggableElement) throw "should be unreachable";
         if (!$applicationState.droppingActive) return;
         draggableElement.style.left = `${e.clientX - (nodeWidthPx / 2 + 25)}px`;
         draggableElement.style.top = `${e.clientY - (nodeWidthPx / 2 + 70)}px`;
         startDrag();
+        $voiceNodes = await getVoiceNodes();
     }
 
     function pointerMove(e: PointerEvent) {

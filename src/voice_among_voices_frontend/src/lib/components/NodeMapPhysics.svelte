@@ -28,11 +28,13 @@
         mapRotation,
         applicationState,
         applicationStates,
+        voiceNodes,
     } from "$lib/state/uxState";
     import { isDarkMode } from "$lib/utils/uxUtils";
     import {
         getColliderCoordinates,
         getSimulationParameters,
+        getVoiceNodes,
     } from "$lib/icInteractions";
 
     let {
@@ -161,12 +163,15 @@
     //     }
     // });
 
-    function resetNodes() {
-        if (backendNodes.length > 0) {
-            localNodes = [...backendNodes];
-            onResetNodes?.();
-            return;
-        }
+    async function resetNodes() {
+        // if (backendNodes.length > 0) {
+        //     console.log("resetting with backend");
+        //     localNodes = [...backendNodes];
+        //     onResetNodes?.();
+        //     $voiceNodes = await getVoiceNodes();
+        //     return;
+        // }
+        console.log("resetting nodes");
         localNodes = [...nodes];
     }
 
@@ -615,6 +620,7 @@
         nodeY: number;
         nodeRadius: number;
     }) {
+        resetNodes();
         const rect = canvas!.getBoundingClientRect();
 
         // Get center of the canvas

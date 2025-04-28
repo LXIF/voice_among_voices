@@ -149,8 +149,6 @@
 
         // reset the map
         $applicationState = applicationStates.recordingVoice;
-        $backendSimulationResult = [];
-        $voiceNodes = await getVoiceNodes();
 
         $applicationState = applicationStates.recordingVoice;
         window.addEventListener("pointerup", handleRecordUp);
