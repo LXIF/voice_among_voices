@@ -7,8 +7,8 @@
         selectedAngle,
         playheadPosition,
         loadingProgress,
-        loadingFile,
         myTokens,
+        applicationState,
     } from "$lib/state/uxState";
     import { identityAgent } from "$lib/canisters";
     import { blur } from "svelte/transition";
@@ -18,14 +18,12 @@
 
     let {
         class: classes = "",
-        loading,
         onSelectAngle,
         onHoverAngle,
         loggedIn,
     }: {
         nodes: VoiceNodeEgress[];
         class?: string;
-        loading: boolean;
         onSelectAngle: (angle: number) => void;
         onHoverAngle: (angle: number | null) => void;
         loggedIn: boolean;
@@ -209,7 +207,7 @@
 
     // Update the animation
     $effect(() => {
-        if (loading) {
+        if ($applicationState.showLoadingAnimation) {
             let lastTime = performance.now();
 
             function animate(currentTime: number) {
@@ -234,7 +232,7 @@
 
     // Helper function to get the current pulse scale
     function getPulseScale(): number {
-        if (!loading) return 1;
+        if (!$applicationState.showLoadingAnimation) return 1;
         // Create a heartbeat-like effect with two quick pulses
         const t = pulseOffset;
         const pulse = Math.sin(t) * 0.5 + Math.sin(2 * t) * 0.25;
@@ -244,7 +242,7 @@
     function getLineColor(angle: number, isAvailable: boolean): string {
         if (!loggedIn) {
             return hsvToRgb(angle, 100, 100);
-        } else if (loading) {
+        } else if ($applicationState.showLoadingAnimation) {
             // During loading, rotate the hue and create a wave effect for saturation
             const adjustedAngle = (angle + rotatingOffset) % 360;
             // Create a wave effect based on the angle's position relative to the rotating offset
@@ -417,7 +415,7 @@
     class={`${classes} pointer-events-none touch-none`}
 >
     <!-- Loading progress arc -->
-    {#if $loadingFile}
+    {#if $applicationState.showFileLoadingLine}
         <path
             d={getProgressArc(
                 centerX,
@@ -450,8 +448,10 @@
             stroke="red"
             opacity="0"
             onpointerdown={handleCirclePointerDown}
-            pointer-events={!!$identityAgent ? "auto" : "none"}
-            class={!!$identityAgent
+            pointer-events={!!$identityAgent && $applicationState.wheelActive
+                ? "auto"
+                : "none"}
+            class={!!$identityAgent && $applicationState.wheelActive
                 ? "z-20 cursor-grab active:cursor-grabbing"
                 : "z-20"}
         />
@@ -484,12 +484,15 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
                     onmouseover={() =>
-                        isAngleAvailable(angle) && (hoveredAngle = angle)}
+                        isAngleAvailable(angle) &&
+                        $applicationState.wheelActive &&
+                        (hoveredAngle = angle)}
                     onmouseleave={() => (hoveredAngle = null)}
                     onpointerdown={(e) => {
-                        if (!$identityAgent) return;
+                        if (!$identityAgent || !$applicationState.wheelActive)
+                            return;
                         if (isAngleAvailable(angle)) {
                             handleSelectAngle(angle);
                         } else {
@@ -497,11 +500,14 @@
                         }
                     }}
                     onfocus={() =>
-                        isAngleAvailable(angle) && (hoveredAngle = angle)}
+                        isAngleAvailable(angle) &&
+                        (hoveredAngle = angle) &&
+                        $applicationState.wheelActive}
                     onblur={() => (hoveredAngle = null)}
                     onkeydown={(e) => {
                         if (
                             isAngleAvailable(angle) &&
+                            $applicationState.wheelActive &&
                             (e.key === "Enter" || e.key === " ")
                         ) {
                             handleSelectAngle(angle);
@@ -547,7 +553,7 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent ? "cursor-grab active:cursor-grabbing" : ""}`}
+                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : ""}`}
                     stroke={getLineColor(angle, isAngleAvailable(angle))}
                     stroke-width={hoveredAngle === angle ? 2.2 : 0.5}
                     pointer-events="none"
@@ -565,8 +571,10 @@
             stroke="red"
             opacity="0"
             onpointerdown={handleCirclePointerDown}
-            pointer-events={!!$identityAgent ? "auto" : "none"}
-            class={!!$identityAgent
+            pointer-events={!!$identityAgent && $applicationState.wheelActive
+                ? "auto"
+                : "none"}
+            class={!!$identityAgent && $applicationState.wheelActive
                 ? "z-20 cursor-grab active:cursor-grabbing"
                 : "z-20"}
         />

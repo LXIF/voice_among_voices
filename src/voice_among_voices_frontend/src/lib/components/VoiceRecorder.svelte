@@ -7,11 +7,14 @@
     import { scale } from "svelte/transition";
     import { elasticOut } from "svelte/easing";
     import {
+        applicationState,
+        applicationStates,
         backendSimulationResult,
-        justDropped,
+        toastMessage,
         voiceNodes,
     } from "$lib/state/uxState";
     import { backend } from "$lib/canisters";
+    import { getVoiceNodes } from "$lib/icInteractions";
 
     // time the rec button needs to be held to be push-action
     const recordActionTimingCutoff = 200;
@@ -19,7 +22,6 @@
     let localStream: MediaStream | undefined = $state();
     let audioElement: HTMLAudioElement | undefined = $state();
     let mediaRecorder = $state<any>();
-    let recording = $state(false);
     let chunks: Blob[] = $state([]);
     let audioBlob: Blob | undefined = $state();
     // let register: any = $state();
@@ -33,7 +35,7 @@
         recordingLength,
         class: classes,
     }: {
-        audioParameters: AudioParameters | undefined;
+        audioParameters: AudioParameters | null;
         voiceRecorded: (blob: Blob) => void;
         recordingLength: (length: number) => void;
         class?: string;
@@ -57,7 +59,7 @@
         if (localStream) {
             localStream.getTracks().forEach((track) => track.stop());
         }
-        recording = false;
+        $applicationState = applicationStates.loggedInIdle;
     }
 
     function processAudioBlob(blob: Blob, trimLengthMs: number) {
@@ -135,7 +137,7 @@
     async function handleRecordDown(e: PointerEvent) {
         e.preventDefault();
         // if we're still recording, we used toggle action
-        if (recording) {
+        if ($applicationState.state === "recordingVoice") {
             handleRecordUp();
             return;
         }
@@ -144,11 +146,11 @@
         handleActivateMicrophone();
 
         // reset the map
-        $justDropped = false;
+        $applicationState = applicationStates.recordingVoice;
         $backendSimulationResult = [];
-        $voiceNodes = await backend.get_voice_nodes();
+        $voiceNodes = await getVoiceNodes();
 
-        recording = true;
+        $applicationState = applicationStates.recordingVoice;
         window.addEventListener("pointerup", handleRecordUp);
         mediaRecorder?.start();
 
@@ -172,9 +174,9 @@
         }
 
         clearInterval(recordingInterval);
-        recording = false;
         window.removeEventListener("pointerup", handleRecordUp);
         mediaRecorder?.stop();
+        $applicationState = applicationStates.loggedInIdle;
     }
 
     function handleActivateMicrophone() {
@@ -184,6 +186,7 @@
                 // .then((stream) => (localStream = stream))
                 .then((stream) => setupMediaRecorder(stream))
                 .catch((err) => {
+                    $toastMessage = "Error activating microphone";
                     console.error(`getUserMedia hiccup: ${err}`);
                 });
         } else {
@@ -192,7 +195,14 @@
     }
 
     async function setupMediaRecorder(stream: MediaStream) {
-        if (!browser || !audioParameters || encoderInitialized) return;
+        if (!browser || !audioParameters) {
+            toastMessage.set("Error setting up media recorder");
+            return;
+        }
+
+        if (encoderInitialized) {
+            return;
+        }
 
         const AudioRecorderModule = await import("audio-recorder-polyfill");
         const AudioRecorder = AudioRecorderModule.default;
@@ -218,13 +228,14 @@
 
 <button
     onpointerdown={handleRecordDown}
-    class={"pointer-events-auto h-20 w-20 select-none rounded-full bg-red-600 text-2xl font-bold transition-all " +
+    class={"pointer-events-auto h-20 w-20 cursor-pointer select-none rounded-full bg-red-600 text-2xl font-bold transition-all disabled:bg-slate-500" +
         classes}
-    class:recording
+    class:recording={$applicationState.state === "recordingVoice"}
     transition:scale={{
         duration: 500,
         easing: elasticOut,
-    }}>Rec</button
+    }}
+    disabled={$applicationState.recorderActive}>Rec</button
 >
 
 <style lang="postcss">

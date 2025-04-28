@@ -1,3 +1,5 @@
+import { toastMessage } from "$lib/state/uxState";
+
 export async function withRetry<T>(
     fn: () => Promise<T>,
     options: {
@@ -25,12 +27,15 @@ export async function withRetry<T>(
             }
             lastError = new Error("Validation failed");
         } catch (error) {
+            // toastMessage.set("Error fetching data");
             lastError = error;
         }
 
         if (attempt < maxRetries - 1) {
             onRetry(attempt + 1, lastError);
-            await new Promise((resolve) => setTimeout(resolve, delayMs));
+            // Exponential backoff: delayMs * 2^attempt
+            const backoffDelay = delayMs * Math.pow(2, attempt);
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay));
         }
     }
 

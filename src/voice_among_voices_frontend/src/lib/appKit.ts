@@ -6,11 +6,10 @@ import {
 } from "@reown/appkit-adapter-wagmi";
 import { derived, get, readable } from "svelte/store";
 import { browser } from "$app/environment";
-
+import { toastMessage } from "./state/uxState";
 
 // Force immediate execution
 const initializeStores = () => {
-
     const projectId = "da65f4e00cada14e87d84160b45060f5";
     const networks = [base];
 
@@ -23,6 +22,7 @@ const initializeStores = () => {
                     const adapter = new WagmiAdapter({ projectId, networks });
                     set(adapter);
                 } catch (error) {
+                    toastMessage.set("Error creating WagmiAdapter");
                     console.error(
                         "[Debug] WagmiAdapter creation error:",
                         error,
@@ -53,6 +53,7 @@ const initializeStores = () => {
                 });
                 set(modal);
             } catch (error) {
+                toastMessage.set("Error creating AppKit");
                 console.error("[Debug] AppKit creation error:", error);
             }
         }

@@ -4,7 +4,13 @@
     import { appkitModal, wagmiConfig } from "$lib/appKit";
     import { identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
-    import { walletAddress, resetUxState } from "$lib/state/uxState";
+    import {
+        walletAddress,
+        resetUxState,
+        applicationState,
+        applicationStates,
+        toastMessage,
+    } from "$lib/state/uxState";
     import { siwe } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
     import { getWalletClient, type Config } from "@wagmi/core";
@@ -71,6 +77,7 @@
                 $walletAddress = $appkitModal?.getAddress()!;
             } catch {
                 console.log("Please connect a wallet first");
+                $toastMessage = "Please connect a wallet first";
                 return;
             }
         }
@@ -93,6 +100,7 @@
         resetUxState();
         isLoggingOut = false;
         isLoggingIn = false;
+        $applicationState = applicationStates.loggedOut;
     }
 
     async function setSiweWalletClient() {

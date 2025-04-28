@@ -4,9 +4,8 @@
 
     import { onMount } from "svelte";
 
-    import { backend, identityAgent } from "$lib/canisters";
+    import { identityAgent } from "$lib/canisters";
     import type { VoiceNodeIngress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    import { appkitModal } from "$lib/appKit";
     import { blobToUint8Array } from "$lib/utils/convUtils";
     import {
         voiceNodes,
@@ -14,22 +13,25 @@
         backendSimulationResult,
         walletAddress,
         myTokens,
-        loadingTokens,
         selectedAngle,
         hoveredAngle,
         currentVoiceBlob,
-        dragging,
         playheadPosition,
         externalPlaybackPosition,
         angle,
         fileLoaded,
-        loadingVoices,
-        justDropped,
+        applicationState,
+        applicationStates,
+        toastMessage,
     } from "$lib/state/uxState";
     import { blur } from "svelte/transition";
     import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
     import { untrack } from "svelte";
-    import { withRetry } from "$lib/utils/commsUtils";
+    import {
+        getSimulationParameters,
+        getVoiceNodes,
+        updateVoiceNode,
+    } from "$lib/icInteractions";
 
     let {
         class: classes,
@@ -40,17 +42,13 @@
     let nodeMap = $state<NodeMapPhysics>();
 
     onMount(async () => {
-        $loadingVoices = true;
-        $voiceNodes = await withRetry(() => backend.get_voice_nodes(), {
-            maxRetries: 15,
-            delayMs: 1000,
-            validate: (nodes) => nodes.length > 0,
-            onRetry: (attempt) =>
-                console.log(`Retrying fetch nodes, attempt ${attempt}...`),
-        });
+        $applicationState = applicationStates.loadingNodes;
+        $voiceNodes = await getVoiceNodes();
 
-        $loadingVoices = false;
-        $simulationParameters = await backend.get_simulation_parameters();
+        $applicationState = $identityAgent
+            ? applicationStates.loggedInIdle
+            : applicationStates.loggedOut;
+        $simulationParameters = await getSimulationParameters();
     });
 
     // $effect(() => {
@@ -68,31 +66,36 @@
     async function fetchOwnedTokens() {
         let tokens = await $myTokens;
         if (tokens.length === 0) {
-            $loadingTokens = true;
+            $applicationState = applicationStates.loadingTokens;
         }
 
         $myTokens = await fetchTokens();
-        $loadingTokens = false;
+        $applicationState = applicationStates.loggedInIdle;
     }
 
     const handleDropNewNode = async (voiceNode: VoiceNodeIngress) => {
         try {
-            $justDropped = true;
             const sample = await blobToUint8Array($currentVoiceBlob!);
             const { x, y, id } = voiceNode;
 
-            let backend_simulation_result = await backend.update_voice_node({
+            let backend_simulation_result = await updateVoiceNode({
                 id,
                 x,
                 y,
                 sample,
             });
 
+            if (!backend_simulation_result) {
+                $toastMessage = "Failed to update backend";
+                return;
+            }
+
             if ("Ok" in backend_simulation_result) {
-                if ($justDropped) {
-                    $backendSimulationResult = backend_simulation_result.Ok;
-                }
+                $backendSimulationResult = backend_simulation_result.Ok;
+                $applicationState = applicationStates.loggedInSimulating;
             } else {
+                $applicationState = applicationStates.loggedInIdle;
+                $toastMessage = "Failed to drop new node";
                 if ("NotValidAudioFileError" in backend_simulation_result.Err) {
                     console.log(
                         backend_simulation_result.Err.NotValidAudioFileError,
@@ -103,8 +106,9 @@
                     console.log("Not within circle error");
                 }
             }
-            $voiceNodes = await backend.get_voice_nodes();
+            $voiceNodes = await getVoiceNodes();
         } catch (e) {
+            $toastMessage = "Failed to drop new node";
             console.error("Failed to drop new node, got this: ", e);
         }
     };
@@ -132,7 +136,6 @@
             nodes={$voiceNodes}
             backendNodes={$backendSimulationResult}
             dropNewNode={handleDropNewNode}
-            dragging={$dragging}
             showPlayHead={$fileLoaded}
             playHeadAngle={$angle}
             playHeadPosition={playheadPosition.current}
@@ -144,7 +147,6 @@
         />
         <NewAngleSelector
             nodes={$voiceNodes}
-            loading={$loadingTokens || $loadingVoices}
             loggedIn={!!$identityAgent}
             class="absolute top-0 h-full w-full lg:max-w-[1200px]"
             onSelectAngle={(angle) => {

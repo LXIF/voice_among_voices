@@ -3,7 +3,8 @@
         audioParameters,
         simulationParameters,
         currentVoiceBlob,
-        dragging,
+        applicationState,
+        applicationStates,
         playheadPosition,
         externalPlaybackPosition,
         angle,
@@ -19,6 +20,10 @@
     import { onMount } from "svelte";
     import { backend } from "$lib/canisters";
     import { identityAgent } from "$lib/canisters";
+    import {
+        getAudioParameters,
+        getSimulationParameters,
+    } from "$lib/icInteractions";
 
     const {
         onDropNodeWithRadius,
@@ -39,8 +44,8 @@
     let nodeWidthLogical = $state(0);
 
     onMount(async () => {
-        $audioParameters = await backend.get_audio_parameters();
-        $simulationParameters = await backend.get_simulation_parameters();
+        $audioParameters = await getAudioParameters();
+        $simulationParameters = await getSimulationParameters();
     });
 
     const calculateNodeWidth = (
@@ -102,7 +107,7 @@
 </script>
 
 <div class="w-full">
-    {#if $selectedAngle && $identityAgent}
+    {#if $selectedAngle && $identityAgent && $applicationState.recorderVisible}
         <div
             class="pointer-events-none absolute bottom-12 flex min-h-32 w-screen items-center justify-center gap-36 px-8 md:gap-56"
         >
@@ -127,9 +132,9 @@
         onFileAngle={(newAngle) => ($angle = newAngle)}
         onFileLoaded={(loaded) => ($fileLoaded = loaded)}
         onPressPlay={() => {
-            nodeWidthPx = 0;
-            nodeWidthLogical = 0;
-            $backendSimulationResult = [];
+            // nodeWidthPx = 0;
+            // nodeWidthLogical = 0;
+            // $backendSimulationResult = [];
         }}
     />
 </div>

@@ -3,7 +3,7 @@ import type {
     VoiceNodeEgress,
     AudioParameters,
 } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-import { writable } from "svelte/store";
+import { writable, type Subscriber, type Updater } from "svelte/store";
 import { Tween } from "svelte/motion";
 import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
 import { browser } from "$app/environment";
@@ -14,8 +14,8 @@ if (browser) {
 
 export const selectedAngle = writable<number>(0);
 export const hoveredAngle = writable<number | null>(null);
-export const currentVoiceBlob = writable<Blob | undefined>(undefined);
-export const dragging = writable<boolean>(false);
+export const currentVoiceBlob = writable<Blob | null>(null);
+// export const dragging = writable<boolean>(false);
 export const playheadPosition = new Tween(0, {
     easing: sineInOut,
     duration: 50,
@@ -25,31 +25,31 @@ export const angle = writable<number>(0);
 export const fileLoaded = writable<boolean>(false);
 export const voiceNodes = writable<VoiceNodeEgress[]>([]);
 export const backendSimulationResult = writable<VoiceNodeEgress[]>([]);
-export const simulationParameters = writable<SimulationParameters | undefined>(
-    undefined,
-);
-export const audioParameters = writable<AudioParameters | undefined>(undefined);
+export const simulationParameters = writable<SimulationParameters | null>(null);
+export const audioParameters = writable<AudioParameters | null>(null);
 export const myAddress = writable<string>("");
 export const myTokens = writable<number[]>([]);
-export const loadingTokens = writable<boolean>(false);
+// export const loadingTokens = writable<boolean>(false);
 export const mapRotation = new Tween(0, {
     easing: cubicOut,
     duration: 800,
 });
 export const walletAddress = writable<string>("");
-export const loadingFile = writable(false);
+// export const loadingFile = writable(false);
 export const loadingProgress = new Tween(0, {
     easing: cubicInOut,
     duration: 500,
 });
-export const loadingVoices = writable<boolean>(true); // start with loading animation active
-export const justDropped = writable<boolean>(false);
+// export const loadingVoices = writable<boolean>(true); // start with loading animation active
+// export const justDropped = writable<boolean>(false);
+
+export const toastMessage = writable<string>("");
 
 export const resetUxState = () => {
     selectedAngle.set(0);
     hoveredAngle.set(null);
-    currentVoiceBlob.set(undefined);
-    dragging.set(false);
+    currentVoiceBlob.set(null);
+    // dragging.set(false);
     playheadPosition.set(0);
     externalPlaybackPosition.set(0);
     angle.set(0);
@@ -59,94 +59,205 @@ export const resetUxState = () => {
     myTokens.set([]);
     mapRotation.set(0);
     walletAddress.set("");
-    loadingFile.set(false);
+    // loadingFile.set(false);
     loadingProgress.set(0);
-    loadingVoices.set(false);
-    justDropped.set(false);
-};
-
-export const applicationState = writable<ApplicationState>();
-
-export type ApplicationState = {
-    physicsActive: false;
-    wheelActive: false;
-    recorderActive: false;
-    recorderVisible: false;
-    droppingActive: false;
-    showLoadingAnimation: false;
+    // loadingVoices.set(false);
+    // justDropped.set(false);
 };
 
 export const applicationStates = {
     loggedOut: {
+        state: "loggedOut" as const,
         physicsActive: false,
         wheelActive: false,
         recorderActive: false,
         recorderVisible: false,
         droppingActive: false,
+        showDraggableNode: false,
         showLoadingAnimation: false,
+        showBackendResult: false,
+        showFileLoadingLine: false,
     },
     loadingNodes: {
+        state: "loadingNodes" as const,
         physicsActive: false,
         wheelActive: false,
         recorderActive: false,
         recorderVisible: false,
         droppingActive: false,
-        showLoadingAnimation: false,
+        showDraggableNode: false,
+        showLoadingAnimation: true,
+        showBackendResult: false,
+        showFileLoadingLine: false,
     },
     loadingTokens: {
+        state: "loadingTokens" as const,
         physicsActive: false,
         wheelActive: false,
         recorderActive: false,
         recorderVisible: false,
         droppingActive: false,
-        showLoadingAnimation: false,
+        showDraggableNode: false,
+        showLoadingAnimation: true,
+        showBackendResult: false,
+        showFileLoadingLine: false,
     },
     loadingFile: {
+        state: "loadingFile" as const,
         physicsActive: false,
-        wheelActive: true,
+        wheelActive: false,
         recorderActive: true,
         recorderVisible: true,
         droppingActive: false,
+        showDraggableNode: true,
         showLoadingAnimation: false,
+        showBackendResult: false,
+        showFileLoadingLine: true,
     },
     recordingVoice: {
+        state: "recordingVoice" as const,
         physicsActive: false,
         wheelActive: false,
         recorderActive: true,
         recorderVisible: true,
         droppingActive: false,
+        showDraggableNode: true,
         showLoadingAnimation: false,
+        showBackendResult: false,
+        showFileLoadingLine: false,
     },
     playingFile: {
+        state: "playingFile" as const,
         physicsActive: false,
-        wheelActive: false,
+        wheelActive: true,
         recorderActive: false,
         recorderVisible: true,
         droppingActive: false,
+        showDraggableNode: false,
         showLoadingAnimation: false,
+        showBackendResult: false,
+        showFileLoadingLine: false,
     },
     rotatingMap: {
+        state: "rotatingMap" as const,
         physicsActive: false,
         wheelActive: false,
         recorderActive: false,
         recorderVisible: true,
         droppingActive: false,
+        showDraggableNode: false,
         showLoadingAnimation: false,
+        showBackendResult: false,
+        showFileLoadingLine: false,
     },
     loggedInIdle: {
-        physicsActive: true,
+        state: "loggedInIdle" as const,
+        physicsActive: false,
         wheelActive: true,
         recorderActive: true,
         recorderVisible: true,
         droppingActive: true,
+        showDraggableNode: true,
         showLoadingAnimation: false,
+        showBackendResult: true,
+        showFileLoadingLine: false,
+    },
+    loggedInSimulating: {
+        state: "loggedInSimulating" as const,
+        physicsActive: true,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: true,
+        droppingActive: false,
+        showDraggableNode: false,
+        showLoadingAnimation: false,
+        showBackendResult: true,
+        showFileLoadingLine: false,
+    },
+    loadingBackendResult: {
+        state: "loadingBackendResult" as const,
+        physicsActive: true,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: true,
+        droppingActive: false,
+        showDraggableNode: false,
+        showLoadingAnimation: true,
+        showBackendResult: true,
+        showFileLoadingLine: false,
     },
     draggingVoice: {
+        state: "draggingVoice" as const,
         physicsActive: false,
         wheelActive: false,
         recorderActive: false,
         recorderVisible: true,
         droppingActive: true,
+        showDraggableNode: true,
         showLoadingAnimation: false,
+        showBackendResult: false,
+        showFileLoadingLine: false,
     },
 };
+
+const createApplicationState = () => {
+    const { subscribe, set, update } = writable<ApplicationState>(
+        applicationStates.loggedOut,
+    );
+
+    const customSet = (value: ApplicationState) => {
+        set(value);
+
+        console.log("[Debug] applicationState changed", value.state);
+        if (value.state === "playingFile") {
+            backendSimulationResult.set([]);
+        }
+        if (value.state === "loadingFile") {
+            backendSimulationResult.set([]);
+        }
+        if (value.state === "recordingVoice") {
+            backendSimulationResult.set([]);
+        }
+        if (value.state === "draggingVoice") {
+            backendSimulationResult.set([]);
+        }
+        if (value.state === "loggedOut") {
+            backendSimulationResult.set([]);
+        }
+        if (value.state === "rotatingMap") {
+            backendSimulationResult.set([]);
+        }
+    };
+
+    return {
+        subscribe,
+        set: customSet,
+        update,
+    };
+};
+
+export type ApplicationState = {
+    state:
+        | "loggedOut"
+        | "loadingNodes"
+        | "loadingTokens"
+        | "loadingFile"
+        | "recordingVoice"
+        | "playingFile"
+        | "rotatingMap"
+        | "loggedInIdle"
+        | "loggedInSimulating"
+        | "loadingBackendResult"
+        | "draggingVoice";
+    physicsActive: boolean;
+    wheelActive: boolean;
+    recorderActive: boolean;
+    recorderVisible: boolean;
+    droppingActive: boolean;
+    showLoadingAnimation: boolean;
+    showFileLoadingLine: boolean;
+    showBackendResult: boolean;
+    showDraggableNode: boolean;
+};
+
+export const applicationState = createApplicationState();

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { dragging, justDropped } from "$lib/state/uxState";
+    import { applicationState, applicationStates } from "$lib/state/uxState";
     import { scale } from "svelte/transition";
     import { elasticOut } from "svelte/easing";
 
@@ -33,6 +33,7 @@
     function handlePointerDown(e: PointerEvent) {
         e.preventDefault();
         if (!draggableElement) throw "should be unreachable";
+        if (!$applicationState.droppingActive) return;
         draggableElement.style.left = `${e.clientX - (nodeWidthPx / 2 + 25)}px`;
         draggableElement.style.top = `${e.clientY - (nodeWidthPx / 2 + 70)}px`;
         startDrag();
@@ -47,7 +48,7 @@
 
     function startDrag() {
         if (!draggableElement) throw "should be unreachable";
-        $dragging = true;
+        $applicationState = applicationStates.draggingVoice;
         draggableElement.classList.add("fixed");
         const body = document.querySelector("body");
         if (!body) throw "Help! I have no body!";
@@ -58,7 +59,6 @@
         ondropnode({ x: e.clientX, y: e.clientY });
         setTimeout(() => {
             if (!draggableElement) throw "should be unreachable";
-            $dragging = false;
             draggableElement.classList.remove("fixed");
             draggableElement.style.left = "";
             draggableElement.style.top = "";
@@ -85,7 +85,7 @@
 </div> -->
 <!-- </div> -->
 <div class="flex w-20 items-center justify-center">
-    {#if nodeWidthPx > 0 && !$justDropped}
+    {#if nodeWidthPx > 0 && $applicationState.showDraggableNode}
         <div
             role="button"
             tabindex="0"

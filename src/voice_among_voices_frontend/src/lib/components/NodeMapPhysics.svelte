@@ -4,11 +4,9 @@
     import RAPIER from "@dimforge/rapier2d-compat";
 
     import { browser } from "$app/environment";
-    import { backend } from "$lib/canisters";
     import type {
         ColliderCoordinate,
         VoiceNodeEgress,
-        SimulationParameters,
         VoiceNodeIngress,
     } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     import {
@@ -27,14 +25,18 @@
         selectedAngle,
         hoveredAngle,
         mapRotation,
-        justDropped,
+        applicationState,
+        applicationStates,
     } from "$lib/state/uxState";
     import { isDarkMode } from "$lib/utils/uxUtils";
+    import {
+        getColliderCoordinates,
+        getSimulationParameters,
+    } from "$lib/icInteractions";
 
     let {
         nodes,
         backendNodes,
-        dragging,
         showPlayHead = true,
         playHeadPosition = 0,
         playHeadAngle = 0,
@@ -45,7 +47,6 @@
     }: {
         nodes: VoiceNodeEgress[];
         backendNodes: VoiceNodeEgress[];
-        dragging: boolean;
         showPlayHead: boolean;
         playHeadPosition: number;
         playHeadAngle: number;
@@ -80,7 +81,7 @@
 
     let steps: number = $state(0);
 
-    let physicsActive = $state(false);
+    // let physicsActive = $state(false);
     let rendering = $state(false);
     let resetting = $state(false);
     let moving = $state(false);
@@ -106,8 +107,8 @@
     });
 
     onMount(async () => {
-        $simulationParameters = await backend.get_simulation_parameters();
-        colliderCoordinates = await backend.get_collider_coordinates();
+        $simulationParameters = await getSimulationParameters();
+        colliderCoordinates = await getColliderCoordinates();
 
         if (!$simulationParameters) return;
         if (colliderCoordinates.length === 0) return;
@@ -153,11 +154,11 @@
         }
     });
 
-    $effect(() => {
-        if (dragging) {
-            resetNodes();
-        }
-    });
+    // $effect(() => {
+    //     if (dragging) {
+    //         resetNodes();
+    //     }
+    // });
 
     function resetNodes() {
         if (backendNodes.length > 0) {
@@ -416,11 +417,11 @@
             if (elapsed > interval) {
                 then = now - (elapsed % interval);
 
-                if (world && physicsActive && $justDropped) {
+                if (world && $applicationState.physicsActive) {
                     steps++;
 
                     if (steps > max_steps) {
-                        physicsActive = false;
+                        $applicationState = applicationStates.loggedInIdle;
                     }
                     magnetismFunction();
                     world.step();
@@ -517,7 +518,7 @@
                         context!.closePath();
                     });
 
-                    if ($justDropped) {
+                    if ($applicationState.showBackendResult) {
                         backendBodies?.forEach((body) => {
                             context!.beginPath();
                             context!.ellipse(
@@ -683,7 +684,7 @@
         }
 
         resetPhysics();
-        physicsActive = true;
+        $applicationState = applicationStates.loadingBackendResult;
         rendering = false;
     }
 

@@ -5,16 +5,22 @@
     import type { HttpStreamingResponse } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     import {
         loadingProgress,
-        loadingFile,
-        justDropped,
+        applicationState,
         backendSimulationResult,
         voiceNodes,
+        applicationStates,
+        toastMessage,
     } from "$lib/state/uxState";
     import {
         selectedAngle,
         externalPlaybackPosition,
     } from "$lib/state/uxState";
     import Button from "./Button.svelte";
+    import {
+        getAngleFile,
+        getVoiceNodes,
+        getZeroFile,
+    } from "$lib/icInteractions";
 
     let {
         onPlaybackPosition,
@@ -51,23 +57,25 @@
         }
 
         // reset the map
-        $justDropped = false;
+        $applicationState = applicationStates.loadingFile;
         $backendSimulationResult = [];
-        $voiceNodes = await backend.get_voice_nodes();
+        $voiceNodes = await getVoiceNodes();
 
         try {
             loadingProgress.set(0, {
                 duration: 0,
             });
-            $loadingFile = true;
+            $applicationState = applicationStates.loadingFile;
             error = "";
             // audioURL = '';
-            const response: HttpStreamingResponse =
+            const response: HttpStreamingResponse | null =
                 $selectedAngle === 0
-                    ? await backend.get_zero_file()
-                    : await backend.get_angle_file(
-                          BigInt(Math.round($selectedAngle)),
-                      );
+                    ? await getZeroFile()
+                    : await getAngleFile($selectedAngle);
+            if (!response) {
+                toastMessage.set("Error fetching the audio file.");
+                throw new Error("No response provided.");
+            }
             if (!response.streaming_strategy) {
                 throw new Error("No streaming strategy provided.");
             }
@@ -128,13 +136,14 @@
             downloadLink!.href = audioURL;
             downloadLink!.download = `voice_among_voices_${$selectedAngle}°_${Date.now()}.wav`;
             setTimeout(() => {
-                $loadingFile = false;
+                $applicationState = applicationStates.playingFile;
             }, 750);
             onFileAngle($selectedAngle);
             onFileLoaded(true);
             togglePlayPause();
         } catch (e) {
             error = "Error fetching the audio file.";
+            $toastMessage = "Error fetching the audio file.";
             console.error(e);
         }
     }
@@ -144,9 +153,11 @@
         if (isPlaying) {
             audioElement!.pause();
             isPlaying = false;
+            $applicationState = applicationStates.loggedInIdle;
         } else {
             audioElement!.play();
             isPlaying = true;
+            $applicationState = applicationStates.playingFile;
         }
     }
 
@@ -189,7 +200,7 @@
 </script>
 
 <div class="flex w-full flex-col items-center gap-4">
-    {#if $loadingFile}
+    {#if $applicationState.showLoadingAnimation || $applicationState.showFileLoadingLine}
         <h1 class="w-min text-center text-2xl font-bold lg:text-5xl">
             Loading...
         </h1>

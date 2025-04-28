@@ -1,16 +1,25 @@
-import { backend } from "$lib/canisters";
 import { readContract } from "viem/actions";
-import { walletAddress } from "$lib/state/uxState";
+import { toastMessage, walletAddress } from "$lib/state/uxState";
 import { get } from "svelte/store";
 import { wagmiConfig } from "$lib/appKit";
 import { writable } from "svelte/store";
+import { getTokenAddress } from "$lib/icInteractions";
 
 export let tokenAddress = writable<string | undefined>();
 
 export const fetchTokenAddress = async () => {
     if (!get(tokenAddress)) {
-        const { address } = await backend.get_token_address();
-        tokenAddress.set(address);
+        try {
+            const result = await getTokenAddress();
+            if (result && result.address) {
+                tokenAddress.set(result.address);
+            }
+        } catch (error) {
+            console.error("Error fetching token address:", error);
+            toastMessage.set(
+                "Error fetching token address, please reload the page.",
+            );
+        }
     }
     return get(tokenAddress);
 };
@@ -21,6 +30,7 @@ export const fetchTokens = async () => {
 
     if (!nftAddress || !userAddress) {
         console.error("Token address or user address not available");
+        toastMessage.set("Token address or user address not available");
         return [];
     }
 
@@ -79,6 +89,7 @@ export const fetchTokens = async () => {
         return tokenIds.map((bigNum: bigint) => Number(bigNum));
     } catch (error) {
         console.error("Error fetching tokens:", error);
+        toastMessage.set("Error fetching tokens");
         return [];
     }
 };

@@ -2,10 +2,9 @@
     import { tick } from "svelte";
     import { backend } from "$lib/canisters";
     import { handleBackendAudioData } from "$lib/utils/convUtils";
-    import type {
-        HttpStreamingResponse,
-        StreamingCallbackHttpResponse,
-    } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+    import type { HttpStreamingResponse } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+    import { toastMessage } from "$lib/state/uxState";
+    import { getAngleFile } from "$lib/icInteractions";
 
     let audioURL: string = $state("");
     let error: string = $state("");
@@ -32,9 +31,11 @@
         try {
             error = "";
             audioURL = "";
-            const response: HttpStreamingResponse =
-                await backend.get_angle_file(BigInt(0));
-            console.log(response);
+            const response: HttpStreamingResponse | null =
+                await getAngleFile(0);
+            if (!response) {
+                throw new Error("No response provided.");
+            }
             if (!response.streaming_strategy) {
                 throw new Error("No streaming strategy provided.");
             }
@@ -43,16 +44,6 @@
             let streamingToken = response.streaming_strategy[0]?.Callback.token;
             const nTokens =
                 response.streaming_strategy[0]?.Callback.token.chunks;
-
-            // while (streamingToken) {
-            //     const {body, token} =
-            //         await backend.http_request_streaming_callback(
-            //             streamingToken
-            //         );
-            //         console.log(token);
-            //     chunks.push(body);
-            //     streamingToken = token[0] || undefined;
-            // }
 
             if (nTokens === undefined) throw new Error("No tokens provided.");
 
@@ -107,6 +98,7 @@
             onFileLoaded(true);
         } catch (e) {
             error = "Error fetching the audio file.";
+            $toastMessage = "Error fetching the audio file.";
             console.error(e);
         }
     }
