@@ -85,4 +85,5 @@ service : (opt VoiceAmongVoicesInit) -> {
       StreamingCallbackHttpResponse,
     ) query;
   update_voice_node : (VoiceNodeIngress) -> (Result_1);
+  update_zero_cache : () -> ();
 }

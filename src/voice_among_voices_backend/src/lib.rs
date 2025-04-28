@@ -9,7 +9,7 @@ mod utils;
 use audio::*;
 use candid::Principal;
 use ic_cdk::{
-    api::{caller, performance_counter},
+    api::{msg_caller, performance_counter},
     export_candid, init, post_upgrade, query, update,
 };
 use ic_cdk_timers::set_timer;
@@ -71,6 +71,11 @@ fn get_zero_file() -> HttpStreamingResponse {
     get_file_for_zero_angle()
 }
 
+#[update]
+fn update_zero_cache() {
+    zero_cache_update();
+}
+
 #[query]
 fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
     get_streaming_chunk(token)
@@ -78,7 +83,7 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
 
 #[query]
 fn get_my_principal() -> String {
-    format!("{}", caller())
+    format!("{}", msg_caller())
 }
 
 #[query]

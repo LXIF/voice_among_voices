@@ -9,7 +9,7 @@ use alloy::{
     transports::icp::{IcpConfig, IcpTransport, L2MainnetService, RpcService},
 };
 use futures::Future;
-use ic_cdk::{call, caller};
+use ic_cdk::{api::msg_caller, call::Call};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde_bytes::ByteBuf;
 use IERC721::IERC721Instance;
@@ -25,14 +25,13 @@ sol! {
 }
 
 pub async fn get_caller_wallet_address() -> Result<String, String> {
-    let (result,): (Result<String, String>,) = call(
-        siwe_principal(),
-        "get_address",
-        (ByteBuf::from(caller().as_slice().to_vec()),),
-    )
-    .await
-    .map_err(|(code, msg)| format!("Error code: {:?}, message: {}", code, msg))?;
-    result
+    let response = Call::unbounded_wait(siwe_principal(), "get_address")
+        .with_arg(ByteBuf::from(msg_caller().as_slice().to_vec()))
+        .await
+        .map(|res| res.candid())
+        .map_err(|err| format!("Error: {:?}", err))?
+        .map_err(|err| format!("Error: {:?}", err))?;
+    response
 }
 
 async fn retry<F, Fut, T>(mut f: F, max_retries: u32) -> Result<T, String>

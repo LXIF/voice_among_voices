@@ -1,12 +1,16 @@
+use futures::FutureExt;
+use ic_cdk::api::canister_self;
+
 use crate::physics::simulate_until_stopped;
 use crate::storage::{
     AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY, SIMULATION_PARAMETERS,
     VOICE_NODES_MEMORY,
 };
 use crate::{
-    get_sample_length, node_within_circle, zero_cache_update, AddVoiceNodeError, AudioSample,
-    VoiceNodeEgressStore, VoiceNodeIngress, VoiceNodeLocal,
+    get_sample_length, node_within_circle, AddVoiceNodeError, AudioSample, VoiceNodeEgressStore,
+    VoiceNodeIngress, VoiceNodeLocal,
 };
+use ic_cdk::{call::Call, futures::spawn};
 
 pub fn update_stored_voice_node(
     node: VoiceNodeIngress,
@@ -77,7 +81,13 @@ pub fn update_stored_voice_node(
         });
     });
 
-    zero_cache_update();
+    spawn(async {
+        Call::unbounded_wait(canister_self(), "update_zero_cache")
+            .await
+            .map(|_| ())
+            .map_err(|_| ())
+            .unwrap() // TODO: this might need logging or so.
+    });
     Ok(returnable_nodes)
 }
 

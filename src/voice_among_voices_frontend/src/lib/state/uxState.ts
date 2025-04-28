@@ -64,3 +64,89 @@ export const resetUxState = () => {
     loadingVoices.set(false);
     justDropped.set(false);
 };
+
+export const applicationState = writable<ApplicationState>();
+
+export type ApplicationState = {
+    physicsActive: false;
+    wheelActive: false;
+    recorderActive: false;
+    recorderVisible: false;
+    droppingActive: false;
+    showLoadingAnimation: false;
+};
+
+export const applicationStates = {
+    loggedOut: {
+        physicsActive: false,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: false,
+        droppingActive: false,
+        showLoadingAnimation: false,
+    },
+    loadingNodes: {
+        physicsActive: false,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: false,
+        droppingActive: false,
+        showLoadingAnimation: false,
+    },
+    loadingTokens: {
+        physicsActive: false,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: false,
+        droppingActive: false,
+        showLoadingAnimation: false,
+    },
+    loadingFile: {
+        physicsActive: false,
+        wheelActive: true,
+        recorderActive: true,
+        recorderVisible: true,
+        droppingActive: false,
+        showLoadingAnimation: false,
+    },
+    recordingVoice: {
+        physicsActive: false,
+        wheelActive: false,
+        recorderActive: true,
+        recorderVisible: true,
+        droppingActive: false,
+        showLoadingAnimation: false,
+    },
+    playingFile: {
+        physicsActive: false,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: true,
+        droppingActive: false,
+        showLoadingAnimation: false,
+    },
+    rotatingMap: {
+        physicsActive: false,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: true,
+        droppingActive: false,
+        showLoadingAnimation: false,
+    },
+    loggedInIdle: {
+        physicsActive: true,
+        wheelActive: true,
+        recorderActive: true,
+        recorderVisible: true,
+        droppingActive: true,
+        showLoadingAnimation: false,
+    },
+    draggingVoice: {
+        physicsActive: false,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: true,
+        droppingActive: true,
+        showLoadingAnimation: false,
+    },
+};
