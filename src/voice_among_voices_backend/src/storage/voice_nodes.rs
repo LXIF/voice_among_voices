@@ -9,7 +9,8 @@ use crate::{
     get_sample_length, node_within_circle, AddVoiceNodeError, AudioSample, VoiceNodeEgressStore,
     VoiceNodeIngress, VoiceNodeLocal,
 };
-use ic_cdk::{call::Call, futures::spawn};
+
+use super::zero_cache_update;
 
 pub fn update_stored_voice_node(
     node: VoiceNodeIngress,
@@ -79,6 +80,8 @@ pub fn update_stored_voice_node(
                 .collect();
         });
     });
+
+    // zero_cache_update();
 
     Ok(returnable_nodes)
 }

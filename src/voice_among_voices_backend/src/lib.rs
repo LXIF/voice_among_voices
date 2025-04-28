@@ -53,13 +53,13 @@ async fn update_voice_node(
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     check_auth_for_single_node_id(node.id).await; // traps if not authorized
     let result = update_stored_voice_node(node);
-    ic_cdk_timers::set_timer(Duration::from_millis(0), || zero_cache_update());
+    ic_cdk_timers::set_timer(Duration::from_nanos(1), || zero_cache_update());
     result
 }
 
 #[query]
-fn get_voice_nodes() -> VoiceNodeEgressStore {
-    get_stored_voice_nodes()
+fn get_voice_nodes() -> Result<VoiceNodeEgressStore, String> {
+    Ok(get_stored_voice_nodes())
 }
 
 #[update]

@@ -8,14 +8,17 @@ import { withRetry } from "$lib/utils/commsUtils";
 
 export const getVoiceNodes = async () => {
     try {
-        const nodes = await withRetry(backend.get_voice_nodes, {
+        const nodesResponse = await withRetry(backend.get_voice_nodes, {
             maxRetries: 10,
             delayMs: 150,
-            validate: (nodes) => nodes.length > 0,
+            validate: (response) => "Ok" in response,
             onRetry: (attempt) =>
                 console.log(`Retrying fetch nodes, attempt ${attempt}...`),
         });
-        return nodes;
+        if ("Err" in nodesResponse) {
+            throw nodesResponse.Err;
+        }
+        return nodesResponse.Ok;
     } catch (error) {
         toastMessage.set("Error fetching nodes, please reload the page.");
         console.error("Error fetching nodes:", error);
@@ -28,7 +31,7 @@ export const getZeroFile = async () => {
         const response = await withRetry(backend.get_zero_file, {
             maxRetries: 10,
             delayMs: 150,
-            validate: (response) => "Ok" in response,
+            validate: (response) => response.status_code === 200,
             onRetry: (attempt) =>
                 console.log(`Retrying fetch zero file, attempt ${attempt}...`),
         });
