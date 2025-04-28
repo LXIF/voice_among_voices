@@ -34,7 +34,6 @@ export default defineConfig({
             // "@reown/appkit",
             // "@reown/appkit-adapter-wagmi",
             "ic-siwe-js",
-            "@dimforge/rapier2d-deterministic-compat",
             // "@wagmi/core",
             // "viem",
             // "wagmi",
