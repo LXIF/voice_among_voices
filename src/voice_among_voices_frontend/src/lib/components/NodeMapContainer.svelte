@@ -62,6 +62,7 @@
 
     $effect(() => {
         if ($walletAddress !== "") {
+            console.log("address changed, fetching tokens");
             untrack(() => fetchOwnedTokens());
         }
     });
@@ -95,7 +96,7 @@
 
             if ("Ok" in backend_simulation_result) {
                 $backendSimulationResult = backend_simulation_result.Ok;
-                $applicationState = applicationStates.loggedInSimulating;
+                $applicationState = applicationStates.loggedInIdle;
             } else {
                 $applicationState = applicationStates.loggedInIdle;
                 $toastMessage = "Failed to drop new node";

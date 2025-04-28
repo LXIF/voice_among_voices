@@ -422,6 +422,7 @@
                     steps++;
 
                     if (steps > max_steps) {
+                        console.log("wow, this ran really long");
                         $applicationState = applicationStates.loggedInIdle;
                     }
                     magnetismFunction();

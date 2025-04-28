@@ -59,6 +59,7 @@
         if (localStream) {
             localStream.getTracks().forEach((track) => track.stop());
         }
+        console.log("cleaning up");
         $applicationState = applicationStates.loggedInIdle;
     }
 
@@ -163,7 +164,7 @@
 
         clearTimeout(recordingTimeout);
         recordingTimeout = setTimeout(
-            handleRecordUp,
+            handleStopRecording,
             audioParameters.max_sample_length_ms,
         );
     }
@@ -174,7 +175,14 @@
             return;
         }
 
+        handleStopRecording();
+    }
+
+    function handleStopRecording() {
+        // if it's just a tap, we use toggle.
+
         clearInterval(recordingInterval);
+        clearTimeout(recordingTimeout);
         window.removeEventListener("pointerup", handleRecordUp);
         mediaRecorder?.stop();
         $applicationState = applicationStates.loggedInIdle;
