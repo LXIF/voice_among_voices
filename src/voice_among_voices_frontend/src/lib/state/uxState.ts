@@ -106,7 +106,7 @@ export const applicationStates = {
         state: "loadingFile" as const,
         physicsActive: false,
         wheelActive: false,
-        recorderActive: true,
+        recorderActive: false,
         recorderVisible: true,
         droppingActive: false,
         showDraggableNode: true,

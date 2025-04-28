@@ -3,8 +3,14 @@
     import Footer from "$lib/components/Footer.svelte";
     import NodeMapContainer from "$lib/components/NodeMapContainer.svelte";
     import AudioContainer from "$lib/components/AudioContainer.svelte";
+    import { onMount } from "svelte";
 
     let nodeMapCont: NodeMapContainer | undefined = $state();
+    let loaded = $state(false);
+
+    onMount(() => {
+        loaded = true;
+    });
 
     const handleDropNodeWithRadius = ({
         nodeX,

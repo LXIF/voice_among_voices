@@ -10,6 +10,7 @@
         applicationState,
         applicationStates,
         toastMessage,
+        myTokens,
     } from "$lib/state/uxState";
     import { siwe } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
@@ -147,6 +148,19 @@
             <Button
                 class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
                 onclick={loginSiwe}>Finish connecting</Button
+            >
+        </div>
+    </Dialog>
+{/if}
+
+{#if $applicationState.state === "loggedInIdle" && !!$identityAgent && $myTokens.length === 0}
+    <Dialog>
+        You don't own any Voice among Voices NFTs. In order to contribute your
+        voice, please acquire one.
+        <div class="m-2 mt-4 flex items-center justify-center lg:min-w-96">
+            <Button
+                class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
+                onclick={handleLogout}>Disconnect</Button
             >
         </div>
     </Dialog>

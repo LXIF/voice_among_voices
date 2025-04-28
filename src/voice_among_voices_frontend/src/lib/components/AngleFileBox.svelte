@@ -163,6 +163,12 @@
 
     // Dispatch the current playback position (normalized)
     function onTimeUpdate() {
+        if (
+            !audioElement ||
+            !audioElement.duration ||
+            !audioElement.currentTime
+        )
+            return;
         const playbackPosition =
             audioElement!.currentTime / audioElement!.duration;
         onPlaybackPosition(playbackPosition);

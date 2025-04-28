@@ -484,7 +484,7 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
+                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : "cursor-wait"}`}
                     onmouseover={() =>
                         isAngleAvailable(angle) &&
                         $applicationState.wheelActive &&
@@ -501,8 +501,8 @@
                     }}
                     onfocus={() =>
                         isAngleAvailable(angle) &&
-                        (hoveredAngle = angle) &&
-                        $applicationState.wheelActive}
+                        $applicationState.wheelActive &&
+                        (hoveredAngle = angle)}
                     onblur={() => (hoveredAngle = null)}
                     onkeydown={(e) => {
                         if (
@@ -515,7 +515,9 @@
                     }}
                     stroke={getLineColor(angle, isAngleAvailable(angle))}
                     stroke-width={hoveredAngle === angle ? 2.2 : 0.5}
-                    pointer-events={!!$identityAgent && isAngleAvailable(angle)
+                    pointer-events={!!$identityAgent &&
+                    isAngleAvailable(angle) &&
+                    $applicationState.wheelActive
                         ? "auto"
                         : "none"}
                 />

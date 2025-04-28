@@ -1,4 +1,7 @@
-import type { VoiceNodeIngress } from "../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+import type {
+    StreamingCallbackToken,
+    VoiceNodeIngress,
+} from "../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
 import { backend } from "./canisters";
 import { toastMessage } from "./state/uxState";
 import { withRetry } from "$lib/utils/commsUtils";
@@ -203,6 +206,32 @@ export const getWalletAddress = async () => {
             "Error fetching wallet address, please reload the page.",
         );
         console.error("Error fetching wallet address:", error);
+        return null;
+    }
+};
+
+export const httpRequestStreamingCallback = async (
+    token: StreamingCallbackToken,
+) => {
+    try {
+        const response = await withRetry(
+            () => backend.http_request_streaming_callback(token),
+            {
+                maxRetries: 10,
+                delayMs: 150,
+                validate: (response) => response !== null,
+                onRetry: (attempt) =>
+                    console.log(
+                        `Retrying http request streaming callback, attempt ${attempt}...`,
+                    ),
+            },
+        );
+        return response;
+    } catch (error) {
+        toastMessage.set(
+            "Error fetching http request streaming callback, please reload the page.",
+        );
+        console.error("Error fetching audio file:", error);
         return null;
     }
 };

@@ -13,7 +13,7 @@
         toastMessage,
         voiceNodes,
     } from "$lib/state/uxState";
-    import { backend } from "$lib/canisters";
+
     import { getVoiceNodes } from "$lib/icInteractions";
 
     // time the rec button needs to be held to be push-action
@@ -136,6 +136,7 @@
 
     async function handleRecordDown(e: PointerEvent) {
         e.preventDefault();
+        if (!$applicationState.recorderActive) return;
         // if we're still recording, we used toggle action
         if ($applicationState.state === "recordingVoice") {
             handleRecordUp();
@@ -228,14 +229,13 @@
 
 <button
     onpointerdown={handleRecordDown}
-    class={"pointer-events-auto h-20 w-20 cursor-pointer select-none rounded-full bg-red-600 text-2xl font-bold transition-all disabled:bg-slate-500" +
-        classes}
+    class={"pointer-events-auto h-20 w-20 cursor-pointer select-none rounded-full bg-red-600 text-2xl font-bold transition-all disabled:cursor-wait disabled:bg-slate-500"}
     class:recording={$applicationState.state === "recordingVoice"}
     transition:scale={{
         duration: 500,
         easing: elasticOut,
     }}
-    disabled={$applicationState.recorderActive}>Rec</button
+    disabled={!$applicationState.recorderActive}>Rec</button
 >
 
 <style lang="postcss">
