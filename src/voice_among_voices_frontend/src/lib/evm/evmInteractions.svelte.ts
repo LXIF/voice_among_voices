@@ -1,5 +1,5 @@
 import { readContract } from "viem/actions";
-import { toastMessage, walletAddress } from "$lib/state/uxState";
+import { hasNoTokens, toastMessage, walletAddress } from "$lib/state/uxState";
 import { get } from "svelte/store";
 import { wagmiConfig } from "$lib/appKit";
 import { writable } from "svelte/store";
@@ -69,7 +69,10 @@ export const fetchTokens = async () => {
             args: [userAddress as `0x${string}`],
         });
 
-        if (!balance) return [];
+        if (!balance) {
+            hasNoTokens.set(true);
+            return [];
+        }
 
         // Prepare calls to get each token ID
         const tokenPromises = [];

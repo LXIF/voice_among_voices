@@ -11,6 +11,7 @@
         applicationStates,
         toastMessage,
         myTokens,
+        hasNoTokens,
     } from "$lib/state/uxState";
     import { siwe } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
@@ -24,25 +25,6 @@
         if (!$appkitModal) throw "Appkit Modal not initialized!";
 
         setAddress();
-
-        // $appkitModal.subscribeState(async (newState) => {
-        //     if (newState.initialized) {
-        //         walletConnected = $appkitModal.getIsConnectedState();
-        //         $walletAddress = $appkitModal?.getAddress() ?? "";
-
-        //         if (
-        //             walletConnected &&
-        //             !$identityAgent &&
-        //             !isLoggingIn &&
-        //             !!$walletAddress
-        //         ) {
-        //             isLoggingIn = true;
-        //             $siwe!.login().then(() => {
-        //                 isLoggingIn = false;
-        //             });
-        //         }
-        //     }
-        // });
     });
 
     // less elegant, but subscribestate is insufficient apparently
@@ -153,7 +135,7 @@
     </Dialog>
 {/if}
 
-{#if $applicationState.state === "loggedInIdle" && !!$identityAgent && $myTokens.length === 0}
+{#if $hasNoTokens}
     <Dialog>
         You don't own any Voice among Voices NFTs. In order to contribute your
         voice, please acquire one.

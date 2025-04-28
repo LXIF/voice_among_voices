@@ -23,6 +23,9 @@
         applicationState,
         applicationStates,
         toastMessage,
+        sampleLength,
+        nodeWidthPx,
+        nodeWidthLogical,
     } from "$lib/state/uxState";
     import { blur } from "svelte/transition";
     import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
@@ -107,6 +110,10 @@
                 }
             }
             $voiceNodes = await getVoiceNodes();
+            $currentVoiceBlob = null;
+            $sampleLength = 0;
+            $nodeWidthPx = 0;
+            $nodeWidthLogical = 0;
         } catch (e) {
             $toastMessage = "Failed to drop new node";
             console.error("Failed to drop new node, got this: ", e);

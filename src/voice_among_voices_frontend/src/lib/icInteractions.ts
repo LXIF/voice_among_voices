@@ -28,7 +28,7 @@ export const getZeroFile = async () => {
         const response = await withRetry(backend.get_zero_file, {
             maxRetries: 10,
             delayMs: 150,
-            validate: (response) => response !== null,
+            validate: (response) => "Ok" in response,
             onRetry: (attempt) =>
                 console.log(`Retrying fetch zero file, attempt ${attempt}...`),
         });
@@ -47,7 +47,7 @@ export const getAngleFile = async (angle: number) => {
             {
                 maxRetries: 10,
                 delayMs: 150,
-                validate: (response) => response !== null,
+                validate: (response) => response.status_code === 200,
                 onRetry: (attempt) =>
                     console.log(
                         `Retrying fetch angle file, attempt ${attempt}...`,
@@ -109,7 +109,7 @@ export const getColliderCoordinates = async () => {
         const response = await withRetry(backend.get_collider_coordinates, {
             maxRetries: 10,
             delayMs: 150,
-            validate: (response) => response !== null,
+            validate: (response) => response.length > 0,
             onRetry: (attempt) =>
                 console.log(
                     `Retrying fetch collider coordinates, attempt ${attempt}...`,
@@ -153,7 +153,7 @@ export const updateVoiceNode = async (voiceNode: VoiceNodeIngress) => {
             {
                 maxRetries: 10,
                 delayMs: 150,
-                validate: (response) => response !== null,
+                validate: (response) => "Ok" in response,
                 onRetry: (attempt) =>
                     console.log(
                         `Retrying update voice node, attempt ${attempt}...`,
@@ -194,7 +194,7 @@ export const getWalletAddress = async () => {
         const response = await withRetry(backend.get_wallet_address, {
             maxRetries: 10,
             delayMs: 150,
-            validate: (response) => response !== null,
+            validate: (response) => "Ok" in response,
             onRetry: (attempt) =>
                 console.log(
                     `Retrying fetch wallet address, attempt ${attempt}...`,

@@ -15,7 +15,6 @@ if (browser) {
 export const selectedAngle = writable<number>(0);
 export const hoveredAngle = writable<number | null>(null);
 export const currentVoiceBlob = writable<Blob | null>(null);
-// export const dragging = writable<boolean>(false);
 export const playheadPosition = new Tween(0, {
     easing: sineInOut,
     duration: 50,
@@ -29,19 +28,19 @@ export const simulationParameters = writable<SimulationParameters | null>(null);
 export const audioParameters = writable<AudioParameters | null>(null);
 export const myAddress = writable<string>("");
 export const myTokens = writable<number[]>([]);
-// export const loadingTokens = writable<boolean>(false);
 export const mapRotation = new Tween(0, {
     easing: cubicOut,
     duration: 800,
 });
 export const walletAddress = writable<string>("");
-// export const loadingFile = writable(false);
 export const loadingProgress = new Tween(0, {
     easing: cubicInOut,
     duration: 500,
 });
-// export const loadingVoices = writable<boolean>(true); // start with loading animation active
-// export const justDropped = writable<boolean>(false);
+export const sampleLength = writable<number>(0);
+export const nodeWidthPx = writable<number>(0);
+export const nodeWidthLogical = writable<number>(0);
+export const hasNoTokens = writable<boolean>(false);
 
 export const toastMessage = writable<string>("");
 
@@ -49,7 +48,6 @@ export const resetUxState = () => {
     selectedAngle.set(0);
     hoveredAngle.set(null);
     currentVoiceBlob.set(null);
-    // dragging.set(false);
     playheadPosition.set(0);
     externalPlaybackPosition.set(0);
     angle.set(0);
@@ -59,10 +57,8 @@ export const resetUxState = () => {
     myTokens.set([]);
     mapRotation.set(0);
     walletAddress.set("");
-    // loadingFile.set(false);
     loadingProgress.set(0);
-    // loadingVoices.set(false);
-    // justDropped.set(false);
+    hasNoTokens.set(false);
 };
 
 export const applicationStates = {

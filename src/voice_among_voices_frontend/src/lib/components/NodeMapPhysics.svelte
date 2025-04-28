@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import { mapRange, clamp } from "$lib/utils/mathUtils";
     import RAPIER from "@dimforge/rapier2d-compat";
+    // import RAPIER from "@dimforge/rapier2d-deterministic";
 
     import { browser } from "$app/environment";
     import type {

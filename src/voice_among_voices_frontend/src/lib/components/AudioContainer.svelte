@@ -11,7 +11,9 @@
         fileLoaded,
         hoveredAngle,
         selectedAngle,
-        backendSimulationResult,
+        sampleLength,
+        nodeWidthPx,
+        nodeWidthLogical,
     } from "$lib/state/uxState";
     import DroppableNode from "./DroppableNode.svelte";
     import VoiceRecorder from "./VoiceRecorder.svelte";
@@ -38,10 +40,6 @@
             nodeRadius: number;
         }) => void;
     } = $props();
-
-    let sampleLength = $state(0);
-    let nodeWidthPx = $state(0);
-    let nodeWidthLogical = $state(0);
 
     onMount(async () => {
         $audioParameters = await getAudioParameters();
@@ -70,9 +68,9 @@
         )
             throw "invalid params";
 
-        sampleLength = length;
+        $sampleLength = length;
 
-        if (sampleLength > 0) {
+        if ($sampleLength > 0) {
             const nodeWidths = calculateNodeWidth(
                 //TODO: make sveltier
                 length,
@@ -80,8 +78,8 @@
                 $audioParameters!.total_length_ms,
                 $simulationParameters!.logical_radius * 2,
             );
-            nodeWidthPx = nodeWidths.nodeWidthPx;
-            nodeWidthLogical = nodeWidths.nodeWidthLogical;
+            $nodeWidthPx = nodeWidths.nodeWidthPx;
+            $nodeWidthLogical = nodeWidths.nodeWidthLogical;
         }
     };
 
@@ -93,7 +91,7 @@
         onDropNodeWithRadius({
             nodeX: x,
             nodeY: y,
-            nodeRadius: nodeWidthLogical / 2,
+            nodeRadius: $nodeWidthLogical / 2,
         }); //TODO maybe other node width
     };
 
@@ -117,8 +115,8 @@
                 audioParameters={$audioParameters}
             />
             <DroppableNode
-                {nodeWidthPx}
-                {nodeWidthLogical}
+                nodeWidthPx={$nodeWidthPx}
+                nodeWidthLogical={$nodeWidthLogical}
                 nodeId={$selectedAngle}
                 class="z-10"
                 ondropnode={handleDropNode}

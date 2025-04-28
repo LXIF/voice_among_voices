@@ -10,71 +10,74 @@ import topLevelAwait from "vite-plugin-top-level-await";
 dotenv.config({ path: "../../.env" });
 
 export default defineConfig({
-  build: {
-    emptyOutDir: true,
-    minify: true,
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          // Ensure core runtime chunks are loaded first
-          if (id.includes("node_modules")) {
-            return "vendor";
-          }
-          // Group related app code
-          if (id.includes("src/lib")) {
-            return "lib";
-          }
+    build: {
+        emptyOutDir: true,
+        minify: true,
+        sourcemap: true,
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    // Ensure core runtime chunks are loaded first
+                    if (id.includes("node_modules")) {
+                        return "vendor";
+                    }
+                    // Group related app code
+                    if (id.includes("src/lib")) {
+                        return "lib";
+                    }
+                },
+            },
         },
-      },
     },
-  },
-  optimizeDeps: {
-    include: [
-      // "@reown/appkit",
-      // "@reown/appkit-adapter-wagmi",
-      "ic-siwe-js",
-      // "@wagmi/core",
-      // "viem",
-      // "wagmi",
-      // "@dfinity/agent",
-      // "@dfinity/candid",
-      // "@dfinity/identity",
-      // "@dfinity/principal",
+    optimizeDeps: {
+        include: [
+            // "@reown/appkit",
+            // "@reown/appkit-adapter-wagmi",
+            "ic-siwe-js",
+            "@dimforge/rapier2d-deterministic-compat",
+            // "@wagmi/core",
+            // "viem",
+            // "wagmi",
+            // "@dfinity/agent",
+            // "@dfinity/candid",
+            // "@dfinity/identity",
+            // "@dfinity/principal",
+        ],
+        esbuildOptions: {
+            define: {
+                target: "es2020",
+                global: "globalThis",
+            },
+        },
+    },
+    server: {
+        proxy: {
+            "/api": {
+                target: "http://127.0.0.1:4943",
+                changeOrigin: true,
+            },
+        },
+    },
+    plugins: [
+        sveltekit(),
+        wasm(),
+        topLevelAwait(),
+        environment("all", { prefix: "CANISTER_" }),
+        environment("all", { prefix: "DFX_" }),
     ],
-    esbuildOptions: {
-      define: {
-        target: "es2020",
-        global: "globalThis",
-      },
+    test: {
+        environment: "jsdom",
+        setupFiles: "src/setupTests.js",
     },
-  },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://127.0.0.1:4943",
-        changeOrigin: true,
-      },
+    resolve: {
+        alias: [
+            {
+                find: "declarations",
+                replacement: fileURLToPath(
+                    new URL("../declarations", import.meta.url),
+                ),
+            },
+        ],
+        dedupe: ["@dfinity/agent"],
     },
-  },
-  plugins: [
-    sveltekit(),
-    wasm(),
-    topLevelAwait(),
-    environment("all", { prefix: "CANISTER_" }),
-    environment("all", { prefix: "DFX_" }),
-  ],
-  test: {
-    environment: "jsdom",
-    setupFiles: "src/setupTests.js",
-  },
-  resolve: {
-    alias: [
-      {
-        find: "declarations",
-        replacement: fileURLToPath(new URL("../declarations", import.meta.url)),
-      },
-    ],
-    dedupe: ["@dfinity/agent"],
-  },
 });
