@@ -1,8 +1,8 @@
 <script lang="ts">
     import { onMount, untrack } from "svelte";
     import { mapRange, clamp } from "$lib/utils/mathUtils";
-    import RAPIER from "@dimforge/rapier2d-compat";
-    // import RAPIER from "@dimforge/rapier2d-deterministic";
+    // import RAPIER from "@dimforge/rapier2d-compat";
+    import RAPIER from "@dimforge/rapier2d-deterministic-compat";
 
     import { browser } from "$app/environment";
     import type {
@@ -84,30 +84,14 @@
 
     let steps: number = 0;
 
-    // let physicsActive = $state(false);
-    let resetting = $state(false);
     let moving = $state(false);
     let fastForward = $state(false);
-
-    // let contentRect = $state<DOMRectReadOnly>();
-
-    // let lastAppliedRotation = 180;
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
         rigidBody: RAPIER.RigidBody;
         voiceNode: VoiceNodeEgress;
     };
-
-    let canvasRatio: number = $state(1);
-
-    // onMount(() => {
-    //     if (canvas) {
-    //         context = canvas.getContext("2d");
-    //         canvasRatio = 1; // TODO
-    //         // canvasRatio = window.devicePixelRatio || 1;
-    //     }
-    // });
 
     function transformColliderCoordinates(
         coords: { x: number; y: number }[],
@@ -223,8 +207,8 @@
                                 if (!localBody) return true;
                                 const localBodyUserData =
                                     localBody?.userData as VoiceNodeEgress;
-                                // if (localBodyUserData.id === body.voiceNode.id)
-                                //     return true;
+                                if (localBodyUserData.id === body.voiceNode.id)
+                                    return true;
                                 bodiesWithinReach.push(localBody);
                                 return true;
                             },
@@ -328,91 +312,6 @@
         });
     }
 
-    // function stopSlowNodes(bodies: PhysicsBody[], velocityCutoff: number) {
-    //     bodies.forEach((body) => {
-    //         const linVel = body.rigidBody.linvel();
-    //         const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
-
-    //         if (absVel < velocityCutoff) {
-    //             body.rigidBody.setLinvel({x: 0, y: 0}, true);
-    //         }
-    //     });
-    // }
-
-    // function drawPlayHead(context: CanvasRenderingContext2D) {
-    //     if (!showPlayHead || !context) return;
-
-    //     // Convert angle to radians
-    //     const angleRadians = playHeadAngle * (Math.PI / 180);
-
-    //     // Get start and end points on the circle (logical_radius)
-    //     const startX = Math.sin(angleRadians) * logical_radius;
-    //     const startY = Math.cos(angleRadians) * logical_radius;
-    //     const endX = Math.sin(angleRadians) * -logical_radius;
-    //     const endY = Math.cos(angleRadians) * -logical_radius;
-
-    //     // Interpolate between start and end based on playHeadPosition
-    //     const playHeadX = startX + (endX - startX) * playHeadPosition;
-    //     const playHeadY = startY + (endY - startY) * playHeadPosition;
-
-    //     // Calculate the tangent vector (rotate radial vector by 90 degrees counterclockwise)
-    //     const radialVectorX = playHeadX;
-    //     const radialVectorY = playHeadY;
-
-    //     // The tangent vector perpendicular to the radial vector
-    //     const tangentX = -radialVectorY; // Negate the Y for 90 degree rotation
-    //     const tangentY = radialVectorX; // X remains the same
-
-    //     // Normalize the tangent vector to ensure it has a unit length
-    //     const tangentLength = Math.sqrt(
-    //         tangentX * tangentX + tangentY * tangentY,
-    //     );
-    //     const normalizedTangentX = tangentX / tangentLength;
-    //     const normalizedTangentY = tangentY / tangentLength;
-
-    //     // Line half-length (so it extends equally on both sides)
-    //     const lineLength = 2 * logical_radius; // Adjust if needed.
-
-    //     // Calculate the points for the perpendicular line (centered at playHeadX, playHeadY)
-    //     // Find the intersection points of the tangent line with the circle
-    //     const distanceFromCenter = Math.sqrt(
-    //         playHeadX * playHeadX + playHeadY * playHeadY,
-    //     );
-
-    //     // Calculate the maximum length the line can have at this point to stay within the circle
-    //     const maxLineLength =
-    //         2 *
-    //         Math.sqrt(
-    //             logical_radius * logical_radius -
-    //                 distanceFromCenter * distanceFromCenter,
-    //         );
-
-    //     // Use the smaller of the two: either the calculated max length or the original line length
-    //     const actualLineLength = Math.min(maxLineLength, lineLength);
-
-    //     const lineStartX =
-    //         playHeadX + normalizedTangentX * (actualLineLength / 2);
-    //     const lineStartY =
-    //         playHeadY + normalizedTangentY * (actualLineLength / 2);
-    //     const lineEndX =
-    //         playHeadX - normalizedTangentX * (actualLineLength / 2);
-    //     const lineEndY =
-    //         playHeadY - normalizedTangentY * (actualLineLength / 2);
-
-    //     // Draw the perpendicular playhead line
-    //     context.beginPath();
-    //     context.moveTo(lineStartX, lineStartY);
-    //     context.lineTo(lineEndX, lineEndY);
-    //     context.lineWidth = 0.2; // Line width
-
-    //     context.strokeStyle = isDarkMode()
-    //         ? `hsl(0, 0%, 100%)`
-    //         : `hsl(0, 0%, 0%)`; // Color of the playhead line
-
-    //     context.stroke();
-    //     context.closePath();
-    // }
-
     function simulate(
         bodies: PhysicsBody[],
         world: any,
@@ -427,7 +326,7 @@
             const elapsed = now - then;
             const interval = fastForward ? 0.1 : worldStepInterval;
 
-            if (elapsed > interval) {
+            if (elapsed >= interval) {
                 then = now - (elapsed % interval);
 
                 if (world && $applicationState.physicsActive) {
@@ -452,8 +351,10 @@
                             radius: body.voiceNode.radius,
                         };
                     });
-                    simulate(bodies, world, magnetismFunction);
                 }
+            }
+            if (world && $applicationState.physicsActive) {
+                simulate(bodies, world, magnetismFunction);
             }
         });
     }
@@ -548,58 +449,6 @@
         $applicationState = applicationStates.loadingBackendResult;
         resetPhysics();
     }
-
-    // Update canvas size when container size changes
-    // function updateCanvasSize() {
-    //     console.log("Updating canvas size...");
-    //     if (!container) return;
-
-    //     const rect = container.getBoundingClientRect();
-    //     if (rect.height <= rect.width) {
-    //         canvasDiameter = Math.min(
-    //             Math.max(rect.width, rect.height),
-    //             Math.min(innerHeight, innerWidth),
-    //         );
-    //     } else {
-    //         canvasDiameter = rect.width;
-    //     }
-
-    //     if (canvas) {
-    //         canvas.width = canvasDiameter * canvasRatio;
-    //         canvas.height = canvasDiameter * canvasRatio;
-
-    //         // Reset context and scaling when size changes
-    //         if (
-    //             context &&
-    //             canvasRatio > 0 &&
-    //             logical_radius &&
-    //             canvasDiameter > 0
-    //         ) {
-    //             context.reset();
-    //             context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-    //             const scaledCanvasDiameter = canvasRatio * canvasDiameter;
-    //             const scaledCanvasRadius = scaledCanvasDiameter / 2;
-    //             const canvasToLogicalRadiusRatio =
-    //                 scaledCanvasRadius / logical_radius;
-    //             const usableToTotalDiameterRatio =
-    //                 usableCanvasDiameter / canvasDiameter;
-    //             const translateX = scaledCanvasDiameter / 2;
-    //             const translateY = translateX;
-    //             context.translate(translateX, translateY);
-    //             context.scale(
-    //                 // invert x to align with stereo image
-    //                 -canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
-    //                 canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
-    //             );
-    //             context.rotate(
-    //                 ((lastAppliedRotation - mapRotation.current) / 180) *
-    //                     Math.PI,
-    //             );
-    //         } else {
-    //             setTimeout(updateCanvasSize, 10);
-    //         }
-    //     }
-    // }
 
     function isNodeTouchedByPlayhead(
         nodeX: number,
@@ -699,7 +548,7 @@
                         ? `hsl(${node.id}, 100%, 50%)`
                         : Number(node.id) === $hoveredAngle
                           ? `hsla(${node.id}, 100%, 50%, 60%)`
-                          : ""}
+                          : "hsla(0, 0%, 0%, 0%)"}
                 />
             {/each}
             {#each backendNodes as node}
