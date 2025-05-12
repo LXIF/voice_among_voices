@@ -85,7 +85,6 @@
     let steps: number = 0;
 
     // let physicsActive = $state(false);
-    let rendering = $state(false);
     let resetting = $state(false);
     let moving = $state(false);
     let fastForward = $state(false);
@@ -165,20 +164,20 @@
         max_steps = Number($simulationParameters.max_steps);
     });
 
-    $effect(() => {
-        if (
-            browser &&
-            svgElement &&
-            localNodes.length >= 1 &&
-            !rendering &&
-            !resetting &&
-            $simulationParameters
-            //   nonNullish(colliderCoordinates)
-        ) {
-            rendering = true;
-            setupAndSimulate();
-        }
-    });
+    // $effect(() => {
+    //     if (
+    //         browser &&
+    //         svgElement &&
+    //         localNodes.length >= 1 &&
+    //         !rendering &&
+    //         !resetting &&
+    //         $simulationParameters
+    //         //   nonNullish(colliderCoordinates)
+    //     ) {
+    //         rendering = true;
+    //         setupAndSimulate();
+    //     }
+    // });
 
     $effect(() => {
         if (
@@ -196,7 +195,7 @@
         }
     });
 
-    async function resetNodes() {
+    function resetNodes() {
         // if (backendNodes.length > 0) {
         //     console.log("resetting with backend");
         //     localNodes = [...backendNodes];
@@ -459,143 +458,24 @@
                     if (steps > max_steps) {
                         // $applicationState = applicationStates.loggedInIdle;
                         // TODO: stop simulating
+                        $applicationState.physicsActive = false;
                     }
                     magnetismFunction();
                     world.step();
                     checkIfStillMoving(bodies);
+                    // update localNodes based off bodies
+
+                    localNodes = bodies.map((body) => {
+                        const { x, y } = body.rigidBody.translation();
+                        return {
+                            x,
+                            y,
+                            id: body.voiceNode.id,
+                            radius: body.voiceNode.radius,
+                        };
+                    });
+                    simulate(bodies, world, magnetismFunction);
                 }
-
-                // if (context) {
-                //     // Clear the canvas
-                //     context.clearRect(
-                //         -canvasDiameter / 2,
-                //         -canvasDiameter / 2,
-                //         canvasDiameter,
-                //         canvasDiameter,
-                //     );
-
-                //     if (lastAppliedRotation !== mapRotation.current) {
-                //         // Apply new rotation
-                //         context.rotate(
-                //             ((lastAppliedRotation - mapRotation.current) /
-                //                 180) *
-                //                 Math.PI,
-                //         );
-
-                //         // Update the tracked rotation value
-                //         lastAppliedRotation = mapRotation.current;
-                //     }
-
-                //     // Draw the collider
-                //     if (drawCollider && colliderCoords?.length > 0) {
-                //         context.beginPath();
-                //         context.moveTo(
-                //             colliderCoords[0].x,
-                //             colliderCoords[0].y,
-                //         );
-                //         colliderCoords.forEach((coordinate) => {
-                //             context?.lineTo(coordinate.x, coordinate.y);
-                //         });
-                //         // context.strokeStyle = 'black';
-                //         // context.lineWidth = 0.5;
-                //         // context.stroke();
-                //         context!.fillStyle = `hsl(200 50% 50%)`;
-                //         context!.fill();
-                //         context.closePath();
-                //     }
-
-                // update localNodes based off bodies
-
-                localNodes = bodies.map((body) => {
-                    const { x, y } = body.rigidBody.translation();
-                    return {
-                        x,
-                        y,
-                        id: body.voiceNode.id,
-                        radius: body.voiceNode.radius,
-                    };
-                });
-
-                //     // Draw each VoiceNode as a circle using the mapped coordinates
-                //     bodies.forEach((body) => {
-                //         const bodyPos = body.rigidBody.translation();
-                //         const linVel = body.rigidBody.linvel();
-                //         const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
-                //         const colorVel = clamp(
-                //             mapRange(absVel, 0, 2, 0, 100),
-                //             0,
-                //             100,
-                //         );
-                //         const canvasX = bodyPos.x;
-                //         const canvasY = bodyPos.y;
-
-                //         let isTouchedByPlayhead = isNodeTouchedByPlayhead(
-                //             canvasX,
-                //             canvasY,
-                //             body.voiceNode.radius,
-                //         );
-
-                //         context!.beginPath();
-                //         context!.ellipse(
-                //             canvasX,
-                //             canvasY,
-                //             body.voiceNode.radius,
-                //             body.voiceNode.radius,
-                //             0,
-                //             0,
-                //             Math.PI * 2,
-                //         );
-                //         if (isTouchedByPlayhead) {
-                //             context!.fillStyle = `hsla(${body.voiceNode.id}, 30%, 70%)`;
-                //         } else if (
-                //             $selectedAngle &&
-                //             body.voiceNode.id === BigInt($selectedAngle)
-                //         ) {
-                //             context!.fillStyle = `hsla(${$selectedAngle}, 100%, 50%, 80%)`;
-                //         } else if (
-                //             $hoveredAngle &&
-                //             body.voiceNode.id === BigInt($hoveredAngle)
-                //         ) {
-                //             context!.fillStyle = `hsla(${$hoveredAngle}, 100%, 80%, 80%)`;
-                //         } else {
-                //             context!.fillStyle = `hsla(${30 + colorVel / 10}, 80%, ${colorVel}%, ${colorVel}%)`;
-                //         }
-                //         context!.fill();
-                //         context!.lineWidth = bodyLineWidth;
-                //         context!.strokeStyle = `hsl(${body.voiceNode.id} 100% 50% )`;
-                //         context!.stroke();
-                //         context!.closePath();
-                //     });
-
-                //     if ($applicationState.showBackendResult) {
-                //         backendBodies?.forEach((body) => {
-                //             context!.beginPath();
-                //             context!.ellipse(
-                //                 body.x,
-                //                 body.y,
-                //                 body.radius + 1,
-                //                 body.radius + 1,
-                //                 0,
-                //                 0,
-                //                 Math.PI * 2,
-                //             );
-
-                //             context!.strokeStyle = isDarkMode()
-                //                 ? `hsl(0, 0%, 100%)`
-                //                 : `hsl(0, 0%, 0%)`; // Color of the playhead line
-
-                //             context!.lineWidth = 0.3;
-                //             context!.stroke();
-                //             context!.closePath();
-                //         });
-                //     }
-                //     if (showPlayHead) {
-                //         drawPlayHead(context);
-                //     }
-                // }
-            }
-            if (rendering) {
-                simulate(bodies, world, magnetismFunction);
             }
         });
     }
@@ -618,17 +498,11 @@
 
     function resetPhysics() {
         console.log("Resetting physics...");
-        resetting = true;
-        rendering = false;
-
         steps = 0;
-
         setTimeout(() => {
             //let last frame play out
-            rendering = true;
-            resetting = false;
             setupAndSimulate();
-        }, 20);
+        }, 50);
     }
 
     /////for drag and drop/////
@@ -662,7 +536,6 @@
         );
 
         const distanceFromCenter = Math.sqrt(rotatedX ** 2 + rotatedY ** 2);
-        console.log(distanceFromCenter);
         const maxDistance = logical_radius - nodeRadius;
 
         if (distanceFromCenter > maxDistance) {
@@ -694,9 +567,8 @@
             });
         }
 
-        resetPhysics();
         $applicationState = applicationStates.loadingBackendResult;
-        rendering = false;
+        resetPhysics();
     }
 
     // Update canvas size when container size changes
