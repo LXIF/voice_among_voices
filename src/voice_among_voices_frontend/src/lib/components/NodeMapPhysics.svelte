@@ -164,21 +164,6 @@
         max_steps = Number($simulationParameters.max_steps);
     });
 
-    // $effect(() => {
-    //     if (
-    //         browser &&
-    //         svgElement &&
-    //         localNodes.length >= 1 &&
-    //         !rendering &&
-    //         !resetting &&
-    //         $simulationParameters
-    //         //   nonNullish(colliderCoordinates)
-    //     ) {
-    //         rendering = true;
-    //         setupAndSimulate();
-    //     }
-    // });
-
     $effect(() => {
         if (
             browser &&
@@ -196,13 +181,6 @@
     });
 
     function resetNodes() {
-        // if (backendNodes.length > 0) {
-        //     console.log("resetting with backend");
-        //     localNodes = [...backendNodes];
-        //     onResetNodes?.();
-        //     $voiceNodes = await getVoiceNodes();
-        //     return;
-        // }
         console.log("Resetting nodes...");
         localNodes = [...nodes];
     }
@@ -698,6 +676,11 @@
         id="node-map"
         class="min-w-full"
     >
+        <defs>
+            <clipPath id="cut-circle">
+                <circle cx="0" cy="0" r="50" />
+            </clipPath>
+        </defs>
         {#if drawCollider}
             <polygon
                 points={transformColliderCoordinates(colliderCoordinates)}
@@ -734,6 +717,7 @@
                 y1={-(playHeadPosition * 100 - 50)}
                 y2={-(playHeadPosition * 100 - 50)}
                 stroke-width="0.2"
+                clip-path="url(#cut-circle)"
             />
         {/if}
     </svg>
