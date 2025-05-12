@@ -27,7 +27,9 @@
     let draggableElement = $state<HTMLDivElement>();
 
     let scaledNodeWidthPx = $derived(
-        (document.querySelector("canvas")?.width! / 600) * nodeWidthPx,
+        (document.querySelector("#node-map")?.getBoundingClientRect().width! /
+            600) *
+            nodeWidthPx,
     );
     const handleWidth = 50;
     const pointOffset = 7;
@@ -62,7 +64,7 @@
     }
 
     function handlePointerUp(e: PointerEvent) {
-        ondropnode({ x: e.clientX, y: e.clientY });
+        ondropnode({ x: e.clientX, y: e.clientY - handleY });
         setTimeout(() => {
             if (!draggableElement) throw "should be unreachable";
             draggableElement.classList.remove("fixed");
