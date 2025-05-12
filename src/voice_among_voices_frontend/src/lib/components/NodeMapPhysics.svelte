@@ -696,6 +696,7 @@
         onclick={handleClick}
         role="application"
         id="node-map"
+        class="min-w-full"
     >
         {#if drawCollider}
             <polygon

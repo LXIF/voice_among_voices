@@ -408,11 +408,9 @@
 </script>
 
 <svg
-    width={usableCanvasWidth}
-    height={usableCanvasHeight}
     viewBox="0 0 200 200"
     xmlns="http://www.w3.org/2000/svg"
-    class={`${classes} pointer-events-none touch-none`}
+    class={`${classes} pointer-events-none min-w-full touch-none`}
 >
     <!-- Loading progress arc -->
     {#if $applicationState.showFileLoadingLine}
