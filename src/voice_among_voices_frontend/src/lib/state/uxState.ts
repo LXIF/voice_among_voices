@@ -159,18 +159,18 @@ export const applicationStates = {
         showBackendResult: true,
         showFileLoadingLine: false,
     },
-    // loggedInSimulating: {
-    //     state: "loggedInSimulating" as const,
-    //     physicsActive: true,
-    //     wheelActive: false,
-    //     recorderActive: false,
-    //     recorderVisible: true,
-    //     droppingActive: false,
-    //     showDraggableNode: false,
-    //     showLoadingAnimation: false,
-    //     showBackendResult: true,
-    //     showFileLoadingLine: false,
-    // },
+    loggedInSimulating: {
+        state: "loggedInSimulating" as const,
+        physicsActive: true,
+        wheelActive: false,
+        recorderActive: false,
+        recorderVisible: true,
+        droppingActive: false,
+        showDraggableNode: false,
+        showLoadingAnimation: false,
+        showBackendResult: true,
+        showFileLoadingLine: false,
+    },
     loadingBackendResult: {
         state: "loadingBackendResult" as const,
         physicsActive: true,
@@ -229,7 +229,7 @@ export type ApplicationState = {
         | "playingFile"
         | "rotatingMap"
         | "loggedInIdle"
-        // | "loggedInSimulating"
+        | "loggedInSimulating"
         | "loadingBackendResult"
         | "draggingVoice";
     physicsActive: boolean;

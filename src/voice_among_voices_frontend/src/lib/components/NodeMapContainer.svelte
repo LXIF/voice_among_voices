@@ -54,12 +54,6 @@
         $simulationParameters = await getSimulationParameters();
     });
 
-    // $effect(() => {
-    //     if ($identityAgent) {
-    //         $walletAddress = $appkitModal!.getAddress()!;
-    //     }
-    // });
-
     $effect(() => {
         if ($walletAddress !== "") {
             console.log("address changed, fetching tokens");
@@ -173,11 +167,11 @@
         />
         {#if $hoveredAngle}
             <div
-                class="pointer-events-none absolute top-0 flex h-full w-full items-center justify-center lg:max-w-[1200px]"
+                class="pointer-events-none absolute top-0 flex h-full w-full select-none items-center justify-center lg:max-w-[1200px]"
             >
                 <h1
                     transition:blur={{ duration: 100 }}
-                    class="text-9xl backdrop-filter"
+                    class="pointer-events-none select-none text-9xl backdrop-filter"
                 >
                     {$hoveredAngle}°
                 </h1>
