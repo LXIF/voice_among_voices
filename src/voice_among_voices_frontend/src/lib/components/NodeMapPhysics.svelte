@@ -65,13 +65,13 @@
     let container: HTMLDivElement | null = null;
     let svgElement: SVGSVGElement | null = null;
 
-    let canvasDiameter = $state(600);
+    let canvasDiameter = $state(800);
     let marginDivisor = 12; // margin is 50 per default
     let canvasMargin = $derived(canvasDiameter / marginDivisor);
     let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
     let colliderCoordinates: ColliderCoordinate[] = $state([]);
-    const drawCollider = true;
+    const drawCollider = false;
     const bodyLineWidth = 0.3;
 
     let max_distance: number = 0;
@@ -90,7 +90,9 @@
     let moving = $state(false);
     let fastForward = $state(false);
 
-    let lastAppliedRotation = 180;
+    // let contentRect = $state<DOMRectReadOnly>();
+
+    // let lastAppliedRotation = 180;
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -118,20 +120,19 @@
         return outputString;
     }
 
-    function rotatedNodeCoords(
-        node: VoiceNodeEgress,
+    function rotatedCoords(
+        x: number,
+        y: number,
         rotation: number,
-    ): { x: number; y: number } {
+    ): { rotatedX: number; rotatedY: number } {
         // Convert rotation from degrees to radians
         const angleRad = (rotation * Math.PI) / 180;
 
         // Calculate the rotated coordinates using rotation matrix
-        const rotatedX =
-            node.x * Math.cos(angleRad) - node.y * Math.sin(angleRad);
-        const rotatedY =
-            node.x * Math.sin(angleRad) + node.y * Math.cos(angleRad);
+        const rotatedX = x * Math.cos(angleRad) - y * Math.sin(angleRad);
+        const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
 
-        return { x: rotatedX, y: rotatedY };
+        return { rotatedX, rotatedY };
     }
 
     function rotatedX(node: VoiceNodeEgress, rotation: number) {
@@ -151,7 +152,6 @@
     onMount(async () => {
         $simulationParameters = await getSimulationParameters();
         colliderCoordinates = await getColliderCoordinates();
-        console.log(colliderCoordinates);
 
         if (!$simulationParameters) return;
         if (colliderCoordinates.length === 0) return;
@@ -176,7 +176,7 @@
             //   nonNullish(colliderCoordinates)
         ) {
             rendering = true;
-            setupAndRender();
+            setupAndSimulate();
         }
     });
 
@@ -210,7 +210,7 @@
 
     ///////////PHYSICS//////////
 
-    const setupAndRender = () => {
+    const setupAndSimulate = () => {
         console.log("Setting up physics engine and rendering...");
         RAPIER.init()
             .then(() => {
@@ -328,13 +328,7 @@
                     };
                 });
 
-                render(
-                    physicsBodies,
-                    colliderCoordinates,
-                    world,
-                    applyMagnetismForces,
-                    backendNodes,
-                );
+                simulate(physicsBodies, world, applyMagnetismForces);
             })
             .then(() => {
                 resetNodes();
@@ -442,12 +436,10 @@
     //     context.closePath();
     // }
 
-    function render(
+    function simulate(
         bodies: PhysicsBody[],
-        colliderCoords: ColliderCoordinate[],
         world: any,
         magnetismFunction: Function,
-        backendBodies: VoiceNodeEgress[],
     ) {
         requestAnimationFrame((timestamp) => {
             if (then === undefined) {
@@ -511,6 +503,18 @@
                 //         context!.fill();
                 //         context.closePath();
                 //     }
+
+                // update localNodes based off bodies
+
+                localNodes = bodies.map((body) => {
+                    const { x, y } = body.rigidBody.translation();
+                    return {
+                        x,
+                        y,
+                        id: body.voiceNode.id,
+                        radius: body.voiceNode.radius,
+                    };
+                });
 
                 //     // Draw each VoiceNode as a circle using the mapped coordinates
                 //     bodies.forEach((body) => {
@@ -591,34 +595,17 @@
                 // }
             }
             if (rendering) {
-                render(
-                    bodies,
-                    colliderCoordinates,
-                    world,
-                    magnetismFunction,
-                    backendNodes,
-                );
+                simulate(bodies, world, magnetismFunction);
             }
         });
     }
 
     function handleClick(e: MouseEvent) {
         const rect = svgElement!.getBoundingClientRect();
-        const canvasX = (e.clientX - rect.left) * canvasRatio;
-        const canvasY = (e.clientY - rect.top) * canvasRatio;
-
-        //canvasX needs to add canvaswidth-usablecanvaswitdh/2
-
-        const { logicalY } = canvasToLogical(
-            canvasX,
-            canvasY,
-            usableCanvasDiameter,
-            canvasMargin,
-            logical_radius,
-        );
+        const mapY = e.clientY - rect.top;
 
         if (showPlayHead) {
-            const normalizedPosition = (logicalY + 50) / 100;
+            const normalizedPosition = 1 - mapY / rect.height;
             // Dispatch the movePlayHead event with the normalized position
             movePlayHead(normalizedPosition);
         }
@@ -640,7 +627,7 @@
             //let last frame play out
             rendering = true;
             resetting = false;
-            setupAndRender();
+            setupAndSimulate();
         }, 20);
     }
 
@@ -662,43 +649,20 @@
         resetNodes();
         const rect = svgElement!.getBoundingClientRect();
 
-        // Get center of the canvas
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-
-        // Get raw mouse position relative to canvas
-        const rawMouseX = nodeX - rect.left;
-        const rawMouseY = nodeY - rect.top - 70; //TODO generalize
-
-        // Adjust for rotation: we need to apply inverse rotation to the mouse coordinates
-        // since the canvas itself is rotated
-        const rotationRadians = (mapRotation.current * Math.PI) / 180 + Math.PI; // add pi because the world is upside down
-
-        // Calculate position relative to center
-        const relativeToCanvasX = rawMouseX - centerX;
-        const relativeToCanvasY = rawMouseY - centerY;
-
-        // Apply inverse rotation
-        const unrotatedX =
-            relativeToCanvasX * Math.cos(-rotationRadians) -
-            relativeToCanvasY * Math.sin(-rotationRadians);
-        const unrotatedY =
-            relativeToCanvasX * Math.sin(-rotationRadians) +
-            relativeToCanvasY * Math.cos(-rotationRadians);
-
-        // Convert back to canvas coordinates
-        const canvasX = (unrotatedX + centerX) * canvasRatio;
-        const canvasY = (unrotatedY + centerY) * canvasRatio;
-
-        const { logicalX, logicalY } = canvasToLogical(
-            canvasX,
-            canvasY,
-            usableCanvasDiameter,
-            canvasMargin,
-            logical_radius,
+        const mapX = nodeX - rect.left;
+        const mapY = nodeY - rect.top;
+        const normalizedX = mapX / rect.width;
+        const normalizedY = mapY / rect.height;
+        const logicalX = normalizedX * 100 - 50;
+        const logicalY = normalizedY * 100 - 50;
+        const { rotatedX, rotatedY } = rotatedCoords(
+            logicalX,
+            logicalY,
+            -mapRotation.current + 180,
         );
 
-        const distanceFromCenter = Math.sqrt(logicalX ** 2 + logicalY ** 2);
+        const distanceFromCenter = Math.sqrt(rotatedX ** 2 + rotatedY ** 2);
+        console.log(distanceFromCenter);
         const maxDistance = logical_radius - nodeRadius;
 
         if (distanceFromCenter > maxDistance) {
@@ -708,8 +672,8 @@
 
         const voiceNode: VoiceNodeIngress = {
             id: BigInt($selectedAngle!),
-            x: logicalX,
-            y: logicalY,
+            x: rotatedX,
+            y: rotatedY,
             sample: [],
         };
         dropNewNode(voiceNode);
@@ -718,13 +682,13 @@
         );
 
         if (updatableNode) {
-            updatableNode.x = logicalX;
-            updatableNode.y = logicalY;
+            updatableNode.x = rotatedX;
+            updatableNode.y = rotatedY;
             updatableNode.radius = nodeRadius;
         } else {
             localNodes.push({
-                x: logicalX,
-                y: logicalY,
+                x: rotatedX,
+                y: rotatedY,
                 radius: nodeRadius,
                 id: BigInt($selectedAngle!),
             });
@@ -847,40 +811,17 @@
 
         return distanceFromPlayhead <= nodeRadius;
     }
-
-    // onMount(() => {
-    //     if (canvas) {
-    //         context = canvas.getContext("2d");
-    //         canvasRatio = 1;
-    //     }
-    // });
-
-    // $effect(() => {
-    //     if (innerWidth || innerHeight) {
-    //         untrack(() => updateCanvasSize());
-    //     }
-    // });
 </script>
 
 <div
     bind:this={container}
-    class={`relative ${classes} flex w-full items-center justify-center`}
+    class={`relative ${classes} flex w-full items-center justify-center p-[8%]`}
 >
-    <!-- <canvas
-        bind:this={canvas}
-        width={canvasDiameter * canvasRatio}
-        height={canvasDiameter * canvasRatio}
-        onclick={handleClick}
-        ondragover={handleDragOver}
-        class={`w-[${canvasDiameter}px] h-[${canvasDiameter}px]`}
-    ></canvas> -->
     <svg
         bind:this={svgElement}
         viewBox="-50 -50 100 100"
-        width={canvasDiameter}
-        height={canvasDiameter}
-        onclick={handleClick}
         ondragover={handleDragOver}
+        onclick={handleClick}
         role="application"
         id="node-map"
     >
@@ -890,17 +831,29 @@
                 fill="green"
             />
         {/if}
-        {#each localNodes as node}
-            <circle
-                cx={rotatedX(node, mapRotation.current)}
-                cy={rotatedY(node, mapRotation.current)}
-                r={node.radius}
-                stroke="hsl({node.id}, 100%, 50%)"
-                stroke-width="0.3"
-                fill="none"
-            />
-        {/each}
-        {#if showPlayHead}
+        <g style={`transform: rotate(${mapRotation.current + 180}deg);`}>
+            {#each localNodes as node}
+                <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={node.radius}
+                    stroke="hsl({node.id}, 100%, 50%)"
+                    stroke-width={bodyLineWidth}
+                    fill="none"
+                />
+            {/each}
+            {#each backendNodes as node}
+                <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={node.radius + 0.5}
+                    stroke-width={bodyLineWidth}
+                    fill="none"
+                    class="stroke-slate-950 dark:stroke-white"
+                />
+            {/each}
+        </g>
+        {#if showPlayHead && playHeadPosition > 0}
             <line
                 class="stroke-slate-950 dark:stroke-white"
                 x1="-50"

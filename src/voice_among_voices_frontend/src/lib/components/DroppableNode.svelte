@@ -64,7 +64,7 @@
     }
 
     function handlePointerUp(e: PointerEvent) {
-        ondropnode({ x: e.clientX, y: e.clientY });
+        ondropnode({ x: e.clientX, y: e.clientY - handleY });
         setTimeout(() => {
             if (!draggableElement) throw "should be unreachable";
             draggableElement.classList.remove("fixed");
