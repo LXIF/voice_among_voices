@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { mapRange, clamp } from "$lib/utils/mathUtils";
     import RAPIER from "@dimforge/rapier2d-compat";
     // import RAPIER from "@dimforge/rapier2d-deterministic";
@@ -29,6 +29,7 @@
         applicationState,
         applicationStates,
         voiceNodes,
+        toastMessage,
     } from "$lib/state/uxState";
     import { isDarkMode } from "$lib/utils/uxUtils";
     import {
@@ -74,24 +75,26 @@
     const drawCollider = false;
     const bodyLineWidth = 0.3;
 
-    let max_distance: number = $state(0);
-    let force_strength: number = $state(0);
-    let linear_damping: number = $state(0);
-    let logical_radius: number = $state(0);
-    let friction: number = $state(0);
-    let density: number = $state(0);
-    let max_steps: number = $state(0);
+    let max_distance: number = 0;
+    let force_strength: number = 0;
+    let linear_damping: number = 0;
+    let logical_radius: number = 0;
+    let friction: number = 0;
+    let density: number = 0;
+    let max_steps: number = 0;
 
-    let steps: number = $state(0);
+    let steps: number = 0;
 
     // let physicsActive = $state(false);
     let rendering = $state(false);
     let resetting = $state(false);
     let moving = $state(false);
     let scaled = $state(false);
+    let innerWidth = $state(0);
+    let innerHeight = $state(0);
     let fastForward = $state(false);
 
-    let lastAppliedRotation = $state<number>(180);
+    let lastAppliedRotation = 180;
 
     type PhysicsBody = {
         collider: RAPIER.Collider;
@@ -157,12 +160,6 @@
         }
     });
 
-    // $effect(() => {
-    //     if (dragging) {
-    //         resetNodes();
-    //     }
-    // });
-
     async function resetNodes() {
         // if (backendNodes.length > 0) {
         //     console.log("resetting with backend");
@@ -171,16 +168,21 @@
         //     $voiceNodes = await getVoiceNodes();
         //     return;
         // }
-        console.log("resetting nodes");
+        console.log("Resetting nodes...");
         localNodes = [...nodes];
     }
 
     ///////////PHYSICS//////////
 
     const setupAndRender = () => {
+        console.log("Setting up physics engine and rendering...");
         RAPIER.init()
             .then(() => {
-                if (!$simulationParameters) return;
+                if (!$simulationParameters) {
+                    console.error("no simulation parameters");
+                    $toastMessage = "No simulation parameters";
+                    return;
+                }
                 let world: RAPIER.World;
                 let physicsBodies: PhysicsBody[] = [];
                 let gravity = { x: 0, y: 0 };
@@ -592,6 +594,7 @@
     }
 
     function resetPhysics() {
+        console.log("Resetting physics...");
         resetting = true;
         rendering = false;
 
@@ -698,16 +701,14 @@
 
     // Update canvas size when container size changes
     function updateCanvasSize() {
+        console.log("Updating canvas size...");
         if (!container) return;
 
         const rect = container.getBoundingClientRect();
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
-
         if (rect.height <= rect.width) {
             canvasDiameter = Math.min(
                 Math.max(rect.width, rect.height),
-                Math.min(screenHeight, screenWidth),
+                Math.min(innerHeight, innerWidth),
             );
         } else {
             canvasDiameter = rect.width;
@@ -720,9 +721,8 @@
             // Reset context and scaling when size changes
             if (
                 context &&
-                canvasRatio &&
+                canvasRatio > 0 &&
                 logical_radius &&
-                canvasDiameter > 0 &&
                 canvasDiameter > 0
             ) {
                 context.reset();
@@ -735,7 +735,6 @@
                     usableCanvasDiameter / canvasDiameter;
                 const translateX = scaledCanvasDiameter / 2;
                 const translateY = translateX;
-
                 context.translate(translateX, translateY);
                 context.scale(
                     // invert x to align with stereo image
@@ -817,23 +816,14 @@
         if (canvas) {
             context = canvas.getContext("2d");
             canvasRatio = 1;
-
-            // Set up resize observer
-            const resizeObserver = new ResizeObserver(() => {
-                updateCanvasSize();
-            });
-
-            resizeObserver.observe(container!);
-            updateCanvasSize(); // Initial size
-
-            return () => resizeObserver.disconnect();
         }
     });
 
-    // $effect(() => {
-    //     console.log("updating");
-    //     if (logical_radius) updateCanvasSize();
-    // });
+    $effect(() => {
+        if (innerWidth || innerHeight) {
+            untrack(() => updateCanvasSize());
+        }
+    });
 </script>
 
 <div
@@ -849,6 +839,9 @@
         class={`w-[${canvasDiameter}px] h-[${canvasDiameter}px]`}
     ></canvas>
 </div>
+
+<svelte:window bind:innerWidth bind:innerHeight />
+
 <!-- TODO handle this -->
 <!-- 
 {#if physicsActive && backendNodes.length > 0}

@@ -25,12 +25,12 @@ sol! {
 }
 
 pub async fn get_caller_wallet_address() -> Result<String, String> {
-    let response = Call::unbounded_wait(siwe_principal(), "get_address")
+    let response = Call::bounded_wait(siwe_principal(), "get_address")
         .with_arg(ByteBuf::from(msg_caller().as_slice().to_vec()))
         .await
         .map(|res| res.candid())
-        .map_err(|err| format!("Error: {:?}", err))?
-        .map_err(|err| format!("Error: {:?}", err))?;
+        .map_err(|err| format!("Call Failed Error: {:?}", err))?
+        .map_err(|err| format!("Candid Decode Failed Error: {:?}", err))?;
     response
 }
 
@@ -54,23 +54,30 @@ where
     }
 }
 
+// TODO: this function is affected by one-after issue
 pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
     let CallObjects {
         owner,
         token_contract,
     } = setup_call_objects().await?;
 
-    let call_response = retry(
-        || async {
-            token_contract
-                .ownerOf(Uint::from(token_id))
-                .call()
-                .await
-                .map_err(|e| format!("Failed to call ownerOf: {}", e))
-        },
-        7,
-    )
-    .await?;
+    // let call_response = retry(
+    //     || async {
+    //         token_contract
+    //             .ownerOf(Uint::from(token_id))
+    //             .call()
+    //             .await
+    //             .map_err(|e| format!("Failed to call ownerOf: {}", e))
+    //     },
+    //     3,
+    // )
+    // .await?;
+
+    let call_response = token_contract
+        .ownerOf(Uint::from(token_id))
+        .call()
+        .await
+        .map_err(|e| format!("Failed to call ownerOf: {}", e))?;
 
     Ok(call_response._0 == owner)
 }

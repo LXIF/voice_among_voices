@@ -81,7 +81,7 @@ pub fn update_stored_voice_node(
         });
     });
 
-    // zero_cache_update();
+    zero_cache_update();
 
     Ok(returnable_nodes)
 }

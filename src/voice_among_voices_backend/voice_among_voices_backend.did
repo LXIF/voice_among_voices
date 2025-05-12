@@ -20,9 +20,10 @@ type HttpStreamingResponse = record {
   streaming_strategy : opt StreamingStrategy;
   status_code : nat16;
 };
-type Result = variant { Ok : vec VoiceNodeEgress; Err : text };
-type Result_1 = variant { Ok : text; Err : text };
-type Result_2 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
+type Result = variant { Ok : bool; Err : text };
+type Result_1 = variant { Ok : vec VoiceNodeEgress; Err : text };
+type Result_2 = variant { Ok : text; Err : text };
+type Result_3 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
 type SimulationParameters = record {
   logical_radius : float64;
   density : float64;
@@ -75,15 +76,16 @@ service : (opt VoiceAmongVoicesInit) -> {
   get_angle_file : (nat64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;
+  get_is_owner_of_node : (nat64) -> (Result);
   get_my_principal : () -> (text) query;
   get_simulation_parameters : () -> (SimulationParameters) query;
   get_siwe_principal : () -> (principal) query;
   get_token_address : () -> (AddressEgress) query;
-  get_voice_nodes : () -> (Result) query;
-  get_wallet_address : () -> (Result_1) composite_query;
+  get_voice_nodes : () -> (Result_1) query;
+  get_wallet_address : () -> (Result_2) composite_query;
   get_zero_file : () -> (HttpStreamingResponse) query;
   http_request_streaming_callback : (StreamingCallbackToken) -> (
       StreamingCallbackHttpResponse,
     ) query;
-  update_voice_node : (VoiceNodeIngress) -> (Result_2);
+  update_voice_node : (VoiceNodeIngress) -> (Result_3);
 }

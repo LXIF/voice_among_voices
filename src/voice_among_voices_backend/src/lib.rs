@@ -30,7 +30,9 @@ use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
 use voice_nodes::get_stored_voice_nodes;
 
-use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress};
+use evm::{
+    caller_is_owner_of, check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress,
+};
 
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
@@ -52,9 +54,9 @@ async fn update_voice_node(
     node: VoiceNodeIngress,
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     check_auth_for_single_node_id(node.id).await; // traps if not authorized
-    let result = update_stored_voice_node(node);
-    ic_cdk_timers::set_timer(Duration::from_nanos(1), || zero_cache_update());
-    result
+    update_stored_voice_node(node)
+    // ic_cdk_timers::set_timer(Duration::from_nanos(1), || zero_cache_update());
+    // result
 }
 
 #[query]
@@ -115,6 +117,11 @@ async fn get_token_address() -> AddressEgress {
 #[query(composite = true)]
 async fn get_wallet_address() -> Result<String, String> {
     get_caller_wallet_address().await
+}
+
+#[update]
+async fn get_is_owner_of_node(node_id: usize) -> Result<bool, String> {
+    caller_is_owner_of(node_id as u64).await
 }
 
 export_candid!();
