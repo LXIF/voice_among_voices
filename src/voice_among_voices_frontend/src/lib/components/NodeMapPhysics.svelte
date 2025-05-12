@@ -60,11 +60,10 @@
         class?: string;
     } = $props();
 
-    let localNodes: VoiceNodeEgress[] = [];
+    let localNodes: VoiceNodeEgress[] = $state([]);
 
     let container: HTMLDivElement | null = null;
-    let canvas: HTMLCanvasElement | null = null;
-    let context: CanvasRenderingContext2D | null = null;
+    let svgElement: SVGSVGElement | null = null;
 
     let canvasDiameter = $state(600);
     let marginDivisor = 12; // margin is 50 per default
@@ -72,7 +71,7 @@
     let usableCanvasDiameter = $derived(canvasDiameter - 2 * canvasMargin);
 
     let colliderCoordinates: ColliderCoordinate[] = $state([]);
-    const drawCollider = false;
+    const drawCollider = true;
     const bodyLineWidth = 0.3;
 
     let max_distance: number = 0;
@@ -89,9 +88,6 @@
     let rendering = $state(false);
     let resetting = $state(false);
     let moving = $state(false);
-    let scaled = $state(false);
-    let innerWidth = $state(0);
-    let innerHeight = $state(0);
     let fastForward = $state(false);
 
     let lastAppliedRotation = 180;
@@ -104,17 +100,58 @@
 
     let canvasRatio: number = $state(1);
 
-    onMount(() => {
-        if (canvas) {
-            context = canvas.getContext("2d");
-            canvasRatio = 1; // TODO
-            // canvasRatio = window.devicePixelRatio || 1;
-        }
-    });
+    // onMount(() => {
+    //     if (canvas) {
+    //         context = canvas.getContext("2d");
+    //         canvasRatio = 1; // TODO
+    //         // canvasRatio = window.devicePixelRatio || 1;
+    //     }
+    // });
+
+    function transformColliderCoordinates(
+        coords: { x: number; y: number }[],
+    ): string {
+        let outputString = "";
+        coords.forEach((coord) => {
+            outputString = `${outputString} ${coord.x},${coord.y}`;
+        });
+        return outputString;
+    }
+
+    function rotatedNodeCoords(
+        node: VoiceNodeEgress,
+        rotation: number,
+    ): { x: number; y: number } {
+        // Convert rotation from degrees to radians
+        const angleRad = (rotation * Math.PI) / 180;
+
+        // Calculate the rotated coordinates using rotation matrix
+        const rotatedX =
+            node.x * Math.cos(angleRad) - node.y * Math.sin(angleRad);
+        const rotatedY =
+            node.x * Math.sin(angleRad) + node.y * Math.cos(angleRad);
+
+        return { x: rotatedX, y: rotatedY };
+    }
+
+    function rotatedX(node: VoiceNodeEgress, rotation: number) {
+        // Convert rotation from degrees to radians
+        const angleRad = (rotation * Math.PI) / 180;
+
+        return node.x * Math.cos(angleRad) - node.y * Math.sin(angleRad);
+    }
+
+    function rotatedY(node: VoiceNodeEgress, rotation: number) {
+        // Convert rotation from degrees to radians
+        const angleRad = (rotation * Math.PI) / 180;
+
+        return node.x * Math.sin(angleRad) + node.y * Math.cos(angleRad);
+    }
 
     onMount(async () => {
         $simulationParameters = await getSimulationParameters();
         colliderCoordinates = await getColliderCoordinates();
+        console.log(colliderCoordinates);
 
         if (!$simulationParameters) return;
         if (colliderCoordinates.length === 0) return;
@@ -131,7 +168,7 @@
     $effect(() => {
         if (
             browser &&
-            context &&
+            svgElement &&
             localNodes.length >= 1 &&
             !rendering &&
             !resetting &&
@@ -146,11 +183,10 @@
     $effect(() => {
         if (
             browser &&
-            !!localNodes &&
             $simulationParameters &&
             colliderCoordinates.length > 0
         ) {
-            resetPhysics();
+            untrack(() => resetPhysics());
         }
     });
 
@@ -332,79 +368,79 @@
     //     });
     // }
 
-    function drawPlayHead(context: CanvasRenderingContext2D) {
-        if (!showPlayHead || !context) return;
+    // function drawPlayHead(context: CanvasRenderingContext2D) {
+    //     if (!showPlayHead || !context) return;
 
-        // Convert angle to radians
-        const angleRadians = playHeadAngle * (Math.PI / 180);
+    //     // Convert angle to radians
+    //     const angleRadians = playHeadAngle * (Math.PI / 180);
 
-        // Get start and end points on the circle (logical_radius)
-        const startX = Math.sin(angleRadians) * logical_radius;
-        const startY = Math.cos(angleRadians) * logical_radius;
-        const endX = Math.sin(angleRadians) * -logical_radius;
-        const endY = Math.cos(angleRadians) * -logical_radius;
+    //     // Get start and end points on the circle (logical_radius)
+    //     const startX = Math.sin(angleRadians) * logical_radius;
+    //     const startY = Math.cos(angleRadians) * logical_radius;
+    //     const endX = Math.sin(angleRadians) * -logical_radius;
+    //     const endY = Math.cos(angleRadians) * -logical_radius;
 
-        // Interpolate between start and end based on playHeadPosition
-        const playHeadX = startX + (endX - startX) * playHeadPosition;
-        const playHeadY = startY + (endY - startY) * playHeadPosition;
+    //     // Interpolate between start and end based on playHeadPosition
+    //     const playHeadX = startX + (endX - startX) * playHeadPosition;
+    //     const playHeadY = startY + (endY - startY) * playHeadPosition;
 
-        // Calculate the tangent vector (rotate radial vector by 90 degrees counterclockwise)
-        const radialVectorX = playHeadX;
-        const radialVectorY = playHeadY;
+    //     // Calculate the tangent vector (rotate radial vector by 90 degrees counterclockwise)
+    //     const radialVectorX = playHeadX;
+    //     const radialVectorY = playHeadY;
 
-        // The tangent vector perpendicular to the radial vector
-        const tangentX = -radialVectorY; // Negate the Y for 90 degree rotation
-        const tangentY = radialVectorX; // X remains the same
+    //     // The tangent vector perpendicular to the radial vector
+    //     const tangentX = -radialVectorY; // Negate the Y for 90 degree rotation
+    //     const tangentY = radialVectorX; // X remains the same
 
-        // Normalize the tangent vector to ensure it has a unit length
-        const tangentLength = Math.sqrt(
-            tangentX * tangentX + tangentY * tangentY,
-        );
-        const normalizedTangentX = tangentX / tangentLength;
-        const normalizedTangentY = tangentY / tangentLength;
+    //     // Normalize the tangent vector to ensure it has a unit length
+    //     const tangentLength = Math.sqrt(
+    //         tangentX * tangentX + tangentY * tangentY,
+    //     );
+    //     const normalizedTangentX = tangentX / tangentLength;
+    //     const normalizedTangentY = tangentY / tangentLength;
 
-        // Line half-length (so it extends equally on both sides)
-        const lineLength = 2 * logical_radius; // Adjust if needed.
+    //     // Line half-length (so it extends equally on both sides)
+    //     const lineLength = 2 * logical_radius; // Adjust if needed.
 
-        // Calculate the points for the perpendicular line (centered at playHeadX, playHeadY)
-        // Find the intersection points of the tangent line with the circle
-        const distanceFromCenter = Math.sqrt(
-            playHeadX * playHeadX + playHeadY * playHeadY,
-        );
+    //     // Calculate the points for the perpendicular line (centered at playHeadX, playHeadY)
+    //     // Find the intersection points of the tangent line with the circle
+    //     const distanceFromCenter = Math.sqrt(
+    //         playHeadX * playHeadX + playHeadY * playHeadY,
+    //     );
 
-        // Calculate the maximum length the line can have at this point to stay within the circle
-        const maxLineLength =
-            2 *
-            Math.sqrt(
-                logical_radius * logical_radius -
-                    distanceFromCenter * distanceFromCenter,
-            );
+    //     // Calculate the maximum length the line can have at this point to stay within the circle
+    //     const maxLineLength =
+    //         2 *
+    //         Math.sqrt(
+    //             logical_radius * logical_radius -
+    //                 distanceFromCenter * distanceFromCenter,
+    //         );
 
-        // Use the smaller of the two: either the calculated max length or the original line length
-        const actualLineLength = Math.min(maxLineLength, lineLength);
+    //     // Use the smaller of the two: either the calculated max length or the original line length
+    //     const actualLineLength = Math.min(maxLineLength, lineLength);
 
-        const lineStartX =
-            playHeadX + normalizedTangentX * (actualLineLength / 2);
-        const lineStartY =
-            playHeadY + normalizedTangentY * (actualLineLength / 2);
-        const lineEndX =
-            playHeadX - normalizedTangentX * (actualLineLength / 2);
-        const lineEndY =
-            playHeadY - normalizedTangentY * (actualLineLength / 2);
+    //     const lineStartX =
+    //         playHeadX + normalizedTangentX * (actualLineLength / 2);
+    //     const lineStartY =
+    //         playHeadY + normalizedTangentY * (actualLineLength / 2);
+    //     const lineEndX =
+    //         playHeadX - normalizedTangentX * (actualLineLength / 2);
+    //     const lineEndY =
+    //         playHeadY - normalizedTangentY * (actualLineLength / 2);
 
-        // Draw the perpendicular playhead line
-        context.beginPath();
-        context.moveTo(lineStartX, lineStartY);
-        context.lineTo(lineEndX, lineEndY);
-        context.lineWidth = 0.2; // Line width
+    //     // Draw the perpendicular playhead line
+    //     context.beginPath();
+    //     context.moveTo(lineStartX, lineStartY);
+    //     context.lineTo(lineEndX, lineEndY);
+    //     context.lineWidth = 0.2; // Line width
 
-        context.strokeStyle = isDarkMode()
-            ? `hsl(0, 0%, 100%)`
-            : `hsl(0, 0%, 0%)`; // Color of the playhead line
+    //     context.strokeStyle = isDarkMode()
+    //         ? `hsl(0, 0%, 100%)`
+    //         : `hsl(0, 0%, 0%)`; // Color of the playhead line
 
-        context.stroke();
-        context.closePath();
-    }
+    //     context.stroke();
+    //     context.closePath();
+    // }
 
     function render(
         bodies: PhysicsBody[],
@@ -437,122 +473,122 @@
                     checkIfStillMoving(bodies);
                 }
 
-                if (context) {
-                    // Clear the canvas
-                    context.clearRect(
-                        -canvasDiameter / 2,
-                        -canvasDiameter / 2,
-                        canvasDiameter,
-                        canvasDiameter,
-                    );
+                // if (context) {
+                //     // Clear the canvas
+                //     context.clearRect(
+                //         -canvasDiameter / 2,
+                //         -canvasDiameter / 2,
+                //         canvasDiameter,
+                //         canvasDiameter,
+                //     );
 
-                    if (lastAppliedRotation !== mapRotation.current) {
-                        // Apply new rotation
-                        context.rotate(
-                            ((lastAppliedRotation - mapRotation.current) /
-                                180) *
-                                Math.PI,
-                        );
+                //     if (lastAppliedRotation !== mapRotation.current) {
+                //         // Apply new rotation
+                //         context.rotate(
+                //             ((lastAppliedRotation - mapRotation.current) /
+                //                 180) *
+                //                 Math.PI,
+                //         );
 
-                        // Update the tracked rotation value
-                        lastAppliedRotation = mapRotation.current;
-                    }
+                //         // Update the tracked rotation value
+                //         lastAppliedRotation = mapRotation.current;
+                //     }
 
-                    // Draw the collider
-                    if (drawCollider && colliderCoords?.length > 0) {
-                        context.beginPath();
-                        context.moveTo(
-                            colliderCoords[0].x,
-                            colliderCoords[0].y,
-                        );
-                        colliderCoords.forEach((coordinate) => {
-                            context?.lineTo(coordinate.x, coordinate.y);
-                        });
-                        // context.strokeStyle = 'black';
-                        // context.lineWidth = 0.5;
-                        // context.stroke();
-                        context!.fillStyle = `hsl(200 50% 50%)`;
-                        context!.fill();
-                        context.closePath();
-                    }
+                //     // Draw the collider
+                //     if (drawCollider && colliderCoords?.length > 0) {
+                //         context.beginPath();
+                //         context.moveTo(
+                //             colliderCoords[0].x,
+                //             colliderCoords[0].y,
+                //         );
+                //         colliderCoords.forEach((coordinate) => {
+                //             context?.lineTo(coordinate.x, coordinate.y);
+                //         });
+                //         // context.strokeStyle = 'black';
+                //         // context.lineWidth = 0.5;
+                //         // context.stroke();
+                //         context!.fillStyle = `hsl(200 50% 50%)`;
+                //         context!.fill();
+                //         context.closePath();
+                //     }
 
-                    // Draw each VoiceNode as a circle using the mapped coordinates
-                    bodies.forEach((body) => {
-                        const bodyPos = body.rigidBody.translation();
-                        const linVel = body.rigidBody.linvel();
-                        const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
-                        const colorVel = clamp(
-                            mapRange(absVel, 0, 2, 0, 100),
-                            0,
-                            100,
-                        );
-                        const canvasX = bodyPos.x;
-                        const canvasY = bodyPos.y;
+                //     // Draw each VoiceNode as a circle using the mapped coordinates
+                //     bodies.forEach((body) => {
+                //         const bodyPos = body.rigidBody.translation();
+                //         const linVel = body.rigidBody.linvel();
+                //         const absVel = Math.sqrt(linVel.x ** 2 + linVel.y ** 2);
+                //         const colorVel = clamp(
+                //             mapRange(absVel, 0, 2, 0, 100),
+                //             0,
+                //             100,
+                //         );
+                //         const canvasX = bodyPos.x;
+                //         const canvasY = bodyPos.y;
 
-                        let isTouchedByPlayhead = isNodeTouchedByPlayhead(
-                            canvasX,
-                            canvasY,
-                            body.voiceNode.radius,
-                        );
+                //         let isTouchedByPlayhead = isNodeTouchedByPlayhead(
+                //             canvasX,
+                //             canvasY,
+                //             body.voiceNode.radius,
+                //         );
 
-                        context!.beginPath();
-                        context!.ellipse(
-                            canvasX,
-                            canvasY,
-                            body.voiceNode.radius,
-                            body.voiceNode.radius,
-                            0,
-                            0,
-                            Math.PI * 2,
-                        );
-                        if (isTouchedByPlayhead) {
-                            context!.fillStyle = `hsla(${body.voiceNode.id}, 30%, 70%)`;
-                        } else if (
-                            $selectedAngle &&
-                            body.voiceNode.id === BigInt($selectedAngle)
-                        ) {
-                            context!.fillStyle = `hsla(${$selectedAngle}, 100%, 50%, 80%)`;
-                        } else if (
-                            $hoveredAngle &&
-                            body.voiceNode.id === BigInt($hoveredAngle)
-                        ) {
-                            context!.fillStyle = `hsla(${$hoveredAngle}, 100%, 80%, 80%)`;
-                        } else {
-                            context!.fillStyle = `hsla(${30 + colorVel / 10}, 80%, ${colorVel}%, ${colorVel}%)`;
-                        }
-                        context!.fill();
-                        context!.lineWidth = bodyLineWidth;
-                        context!.strokeStyle = `hsl(${body.voiceNode.id} 100% 50% )`;
-                        context!.stroke();
-                        context!.closePath();
-                    });
+                //         context!.beginPath();
+                //         context!.ellipse(
+                //             canvasX,
+                //             canvasY,
+                //             body.voiceNode.radius,
+                //             body.voiceNode.radius,
+                //             0,
+                //             0,
+                //             Math.PI * 2,
+                //         );
+                //         if (isTouchedByPlayhead) {
+                //             context!.fillStyle = `hsla(${body.voiceNode.id}, 30%, 70%)`;
+                //         } else if (
+                //             $selectedAngle &&
+                //             body.voiceNode.id === BigInt($selectedAngle)
+                //         ) {
+                //             context!.fillStyle = `hsla(${$selectedAngle}, 100%, 50%, 80%)`;
+                //         } else if (
+                //             $hoveredAngle &&
+                //             body.voiceNode.id === BigInt($hoveredAngle)
+                //         ) {
+                //             context!.fillStyle = `hsla(${$hoveredAngle}, 100%, 80%, 80%)`;
+                //         } else {
+                //             context!.fillStyle = `hsla(${30 + colorVel / 10}, 80%, ${colorVel}%, ${colorVel}%)`;
+                //         }
+                //         context!.fill();
+                //         context!.lineWidth = bodyLineWidth;
+                //         context!.strokeStyle = `hsl(${body.voiceNode.id} 100% 50% )`;
+                //         context!.stroke();
+                //         context!.closePath();
+                //     });
 
-                    if ($applicationState.showBackendResult) {
-                        backendBodies?.forEach((body) => {
-                            context!.beginPath();
-                            context!.ellipse(
-                                body.x,
-                                body.y,
-                                body.radius + 1,
-                                body.radius + 1,
-                                0,
-                                0,
-                                Math.PI * 2,
-                            );
+                //     if ($applicationState.showBackendResult) {
+                //         backendBodies?.forEach((body) => {
+                //             context!.beginPath();
+                //             context!.ellipse(
+                //                 body.x,
+                //                 body.y,
+                //                 body.radius + 1,
+                //                 body.radius + 1,
+                //                 0,
+                //                 0,
+                //                 Math.PI * 2,
+                //             );
 
-                            context!.strokeStyle = isDarkMode()
-                                ? `hsl(0, 0%, 100%)`
-                                : `hsl(0, 0%, 0%)`; // Color of the playhead line
+                //             context!.strokeStyle = isDarkMode()
+                //                 ? `hsl(0, 0%, 100%)`
+                //                 : `hsl(0, 0%, 0%)`; // Color of the playhead line
 
-                            context!.lineWidth = 0.3;
-                            context!.stroke();
-                            context!.closePath();
-                        });
-                    }
-                    if (showPlayHead) {
-                        drawPlayHead(context);
-                    }
-                }
+                //             context!.lineWidth = 0.3;
+                //             context!.stroke();
+                //             context!.closePath();
+                //         });
+                //     }
+                //     if (showPlayHead) {
+                //         drawPlayHead(context);
+                //     }
+                // }
             }
             if (rendering) {
                 render(
@@ -567,7 +603,7 @@
     }
 
     function handleClick(e: MouseEvent) {
-        const rect = canvas!.getBoundingClientRect();
+        const rect = svgElement!.getBoundingClientRect();
         const canvasX = (e.clientX - rect.left) * canvasRatio;
         const canvasY = (e.clientY - rect.top) * canvasRatio;
 
@@ -624,7 +660,7 @@
         nodeRadius: number;
     }) {
         resetNodes();
-        const rect = canvas!.getBoundingClientRect();
+        const rect = svgElement!.getBoundingClientRect();
 
         // Get center of the canvas
         const centerX = rect.width / 2;
@@ -700,56 +736,56 @@
     }
 
     // Update canvas size when container size changes
-    function updateCanvasSize() {
-        console.log("Updating canvas size...");
-        if (!container) return;
+    // function updateCanvasSize() {
+    //     console.log("Updating canvas size...");
+    //     if (!container) return;
 
-        const rect = container.getBoundingClientRect();
-        if (rect.height <= rect.width) {
-            canvasDiameter = Math.min(
-                Math.max(rect.width, rect.height),
-                Math.min(innerHeight, innerWidth),
-            );
-        } else {
-            canvasDiameter = rect.width;
-        }
+    //     const rect = container.getBoundingClientRect();
+    //     if (rect.height <= rect.width) {
+    //         canvasDiameter = Math.min(
+    //             Math.max(rect.width, rect.height),
+    //             Math.min(innerHeight, innerWidth),
+    //         );
+    //     } else {
+    //         canvasDiameter = rect.width;
+    //     }
 
-        if (canvas) {
-            canvas.width = canvasDiameter * canvasRatio;
-            canvas.height = canvasDiameter * canvasRatio;
+    //     if (canvas) {
+    //         canvas.width = canvasDiameter * canvasRatio;
+    //         canvas.height = canvasDiameter * canvasRatio;
 
-            // Reset context and scaling when size changes
-            if (
-                context &&
-                canvasRatio > 0 &&
-                logical_radius &&
-                canvasDiameter > 0
-            ) {
-                context.reset();
-                context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-                const scaledCanvasDiameter = canvasRatio * canvasDiameter;
-                const scaledCanvasRadius = scaledCanvasDiameter / 2;
-                const canvasToLogicalRadiusRatio =
-                    scaledCanvasRadius / logical_radius;
-                const usableToTotalDiameterRatio =
-                    usableCanvasDiameter / canvasDiameter;
-                const translateX = scaledCanvasDiameter / 2;
-                const translateY = translateX;
-                context.translate(translateX, translateY);
-                context.scale(
-                    // invert x to align with stereo image
-                    -canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
-                    canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
-                );
-                context.rotate(
-                    ((lastAppliedRotation - mapRotation.current) / 180) *
-                        Math.PI,
-                );
-            } else {
-                setTimeout(updateCanvasSize, 10);
-            }
-        }
-    }
+    //         // Reset context and scaling when size changes
+    //         if (
+    //             context &&
+    //             canvasRatio > 0 &&
+    //             logical_radius &&
+    //             canvasDiameter > 0
+    //         ) {
+    //             context.reset();
+    //             context.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+    //             const scaledCanvasDiameter = canvasRatio * canvasDiameter;
+    //             const scaledCanvasRadius = scaledCanvasDiameter / 2;
+    //             const canvasToLogicalRadiusRatio =
+    //                 scaledCanvasRadius / logical_radius;
+    //             const usableToTotalDiameterRatio =
+    //                 usableCanvasDiameter / canvasDiameter;
+    //             const translateX = scaledCanvasDiameter / 2;
+    //             const translateY = translateX;
+    //             context.translate(translateX, translateY);
+    //             context.scale(
+    //                 // invert x to align with stereo image
+    //                 -canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
+    //                 canvasToLogicalRadiusRatio * usableToTotalDiameterRatio,
+    //             );
+    //             context.rotate(
+    //                 ((lastAppliedRotation - mapRotation.current) / 180) *
+    //                     Math.PI,
+    //             );
+    //         } else {
+    //             setTimeout(updateCanvasSize, 10);
+    //         }
+    //     }
+    // }
 
     function isNodeTouchedByPlayhead(
         nodeX: number,
@@ -812,35 +848,70 @@
         return distanceFromPlayhead <= nodeRadius;
     }
 
-    onMount(() => {
-        if (canvas) {
-            context = canvas.getContext("2d");
-            canvasRatio = 1;
-        }
-    });
+    // onMount(() => {
+    //     if (canvas) {
+    //         context = canvas.getContext("2d");
+    //         canvasRatio = 1;
+    //     }
+    // });
 
-    $effect(() => {
-        if (innerWidth || innerHeight) {
-            untrack(() => updateCanvasSize());
-        }
-    });
+    // $effect(() => {
+    //     if (innerWidth || innerHeight) {
+    //         untrack(() => updateCanvasSize());
+    //     }
+    // });
 </script>
 
 <div
     bind:this={container}
     class={`relative ${classes} flex w-full items-center justify-center`}
 >
-    <canvas
+    <!-- <canvas
         bind:this={canvas}
         width={canvasDiameter * canvasRatio}
         height={canvasDiameter * canvasRatio}
         onclick={handleClick}
         ondragover={handleDragOver}
         class={`w-[${canvasDiameter}px] h-[${canvasDiameter}px]`}
-    ></canvas>
+    ></canvas> -->
+    <svg
+        bind:this={svgElement}
+        viewBox="-50 -50 100 100"
+        width={canvasDiameter}
+        height={canvasDiameter}
+        onclick={handleClick}
+        ondragover={handleDragOver}
+        role="application"
+        id="node-map"
+    >
+        {#if drawCollider}
+            <polygon
+                points={transformColliderCoordinates(colliderCoordinates)}
+                fill="green"
+            />
+        {/if}
+        {#each localNodes as node}
+            <circle
+                cx={rotatedX(node, mapRotation.current)}
+                cy={rotatedY(node, mapRotation.current)}
+                r={node.radius}
+                stroke="hsl({node.id}, 100%, 50%)"
+                stroke-width="0.3"
+                fill="none"
+            />
+        {/each}
+        {#if showPlayHead}
+            <line
+                class="stroke-slate-950 dark:stroke-white"
+                x1="-50"
+                x2="50"
+                y1={-(playHeadPosition * 100 - 50)}
+                y2={-(playHeadPosition * 100 - 50)}
+                stroke-width="0.2"
+            />
+        {/if}
+    </svg>
 </div>
-
-<svelte:window bind:innerWidth bind:innerHeight />
 
 <!-- TODO handle this -->
 <!-- 
