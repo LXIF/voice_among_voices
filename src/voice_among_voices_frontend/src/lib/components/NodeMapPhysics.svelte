@@ -695,7 +695,11 @@
                     r={node.radius}
                     stroke="hsl({node.id}, 100%, 50%)"
                     stroke-width={bodyLineWidth}
-                    fill="none"
+                    fill={Number(node.id) === $selectedAngle
+                        ? `hsl(${node.id}, 100%, 50%)`
+                        : Number(node.id) === $hoveredAngle
+                          ? `hsla(${node.id}, 100%, 50%, 60%)`
+                          : ""}
                 />
             {/each}
             {#each backendNodes as node}
