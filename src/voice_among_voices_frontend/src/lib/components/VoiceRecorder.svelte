@@ -10,6 +10,7 @@
         applicationState,
         applicationStates,
         backendSimulationResult,
+        selectedAngle,
         toastMessage,
         voiceNodes,
     } from "$lib/state/uxState";
@@ -241,7 +242,8 @@
         duration: 500,
         easing: elasticOut,
     }}
-    disabled={!$applicationState.recorderActive}>Rec</button
+    disabled={!$applicationState.recorderActive || $selectedAngle === 0}
+    >Rec</button
 >
 
 <style lang="postcss">

@@ -165,7 +165,7 @@
                 $hoveredAngle = angle;
             }}
         />
-        {#if $hoveredAngle}
+        {#if $hoveredAngle !== null}
             <div
                 class="pointer-events-none absolute top-0 flex h-full w-full select-none items-center justify-center lg:max-w-[1200px]"
             >

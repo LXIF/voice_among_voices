@@ -218,7 +218,7 @@
     {/if}
     <h1
         style={`color: hsl(${$selectedAngle},100%,50%)`}
-        class="text-center text-5xl font-bold"
+        class="pointer-events-none cursor-none select-none text-center text-5xl font-bold"
     >
         {$selectedAngle}°
     </h1>

@@ -38,7 +38,7 @@
     $effect(() => {
         if ($identityAgent && $myTokens.length > 0) {
             untrack(() => {
-                rotateToClosest($myTokens);
+                rotateToClosest([...$myTokens, 0]);
             });
         }
     });
@@ -79,9 +79,8 @@
     };
 
     const findClosestAngle = (angle: number, availableAngles: number[]) => {
-        let closestAngle = angle + (180 % 360);
+        let closestAngle = Math.round(angle + (180 % 360));
         let closestDistance = 180;
-
         availableAngles.forEach((availableAngle) => {
             // closest angles don't cross 0
             let distanceWithoutCrossing = availableAngle - angle;
@@ -195,7 +194,7 @@
     }
 
     function isAngleAvailable(angle: number): boolean {
-        return $myTokens.includes(angle);
+        return angle === 0 || $myTokens.includes(angle);
     }
 
     // Add a rotating offset for the loading animation
@@ -335,9 +334,8 @@
 
             // Update hoveredAngle to match current rotation
             const currentRotation = -mapRotation.current; // Convert from map rotation to angle
-            const normalizedRotation = Math.round(
-                ((currentRotation % 360) + 360) % 360,
-            ); // Normalize to 0-359 and round
+            const normalizedRotation =
+                Math.round(((currentRotation % 360) + 360) % 360) % 360; // Normalize to 0-359 and round
             hoveredAngle = normalizedRotation;
         }
 
@@ -371,7 +369,7 @@
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
 
-            const availableAngles = $myTokens;
+            const availableAngles = [...$myTokens, 0];
 
             rotateToClosest(availableAngles);
         }
@@ -458,7 +456,7 @@
             class="z-20"
         >
             <!-- Draw lines for all angles -->
-            {#each Array.from({ length: 360 }, (_, i) => i + 1) as angle}
+            {#each Array.from({ length: 360 }, (_, i) => i) as angle}
                 <line
                     tabindex={isAngleAvailable(angle) ? 0 : -1}
                     role="button"
@@ -529,7 +527,7 @@
             class="z-20"
         >
             <!-- Draw lines for all angles -->
-            {#each Array.from({ length: 360 }, (_, i) => i + 1) as angle}
+            {#each Array.from({ length: 360 }, (_, i) => i) as angle}
                 <line
                     tabindex={isAngleAvailable(angle) ? 0 : -1}
                     role="button"
