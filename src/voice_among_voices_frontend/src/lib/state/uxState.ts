@@ -106,7 +106,7 @@ export const applicationStates = {
         recorderActive: false,
         recorderVisible: true,
         droppingActive: false,
-        showDraggableNode: true,
+        showDraggableNode: false,
         showLoadingAnimation: false,
         showBackendResult: false,
         showFileLoadingLine: true,

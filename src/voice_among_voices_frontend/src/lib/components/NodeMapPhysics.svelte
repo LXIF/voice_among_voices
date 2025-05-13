@@ -364,7 +364,7 @@
         const mapY = e.clientY - rect.top;
 
         if (showPlayHead) {
-            const normalizedPosition = 1 - mapY / rect.height;
+            const normalizedPosition = mapY / rect.height;
             // Dispatch the movePlayHead event with the normalized position
             movePlayHead(normalizedPosition);
         }
@@ -567,8 +567,8 @@
                 class="stroke-slate-950 dark:stroke-white"
                 x1="-50"
                 x2="50"
-                y1={-(playHeadPosition * 100 - 50)}
-                y2={-(playHeadPosition * 100 - 50)}
+                y1={playHeadPosition * 100 - 50}
+                y2={playHeadPosition * 100 - 50}
                 stroke-width="0.2"
                 clip-path="url(#cut-circle)"
             />

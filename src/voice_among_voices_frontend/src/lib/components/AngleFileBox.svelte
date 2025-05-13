@@ -175,7 +175,7 @@
 
     // Set playback position externally (in response to incoming props)
     $effect(() => {
-        console.log($externalPlaybackPosition); //TODO: figure out why this needs to be here
+        $externalPlaybackPosition;
         if (
             audioElement &&
             audioElement.duration &&
