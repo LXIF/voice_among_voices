@@ -113,6 +113,14 @@ pub fn token_address() -> Address {
     TOKEN_ADDRESS.with_borrow(|token_address| token_address.get().0)
 }
 
+pub fn store_voice_log(log: VoiceLog) -> Result<(), ic_stable_structures::GrowFailed> {
+    VOICE_LOG.with_borrow_mut(|log_vec| log_vec.push(&log))
+}
+
+pub fn retrieve_voice_logs(skip: usize, take: usize) -> Vec<VoiceLog> {
+    VOICE_LOG.with_borrow(|log_vec| log_vec.iter().skip(skip).take(take).collect())
+}
+
 #[derive(CandidType, Serialize, Deserialize)]
 pub struct AddressEgress {
     pub address: String,

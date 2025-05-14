@@ -14,6 +14,24 @@ pub struct VoiceLog {
     position: Option<PositionLog>,
 }
 
+impl VoiceLog {
+    pub fn new(
+        timestamp: u64,
+        id: u64,
+        action: VoiceAction,
+        initiator: AddressEgress,
+        position: Option<PositionLog>,
+    ) -> Self {
+        Self {
+            timestamp,
+            id,
+            action,
+            initiator,
+            position,
+        }
+    }
+}
+
 impl Storable for VoiceLog {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
@@ -33,6 +51,6 @@ pub enum VoiceAction {
 
 #[derive(CandidType, Serialize, Deserialize)]
 pub struct PositionLog {
-    x: f64,
-    y: f64,
+    pub x: f64,
+    pub y: f64,
 }

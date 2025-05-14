@@ -6,10 +6,11 @@ mod structs;
 pub mod test_functions;
 mod utils;
 
+use alloy::primitives::Address;
 use audio::*;
 use candid::Principal;
 use ic_cdk::{
-    api::{canister_self, msg_caller, performance_counter},
+    api::{canister_self, msg_caller, performance_counter, time},
     call::Call,
     export_candid,
     futures::spawn,
@@ -18,10 +19,11 @@ use ic_cdk::{
 use ic_cdk_timers::set_timer;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{panic::RefUnwindSafe, time::Duration, u64};
+use std::{panic::RefUnwindSafe, str::FromStr, time::Duration, u64};
 use storage::{
     files_and_voices::{get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk},
     init::*,
+    voice_log::{PositionLog, VoiceAction, VoiceLog},
     voice_nodes::update_stored_voice_node,
     *,
 };
@@ -54,7 +56,18 @@ async fn update_voice_node(
     node: VoiceNodeIngress,
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     check_auth_for_single_node_id(node.id).await; // traps if not authorized
-    update_stored_voice_node(node)
+    let res = update_stored_voice_node(node.clone());
+    let _ = store_voice_log(VoiceLog::new(
+        time(),
+        node.id as u64,
+        VoiceAction::Drop,
+        Address::from_str("asdf").unwrap().into(), // TODO: address here needs to be correct
+        Some(PositionLog {
+            x: node.x,
+            y: node.y,
+        }),
+    ));
+    res
     // ic_cdk_timers::set_timer(Duration::from_nanos(1), || zero_cache_update());
     // result
 }
@@ -122,6 +135,12 @@ async fn get_wallet_address() -> Result<String, String> {
 #[update]
 async fn get_is_owner_of_node(node_id: usize) -> Result<bool, String> {
     caller_is_owner_of(node_id as u64).await
+}
+
+// LOGS
+#[query]
+async fn get_voice_logs(skip: u64, take: u64) -> Vec<VoiceLog> {
+    retrieve_voice_logs(skip as usize, take as usize)
 }
 
 export_candid!();
