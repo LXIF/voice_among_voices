@@ -7,6 +7,7 @@ use alloy::primitives::Address;
 use candid::CandidType;
 use candid::Principal;
 
+use crate::storage::voice_log::VoiceLog;
 use ic_cdk::api::msg_caller;
 use ic_stable_structures::{
     cell::ValueError,
@@ -14,11 +15,13 @@ use ic_stable_structures::{
     DefaultMemoryImpl, StableCell, StableVec,
 };
 use once_cell::sync::Lazy;
+use serde::Deserialize;
 use serde::Serialize;
 use std::{cell::RefCell, collections::HashMap};
 
 pub mod files_and_voices;
 pub mod init;
+pub mod voice_log;
 pub mod voice_nodes;
 
 thread_local! {
@@ -38,6 +41,9 @@ thread_local! {
     );
     pub static CONFIG: RefCell<StableCell<StorableConfig, Memory>> = RefCell::new(
         StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(4))), StorableConfig::default()).expect("Failed to initialize config storage")
+    );
+    pub static VOICE_LOG: RefCell<StableVec<VoiceLog, Memory>> = RefCell::new(
+        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(4)))).expect("Failed to initialize log storage")
     );
     pub static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     pub static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
@@ -107,7 +113,7 @@ pub fn token_address() -> Address {
     TOKEN_ADDRESS.with_borrow(|token_address| token_address.get().0)
 }
 
-#[derive(CandidType, Serialize)]
+#[derive(CandidType, Serialize, Deserialize)]
 pub struct AddressEgress {
     pub address: String,
 }

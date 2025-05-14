@@ -1,5 +1,3 @@
-use ic_cdk::api::canister_self;
-
 use crate::physics::simulate_until_stopped;
 use crate::storage::{
     AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY, SIMULATION_PARAMETERS,
