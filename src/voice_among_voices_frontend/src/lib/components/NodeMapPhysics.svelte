@@ -164,9 +164,20 @@
         }
     });
 
+    $effect(() => {
+        $applicationState;
+        if (
+            $applicationState.state === "loadingFile" ||
+            $applicationState.state === "playingFile"
+        ) {
+            resetNodes();
+        }
+    });
+
     function resetNodes() {
         console.log("Resetting nodes...");
         localNodes = [...nodes];
+        backendNodes = [];
     }
 
     ///////////PHYSICS//////////
@@ -370,11 +381,6 @@
         }
     }
 
-    function handleFastForward() {
-        resetNodes();
-        backendNodes = [];
-    }
-
     function resetPhysics() {
         console.log("Resetting physics...");
         steps = 0;
@@ -551,16 +557,18 @@
                           : "hsla(0, 0%, 0%, 0%)"}
                 />
             {/each}
-            {#each backendNodes as node}
-                <circle
-                    cx={node.x}
-                    cy={node.y}
-                    r={node.radius + 0.5}
-                    stroke-width={bodyLineWidth}
-                    fill="none"
-                    class="stroke-slate-950 dark:stroke-white"
-                />
-            {/each}
+            {#if $applicationState.showBackendResult}
+                {#each backendNodes as node}
+                    <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius + 0.5}
+                        stroke-width={bodyLineWidth}
+                        fill="none"
+                        class="stroke-slate-950 dark:stroke-white"
+                    />
+                {/each}
+            {/if}
         </g>
         {#if showPlayHead && playHeadPosition > 0}
             <line
