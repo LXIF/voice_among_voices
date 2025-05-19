@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use alloy::primitives::Address;
 use ic_cdk::api::time;
 
 use crate::physics::simulate_until_stopped;
@@ -10,11 +13,12 @@ use crate::{
     VoiceNodeIngress, VoiceNodeLocal,
 };
 
-use super::voice_log::{VoiceAction, VoiceLog};
+use super::voice_log::{PositionLog, VoiceAction, VoiceLog};
 use super::{store_voice_log, zero_cache_update};
 
 pub fn update_stored_voice_node(
     node: VoiceNodeIngress,
+    address: Address, // needed for logging
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     // first check radius
     let (sample_length_samples, sample_length_ms) = get_sample_length(&node.sample)?;
@@ -82,7 +86,20 @@ pub fn update_stored_voice_node(
         });
     });
 
-    zero_cache_update();
+    let _ = store_voice_log(VoiceLog::new(
+        //TODO: maybe handle better
+        time(),
+        node.id as u64,
+        VoiceAction::Drop,
+        address.into(),
+        Some(PositionLog {
+            x: node.x,
+            y: node.y,
+        }),
+    ));
+
+    // zero_cache_update();
+    ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
 
     Ok(returnable_nodes)
 }

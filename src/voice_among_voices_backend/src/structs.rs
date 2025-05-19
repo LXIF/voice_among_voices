@@ -5,7 +5,7 @@ use ic_stable_structures::{
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, collections::HashMap, ops::Add};
 
 // LIB ////////////////////
 
@@ -117,8 +117,26 @@ pub struct AudioParameters {
 pub enum AddVoiceNodeError {
     NotWithinCircleError(String),
     NotValidAudioFileError(String),
-    NotAuthorizedError,
+    Unauthorized,
     EvmError(String),
+    SetupError(String),
+}
+
+impl From<AuthorizationError> for AddVoiceNodeError {
+    fn from(error: AuthorizationError) -> Self {
+        match error {
+            AuthorizationError::Unauthorized => AddVoiceNodeError::Unauthorized,
+            AuthorizationError::EvmError(e) => AddVoiceNodeError::EvmError(e),
+            AuthorizationError::SetupError(e) => AddVoiceNodeError::SetupError(e),
+        }
+    }
+}
+
+#[derive(CandidType, Debug)]
+pub enum AuthorizationError {
+    Unauthorized,
+    EvmError(String),
+    SetupError(String),
 }
 
 #[derive(CandidType, Deserialize, Clone, Default)]

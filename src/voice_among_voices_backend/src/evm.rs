@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use crate::structs::AuthorizationError;
 use crate::token_address;
 use crate::{siwe_principal, storage::dev_mode};
 use alloy::{
@@ -55,11 +56,13 @@ where
 }
 
 // TODO: this function is affected by one-after issue
-pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
+pub async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError> {
     let CallObjects {
         owner,
         token_contract,
-    } = setup_call_objects().await?;
+    } = setup_call_objects()
+        .await
+        .map_err(AuthorizationError::EvmError)?;
 
     // let call_response = retry(
     //     || async {
@@ -77,22 +80,20 @@ pub async fn caller_is_owner_of(token_id: u64) -> Result<bool, String> {
         .ownerOf(Uint::from(token_id))
         .call()
         .await
-        .map_err(|e| format!("Failed to call ownerOf: {}", e))?;
+        .map_err(|e| AuthorizationError::EvmError(format!("Failed to call ownerOf: {}", e)))?;
 
-    Ok(call_response._0 == owner)
+    if call_response._0 == owner {
+        Ok(owner)
+    } else {
+        Err(AuthorizationError::Unauthorized)
+    }
 }
 
-pub async fn check_auth_for_single_node_id(node_id: usize) {
+pub async fn check_auth_for_single_node_id(node_id: usize) -> Result<Address, AuthorizationError> {
     if dev_mode() {
-        return ();
+        return Ok(Address::ZERO);
     };
-    match caller_is_owner_of(node_id as u64).await {
-        Ok(res) => match res {
-            true => (),
-            false => ic_cdk::trap("Unauthorized"),
-        },
-        Err(err) => ic_cdk::trap(&format!("Failed to check authorization: {}", err)),
-    }
+    caller_is_owner_of(node_id as u64).await
 }
 
 struct CallObjects {

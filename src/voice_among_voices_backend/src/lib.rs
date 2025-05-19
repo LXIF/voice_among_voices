@@ -6,7 +6,6 @@ mod structs;
 pub mod test_functions;
 mod utils;
 
-use alloy::primitives::Address;
 use audio::*;
 use candid::Principal;
 use ic_cdk::{
@@ -55,21 +54,10 @@ fn post_upgrade() {
 async fn update_voice_node(
     node: VoiceNodeIngress,
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
-    check_auth_for_single_node_id(node.id).await; // traps if not authorized
-    let res = update_stored_voice_node(node.clone());
-    let _ = store_voice_log(VoiceLog::new(
-        time(),
-        node.id as u64,
-        VoiceAction::Drop,
-        Address::from_str("asdf").unwrap().into(), // TODO: address here needs to be correct
-        Some(PositionLog {
-            x: node.x,
-            y: node.y,
-        }),
-    ));
-    res
-    // ic_cdk_timers::set_timer(Duration::from_nanos(1), || zero_cache_update());
-    // result
+    match check_auth_for_single_node_id(node.id).await {
+        Ok(address) => update_stored_voice_node(node, address),
+        Err(err) => Err(err.into()),
+    }
 }
 
 #[query]

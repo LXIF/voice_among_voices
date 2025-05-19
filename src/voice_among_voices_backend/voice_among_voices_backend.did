@@ -1,8 +1,9 @@
 type AddVoiceNodeError = variant {
   EvmError : text;
-  NotAuthorizedError;
+  Unauthorized;
   NotValidAudioFileError : text;
   NotWithinCircleError : text;
+  SetupError : text;
 };
 type AddressEgress = record { address : text };
 type AudioParameters = record {
