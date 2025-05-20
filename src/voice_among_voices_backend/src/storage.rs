@@ -7,6 +7,7 @@ use alloy::primitives::Address;
 use candid::CandidType;
 use candid::Principal;
 
+use crate::storage::voice_log::VoiceLog;
 use ic_cdk::api::msg_caller;
 use ic_stable_structures::{
     cell::ValueError,
@@ -14,11 +15,13 @@ use ic_stable_structures::{
     DefaultMemoryImpl, StableCell, StableVec,
 };
 use once_cell::sync::Lazy;
+use serde::Deserialize;
 use serde::Serialize;
 use std::{cell::RefCell, collections::HashMap};
 
 pub mod files_and_voices;
 pub mod init;
+pub mod voice_log;
 pub mod voice_nodes;
 
 thread_local! {
@@ -38,6 +41,9 @@ thread_local! {
     );
     pub static CONFIG: RefCell<StableCell<StorableConfig, Memory>> = RefCell::new(
         StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(4))), StorableConfig::default()).expect("Failed to initialize config storage")
+    );
+    pub static VOICE_LOG: RefCell<StableVec<VoiceLog, Memory>> = RefCell::new(
+        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(5)))).expect("Failed to initialize log storage")
     );
     pub static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     pub static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
@@ -107,7 +113,15 @@ pub fn token_address() -> Address {
     TOKEN_ADDRESS.with_borrow(|token_address| token_address.get().0)
 }
 
-#[derive(CandidType, Serialize)]
+pub fn store_voice_log(log: VoiceLog) -> Result<(), ic_stable_structures::GrowFailed> {
+    VOICE_LOG.with_borrow_mut(|log_vec| log_vec.push(&log))
+}
+
+pub fn retrieve_voice_logs(skip: usize, take: usize) -> Vec<VoiceLog> {
+    VOICE_LOG.with_borrow(|log_vec| log_vec.iter().skip(skip).take(take).collect())
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
 pub struct AddressEgress {
     pub address: String,
 }
@@ -157,9 +171,9 @@ mod tests {
             id: 1,
         };
 
-        let result_a = update_stored_voice_node(voice_node);
+        let result_a = update_stored_voice_node(voice_node, Address::ZERO, 0u64);
         println!("{:#?}", result_a.unwrap());
-        let _ = update_stored_voice_node(another_voice_node);
+        let _ = update_stored_voice_node(another_voice_node, Address::ZERO, 0u64);
 
         SAMPLES_MEMORY.with_borrow(|samples_map| {
             let id = samples_map.get(0).expect("No sample!").id;
@@ -195,8 +209,8 @@ mod tests {
             id: 1,
         };
 
-        let _ = update_stored_voice_node(voice_node);
-        let _ = update_stored_voice_node(another_voice_node);
+        let _ = update_stored_voice_node(voice_node, Address::ZERO, 0u64);
+        let _ = update_stored_voice_node(another_voice_node, Address::ZERO, 0u64);
 
         SAMPLES_MEMORY.with_borrow(|samples_map| {
             println!("{}", samples_map.len());
@@ -224,8 +238,8 @@ mod tests {
             id: 1,
         };
 
-        let _ = update_stored_voice_node(voice_node);
-        let _ = update_stored_voice_node(another_voice_node);
+        let _ = update_stored_voice_node(voice_node, Address::ZERO, 0u64);
+        let _ = update_stored_voice_node(another_voice_node, Address::ZERO, 0u64);
 
         SAMPLES_MEMORY.with_borrow(|samples_map| {
             println!("{}", samples_map.len());

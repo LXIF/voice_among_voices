@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { isTouch } from "$lib/state/isMobile";
     import { onMount } from "svelte";
     import { scale, fly } from "svelte/transition";
     import { type HTMLAttributes } from "svelte/elements";
     import { nonNullish } from "@dfinity/utils";
+    import Button from "./Button.svelte";
 
     type Props = HTMLAttributes<HTMLDialogElement> & {
         onClose?: () => void;
@@ -11,7 +11,6 @@
         closeOnOutsideClick?: boolean;
         showCloseButton?: boolean;
         backdrop?: boolean;
-        bottomSheet?: "mobile" | "always" | "never";
     };
 
     const {
@@ -22,7 +21,6 @@
         closeOnOutsideClick = true,
         showCloseButton = true,
         backdrop = true,
-        bottomSheet = "mobile",
         ...props
     }: Props = $props();
 
@@ -33,7 +31,7 @@
     };
 
     const transitionFn = $derived(
-        ($isTouch && bottomSheet === "mobile") || bottomSheet === "always"
+        window.innerWidth < 480
             ? (node: Element) => fly(node, { duration: 200, y: "100%" })
             : (node: Element) => scale(node, { duration: 200, start: 0.9 }),
     );
@@ -45,48 +43,112 @@
     onMount(() => {
         dialogRef.showModal();
         dialogRef.setAttribute("data-visible", "true");
+
+        // Use the virtualKeyboard API to intentionally render the software keyboard
+        // on top of the page, we manually adjust the dialog positioning for it.
+        //
+        // If the API is not supported (e.g. iOS) polyfill it with visualViewport.
+        let visualViewportResizeTimeout: ReturnType<typeof setTimeout>;
+        const updateKeyboardInset = () => {
+            clearTimeout(visualViewportResizeTimeout);
+            visualViewportResizeTimeout = setTimeout(() => {
+                dialogRef.style.setProperty(
+                    "--keyboard-inset-height",
+                    `${Math.max(window.innerHeight - window.visualViewport!.height, 0)}px`,
+                );
+            }, 100);
+        };
+        if ("virtualKeyboard" in navigator) {
+            (
+                navigator.virtualKeyboard as { overlaysContent: boolean }
+            ).overlaysContent = true;
+        } else {
+            window.visualViewport?.addEventListener(
+                "resize",
+                updateKeyboardInset,
+            );
+            window.visualViewport?.addEventListener(
+                "scroll",
+                updateKeyboardInset,
+            );
+        }
+        return () => {
+            if ("virtualKeyboard" in navigator) {
+                (
+                    navigator.virtualKeyboard as { overlaysContent: boolean }
+                ).overlaysContent = false;
+            } else {
+                window.visualViewport?.removeEventListener(
+                    "resize",
+                    updateKeyboardInset,
+                );
+                window.visualViewport?.removeEventListener(
+                    "scroll",
+                    updateKeyboardInset,
+                );
+                updateKeyboardInset();
+            }
+        };
     });
 </script>
 
-<div class="fixed left-0 top-0 z-20 h-screen w-screen backdrop-blur-lg"></div>
 <dialog
     bind:this={dialogRef}
     oncancel={onCancel}
     closedby={closeOnOutsideClick ? "any" : "none"}
     class={[
-        "flex max-h-screen max-w-full flex-col overflow-hidden bg-transparent bg-white text-black backdrop:opacity-0 backdrop:backdrop-brightness-75 backdrop:transition-opacity backdrop:duration-200 max-[460px]:min-w-full dark:bg-slate-950 dark:text-gray-100",
-        backdrop && "[&[data-visible]]:backdrop:opacity-100",
-        ($isTouch && bottomSheet === "mobile") || bottomSheet === "always"
-            ? "mx-auto mt-auto"
-            : "m-auto max-[460px]:m-0 max-[460px]:min-h-full",
+        // Layout base/dialog/bottomsheet
+        "fixed flex max-w-full flex-col overflow-hidden bg-transparent",
+        "sm:w-100 sm:m-auto sm:min-h-[100dvh]",
+        "w-full max-sm:bottom-0 max-sm:top-auto",
+        // Backdrop base/visible
+        "backdrop:bg-bg-overlay backdrop:opacity-0 backdrop:transition-opacity backdrop:duration-200",
+        backdrop && "[&[data-visible]]:backdrop:opacity-80",
     ]}
-    transition:transitionFn|global
+    style="--keyboard-inset-height: env(keyboard-inset-height);"
+    transition:transitionFn
     onoutrostart={fadeOutBackDrop}
     {...props}
 >
     <div
         class={[
-            "w-100 flex max-h-screen flex-col overflow-hidden bg-slate-100 p-6 max-[460px]:min-w-full max-[460px]:max-w-full dark:bg-slate-900",
-            ($isTouch && bottomSheet === "mobile") || bottomSheet === "always"
-                ? "fixed bottom-0 max-w-full rounded-t-2xl"
-                : "rounded-2xl max-[460px]:flex-1 max-[460px]:rounded-none",
+            // Container base/dialog/bottomsheet
+            "border-border-secondary relative flex max-h-screen flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 dark:sm:border",
+            "sm:w-100 sm:m-auto sm:rounded-2xl sm:px-6 sm:pb-8 sm:pt-6",
+            "w-full rounded-t-2xl px-4 pb-6 pt-4",
             className,
         ]}
     >
-        <div class="flex">
-            {#if nonNullish(title)}
-                <h1 class="h1 -mt-1 mb-4 flex-1 items-center text-2xl">
-                    {title}
-                </h1>
-            {/if}
-            {#if showCloseButton && nonNullish(onClose)}
-                <button type="button" class="rounded-full" onclick={onClose}
-                    >✕</button
-                >
-            {/if}
+        <!-- Non-interactive element to render dark-mode bottom sheet border gradient -->
+        <div
+            class="from-border-secondary pointer-events-none absolute left-0 right-0 top-0 z-0 hidden rounded-t-2xl to-transparent p-[1px] max-sm:dark:block"
+        >
+            <div class="h-24 rounded-t-2xl bg-slate-50 dark:bg-slate-950"></div>
         </div>
-        <div class="flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+        <div class="z-1 relative flex flex-1 flex-col">
             {@render children?.()}
+            <!-- Element that pushes bottom sheet away from mobile keyboard or gesture navigation -->
+            <div class="flex sm:hidden">
+                <div class="h-[var(--keyboard-inset-height)]"></div>
+                <div class="h-[env(safe-area-inset-bottom)]"></div>
+            </div>
         </div>
+        {#if showCloseButton && nonNullish(onClose)}
+            <Button
+                variant="tertiary"
+                size="lg"
+                iconOnly
+                type="button"
+                class="z-2 absolute right-2 top-2 !rounded-full"
+                onclick={onClose}
+            >
+                ✕
+            </Button>
+        {/if}
+    </div>
+    <!-- Element that pushes dialog away from mobile keyboard or gesture navigation -->
+    <div class="flex max-sm:hidden">
+        <div class="h-[var(--keyboard-inset-height)]"></div>
+        <div class="h-[env(safe-area-inset-bottom)]"></div>
     </div>
 </dialog>

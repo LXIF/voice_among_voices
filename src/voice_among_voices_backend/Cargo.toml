@@ -28,8 +28,14 @@ alloy = { git = "https://github.com/ic-alloy/ic-alloy.git", tag = "v0.3.5-icp.1"
 ] }
 
 getrandom = { version = "0.2.15", features = ["custom"] }
+serde_cbor = "0.11.2"
 
 [dev-dependencies]
-pocket-ic = "6.0.0"
+pocket-ic = "9.0.0"
 rand = "0.8.5"
 
+[package.metadata.cargo-udeps.ignore]
+ic-cdk-timers = "0.12.0"
+
+[patch.crates-io]
+ic-cdk-timers = "0.12.0"

@@ -1,6 +1,7 @@
 type AddVoiceNodeError = variant {
   EvmError : text;
-  NotAuthorizedError;
+  SetupError : text;
+  Unauthorized;
   NotValidAudioFileError : text;
   NotWithinCircleError : text;
 };
@@ -12,6 +13,11 @@ type AudioParameters = record {
   total_length_ms : nat32;
   chunk_size : nat64;
 };
+type AuthorizationError = variant {
+  EvmError : text;
+  SetupError : text;
+  Unauthorized;
+};
 type ColliderCoordinate = record { x : float64; y : float64 };
 type HttpStreamingResponse = record {
   body : blob;
@@ -20,7 +26,7 @@ type HttpStreamingResponse = record {
   streaming_strategy : opt StreamingStrategy;
   status_code : nat16;
 };
-type Result = variant { Ok : bool; Err : text };
+type Result = variant { Ok : AddressEgress; Err : AuthorizationError };
 type Result_1 = variant { Ok : vec VoiceNodeEgress; Err : text };
 type Result_2 = variant { Ok : text; Err : text };
 type Result_3 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
@@ -55,10 +61,18 @@ type StreamingStrategy = variant {
       ) query;
   };
 };
+type VoiceAction = variant { Drop; Censor };
 type VoiceAmongVoicesInit = record {
   siwe_canister_principal : opt principal;
   token_address : opt text;
   dev_mode : opt bool;
+};
+type VoiceLog = record {
+  id : nat64;
+  action : VoiceAction;
+  initiator : AddressEgress;
+  timestamp : nat64;
+  position : opt ColliderCoordinate;
 };
 type VoiceNodeEgress = record {
   x : float64;
@@ -81,6 +95,7 @@ service : (opt VoiceAmongVoicesInit) -> {
   get_simulation_parameters : () -> (SimulationParameters) query;
   get_siwe_principal : () -> (principal) query;
   get_token_address : () -> (AddressEgress) query;
+  get_voice_logs : (nat64, nat64) -> (vec VoiceLog) query;
   get_voice_nodes : () -> (Result_1) query;
   get_wallet_address : () -> (Result_2) composite_query;
   get_zero_file : () -> (HttpStreamingResponse) query;
