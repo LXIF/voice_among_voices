@@ -112,8 +112,8 @@ fn generate_audio_vectors(
 
         // figure out the panning multipliers
         let pan = sample_pos.pan_position;
-        let left_gain = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos();
-        let right_gain = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos();
+        let left_gain = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos();
+        let right_gain = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos();
 
         // loop over samples zipped with the slice of our left and right channels we want
         for (index, sample) in input_samples.iter().enumerate() {

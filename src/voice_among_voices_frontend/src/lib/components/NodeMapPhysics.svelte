@@ -542,7 +542,9 @@
                 fill="green"
             />
         {/if}
-        <g style={`transform: rotate(${mapRotation.current + 180}deg);`}>
+        <g
+            style={`transform: scaleX(-1) rotate(${-mapRotation.current + 180}deg);`}
+        >
             {#each localNodes as node}
                 <circle
                     cx={node.x}
