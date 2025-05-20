@@ -28,6 +28,10 @@ jobs:
                       ~/.cargo/git
                       target
                   key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            - name: Install PocketIC server
+              uses: dfinity/pocketic@main
+            - name: Confirm successful installation
+              run: $POCKET_IC_BIN --version
 
             # Not running integration tests for now as needs pocketic setup
             - name: Run tests
