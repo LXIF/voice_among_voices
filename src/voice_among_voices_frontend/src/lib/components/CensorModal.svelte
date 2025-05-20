@@ -83,6 +83,7 @@
 <Dialog
     class="max-h-[50vh] text-slate-950 dark:text-white"
     onClose={() => ($showCensorModal = false)}
+    alwaysOnBottom
 >
     <div class="p-4">
         <h2 class="mb-4 text-xl font-bold">Voice Management</h2>
@@ -98,12 +99,14 @@
                         >
                         <Button
                             onclick={decrementManagementNode}
-                            class="px-2 py-2 ">-</Button
+                            class="px-2 py-2 ">←</Button
                         >
-                        Voice {$selectedManagementNode}
+                        <div class="inline-block min-w-16">
+                            Voice {$selectedManagementNode}
+                        </div>
                         <Button
                             onclick={incrementManagementNode}
-                            class="px-2 py-2 ">+</Button
+                            class="px-2 py-2 ">→</Button
                         ></span
                     >
                     <div class="space-x-2">
