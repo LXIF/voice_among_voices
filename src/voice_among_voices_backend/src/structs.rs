@@ -5,7 +5,7 @@ use ic_stable_structures::{
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::{borrow::Cow, collections::HashMap, ops::Add};
+use std::{borrow::Cow, collections::HashMap};
 
 // LIB ////////////////////
 
