@@ -139,6 +139,25 @@ pub enum AuthorizationError {
     SetupError(String),
 }
 
+#[derive(CandidType, Debug)]
+pub enum CensorshipError {
+    Unauthorized,
+    EvmError(String),
+    SetupError(String),
+    VoiceNotFound,
+    InternalCanisterError(String),
+}
+
+impl From<AuthorizationError> for CensorshipError {
+    fn from(error: AuthorizationError) -> Self {
+        match error {
+            AuthorizationError::Unauthorized => CensorshipError::Unauthorized,
+            AuthorizationError::EvmError(e) => CensorshipError::EvmError(e),
+            AuthorizationError::SetupError(e) => CensorshipError::SetupError(e),
+        }
+    }
+}
+
 #[derive(CandidType, Deserialize, Clone, Default)]
 pub struct HttpStreamingResponse {
     pub status_code: u16,

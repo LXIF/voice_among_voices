@@ -32,8 +32,7 @@
             </p>
         {:else if "Censor" in log.action}
             {abbreviateWalletAddress(log.initiator.address)} censored voice {log.id}
-            at x: {log.position[0]?.x.toFixed(3)} y:
-            {log.position[0]?.y.toFixed(3)} at {new Date(
+            at {new Date(
                 Number(log.timestamp / BigInt(1_000_000)),
             ).toLocaleString("en-US", {
                 month: "long",
