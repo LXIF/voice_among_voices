@@ -146,6 +146,18 @@ pub fn dev_mode() -> bool {
     CONFIG.with_borrow(|config| config.get().dev_mode)
 }
 
+pub fn store_admin_token_id(id: u64) -> Result<StorableConfig, ValueError> {
+    CONFIG.with_borrow_mut(|config| {
+        let mut current = config.get().clone();
+        current.admin_id = id;
+        config.set(current)
+    })
+}
+
+pub fn admin_id() -> u64 {
+    CONFIG.with_borrow(|config| config.get().admin_id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{init::*, voice_nodes::*, *};

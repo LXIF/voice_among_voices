@@ -212,6 +212,7 @@ pub struct VoiceAmongVoicesInit {
     pub siwe_canister_principal: Option<Principal>,
     pub token_address: Option<String>,
     pub dev_mode: Option<bool>,
+    pub admin_token_id: Option<u64>,
 }
 
 #[derive(

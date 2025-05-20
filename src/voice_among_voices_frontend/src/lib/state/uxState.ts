@@ -8,6 +8,7 @@ import { Tween } from "svelte/motion";
 import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
 import { browser } from "$app/environment";
 import { getVoiceNodes } from "$lib/icInteractions";
+import { backend } from "$lib/canisters";
 
 if (browser) {
     console.log("[Debug] uxState.svelte.ts module initialization");
@@ -29,6 +30,7 @@ export const simulationParameters = writable<SimulationParameters | null>(null);
 export const audioParameters = writable<AudioParameters | null>(null);
 export const myAddress = writable<string>("");
 export const myTokens = writable<number[]>([]);
+export const adminTokenId = writable<number>(0);
 export const mapRotation = new Tween(0, {
     easing: cubicOut,
     duration: 800,
@@ -245,3 +247,7 @@ export type ApplicationState = {
 };
 
 export const applicationState = createApplicationState();
+
+export async function fetchAdminTokenId() {
+    adminTokenId.set(Number(await backend.get_admin_id()));
+}

@@ -97,6 +97,7 @@ type VoiceNodeIngress = record {
 };
 service : (opt VoiceAmongVoicesInit) -> {
   censor : (nat64) -> (Result);
+  get_admin_id : () -> (nat64) query;
   get_angle_file : (nat64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;

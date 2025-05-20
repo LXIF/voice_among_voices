@@ -128,6 +128,11 @@ async fn get_voice_logs(skip: u64, take: u64) -> Vec<VoiceLog> {
 
 // CENSORSHIP
 #[query]
+fn get_admin_id() -> u64 {
+    admin_id()
+}
+
+#[query]
 async fn get_voice(node_id: u64) -> Result<AudioSample, CensorshipError> {
     match check_auth_for_single_node_id(0).await {
         Ok(_) => files_and_voices::get_voice(node_id).ok_or(CensorshipError::VoiceNotFound),
