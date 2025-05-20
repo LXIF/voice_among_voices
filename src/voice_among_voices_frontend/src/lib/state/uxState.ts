@@ -43,6 +43,7 @@ export const nodeWidthPx = writable<number>(0);
 export const nodeWidthLogical = writable<number>(0);
 export const hasNoTokens = writable<boolean>(false);
 export const showInfoModal = writable<boolean>(false);
+export const showCensorModal = writable<boolean>(false);
 export const toastMessage = writable<string>("");
 
 export const resetUxState = () => {

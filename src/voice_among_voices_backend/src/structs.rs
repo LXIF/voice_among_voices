@@ -219,11 +219,15 @@ pub struct VoiceAmongVoicesInit {
 )]
 pub struct StorableConfig {
     pub dev_mode: bool,
+    pub admin_id: u64,
 }
 
 impl StorableConfig {
     pub fn default() -> Self {
-        StorableConfig { dev_mode: false }
+        StorableConfig {
+            dev_mode: false,
+            admin_id: 0,
+        }
     }
 }
 
