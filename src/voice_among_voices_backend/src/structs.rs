@@ -5,7 +5,7 @@ use ic_stable_structures::{
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::{borrow::Cow, collections::HashMap, ops::Add};
+use std::{borrow::Cow, collections::HashMap};
 
 // LIB ////////////////////
 
@@ -38,7 +38,7 @@ impl From<VoiceNodeLocal> for VoiceNodeEgress {
     }
 }
 
-#[derive(Clone, Debug, CandidType, Deserialize)]
+#[derive(Clone, Debug, CandidType, Deserialize, Serialize)]
 pub struct VoiceNodeLocal {
     pub id: usize,
     pub x: f64,
@@ -50,10 +50,10 @@ pub struct VoiceNodeLocal {
 
 impl Storable for VoiceNodeLocal {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
+        Cow::Owned(serde_cbor::to_vec(self).unwrap()) // TODO: perhaps more graceful handling
     }
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
+        serde_cbor::from_slice(&bytes).unwrap()
     }
     const BOUND: Bound = Bound::Bounded {
         max_size: 79,
@@ -75,10 +75,10 @@ pub struct AudioSample {
 
 impl Storable for AudioSample {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
+        Cow::Owned(serde_cbor::to_vec(self).unwrap()) // TODO: perhaps more graceful handling
     }
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
+        serde_cbor::from_slice(&bytes).unwrap()
     }
     const BOUND: Bound = Bound::Bounded {
         max_size: 1024 * 1024, // TODO: calculate from max sample size
