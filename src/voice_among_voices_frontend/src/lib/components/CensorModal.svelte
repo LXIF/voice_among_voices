@@ -2,6 +2,7 @@
     import {
         showCensorModal,
         selectedManagementNode,
+        voiceNodes,
     } from "$lib/state/uxState";
     import Button from "./Button.svelte";
     import Dialog from "./Dialog.svelte";
@@ -9,8 +10,25 @@
     import { onMount } from "svelte";
 
     let audioElement: HTMLAudioElement;
-    let currentPlayingId: number | null = null;
+    let currentPlayingId: number | null = $state(null);
     let censorSuccess = $state(false);
+
+    function incrementManagementNode() {
+        const currentId = $selectedManagementNode;
+        const availableIds = $voiceNodes.map((node) => Number(node.id));
+        const nextId =
+            availableIds.find((id) => id > currentId) ??
+            Math.min(...availableIds);
+        $selectedManagementNode = nextId;
+    }
+    function decrementManagementNode() {
+        const currentId = $selectedManagementNode;
+        const availableIds = $voiceNodes.map((node) => Number(node.id));
+        const nextId =
+            availableIds.find((id) => id < currentId) ??
+            Math.max(...availableIds);
+        $selectedManagementNode = nextId;
+    }
 
     async function playVoice(id: number) {
         if (currentPlayingId === id) {
@@ -68,9 +86,6 @@
 >
     <div class="p-4">
         <h2 class="mb-4 text-xl font-bold">Voice Management</h2>
-        <h3 class="text-l mb-4 font-bold">
-            Select a node on the map to manage it
-        </h3>
         {#if $selectedManagementNode}
             <div class="max-h-[40vh] space-y-2 overflow-y-auto">
                 <div
@@ -81,7 +96,15 @@
                             style={`color: hsl(${$selectedManagementNode}, 100%, 50%)`}
                             >●</span
                         >
-                        Voice #{$selectedManagementNode}</span
+                        <Button
+                            onclick={decrementManagementNode}
+                            class="px-2 py-2 ">-</Button
+                        >
+                        Voice {$selectedManagementNode}
+                        <Button
+                            onclick={incrementManagementNode}
+                            class="px-2 py-2 ">+</Button
+                        ></span
                     >
                     <div class="space-x-2">
                         <Button

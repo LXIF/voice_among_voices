@@ -41,7 +41,7 @@ export const adminTokenId = writable<number>(0);
 export const isAdmin = derived([myTokens, adminTokenId], () => {
     return get(myTokens).includes(get(adminTokenId));
 });
-export const selectedManagementNode = writable<number | undefined>();
+export const selectedManagementNode = writable<number>(1);
 export const mapRotation = new Tween(0, {
     easing: cubicOut,
     duration: 800,

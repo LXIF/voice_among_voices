@@ -121,7 +121,7 @@
     >
         <!-- Non-interactive element to render dark-mode bottom sheet border gradient -->
         <div
-            class="from-border-secondary pointer-events-none absolute left-0 right-0 top-0 z-0 hidden rounded-t-2xl to-transparent p-[1px] max-sm:dark:block"
+            class=" pointer-events-none absolute left-0 right-0 top-0 z-0 hidden rounded-t-2xl p-[1px] max-sm:dark:block"
         >
             <div class="h-24 rounded-t-2xl bg-slate-50 dark:bg-slate-950"></div>
         </div>
