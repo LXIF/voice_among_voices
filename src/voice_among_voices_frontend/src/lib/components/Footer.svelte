@@ -5,6 +5,7 @@
         showCensorModal,
         fetchAdminTokenId,
         adminTokenId,
+        isAdmin,
     } from "$lib/state/uxState";
     import { onMount } from "svelte";
     import Button from "./Button.svelte";
@@ -16,7 +17,7 @@
 
 <footer class="absolute bottom-0 flex w-full justify-between px-4 pb-4">
     <h1 class="select-none text-xl font-bold">Beschrieb</h1>
-    {#if $myTokens.includes($adminTokenId)}
+    {#if $isAdmin}
         <Button
             onclick={() => ($showCensorModal = !$showCensorModal)}
             class="text-xl">Censor</Button

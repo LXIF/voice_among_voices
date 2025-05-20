@@ -75,6 +75,7 @@ type VoiceAmongVoicesInit = record {
   siwe_canister_principal : opt principal;
   token_address : opt text;
   dev_mode : opt bool;
+  admin_token_id : opt nat64;
 };
 type VoiceLog = record {
   id : nat64;

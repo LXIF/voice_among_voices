@@ -30,6 +30,8 @@
         applicationStates,
         voiceNodes,
         toastMessage,
+        isAdmin,
+        selectedManagementNode,
     } from "$lib/state/uxState";
     import { isDarkMode } from "$lib/utils/uxUtils";
     import {
@@ -116,6 +118,13 @@
         const rotatedY = x * Math.sin(angleRad) + y * Math.cos(angleRad);
 
         return { rotatedX, rotatedY };
+    }
+
+    function handleClickNode(id: BigInt) {
+        if ($isAdmin) {
+            console.log("selecting for admin: ", Number(id));
+            $selectedManagementNode = Number(id);
+        }
     }
 
     function rotatedX(node: VoiceNodeEgress, rotation: number) {
@@ -555,6 +564,8 @@
                         : Number(node.id) === $hoveredAngle
                           ? `hsla(${node.id}, 100%, 50%, 60%)`
                           : "hsla(0, 0%, 0%, 0%)"}
+                    onclick={() => handleClickNode(node.id)}
+                    class={$isAdmin ? "cursor-select" : ""}
                 />
             {/each}
             {#if $applicationState.showBackendResult}

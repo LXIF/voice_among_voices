@@ -40,8 +40,8 @@ fn get_siwe_principal() -> Principal {
 }
 
 #[post_upgrade]
-fn post_upgrade() {
-    collider_init();
+fn post_upgrade(maybe_arg: Option<VoiceAmongVoicesInit>) {
+    upgrade_storage(maybe_arg);
 }
 
 #[update]
@@ -134,7 +134,7 @@ fn get_admin_id() -> u64 {
 
 #[query]
 async fn get_voice(node_id: u64) -> Result<AudioSample, CensorshipError> {
-    match check_auth_for_single_node_id(0).await {
+    match check_auth_for_single_node_id(admin_id() as usize).await {
         Ok(_) => files_and_voices::get_voice(node_id).ok_or(CensorshipError::VoiceNotFound),
         Err(err) => Err(err.into()),
     }

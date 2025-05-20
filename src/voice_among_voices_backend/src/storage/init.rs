@@ -61,10 +61,15 @@ pub fn zero_cache_init() {
 }
 
 pub fn initialize_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
-    collider_init();
     nodes_init();
     samples_init();
+
+    upgrade_storage(maybe_arg);
+}
+
+pub fn upgrade_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
     zero_cache_init();
+    collider_init();
 
     if let Some(args) = maybe_arg {
         if let Some(siwe_principal) = args.siwe_canister_principal {
