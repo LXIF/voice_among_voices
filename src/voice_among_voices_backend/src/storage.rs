@@ -43,7 +43,7 @@ thread_local! {
         StableCell::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(4))), StorableConfig::default()).expect("Failed to initialize config storage")
     );
     pub static VOICE_LOG: RefCell<StableVec<VoiceLog, Memory>> = RefCell::new(
-        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(4)))).expect("Failed to initialize log storage")
+        StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(5)))).expect("Failed to initialize log storage")
     );
     pub static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
     pub static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
@@ -171,9 +171,9 @@ mod tests {
             id: 1,
         };
 
-        let result_a = update_stored_voice_node(voice_node);
+        let result_a = update_stored_voice_node(voice_node, Address::ZERO, 0u64);
         println!("{:#?}", result_a.unwrap());
-        let _ = update_stored_voice_node(another_voice_node);
+        let _ = update_stored_voice_node(another_voice_node, Address::ZERO, 0u64);
 
         SAMPLES_MEMORY.with_borrow(|samples_map| {
             let id = samples_map.get(0).expect("No sample!").id;
@@ -209,8 +209,8 @@ mod tests {
             id: 1,
         };
 
-        let _ = update_stored_voice_node(voice_node);
-        let _ = update_stored_voice_node(another_voice_node);
+        let _ = update_stored_voice_node(voice_node, Address::ZERO, 0u64);
+        let _ = update_stored_voice_node(another_voice_node, Address::ZERO, 0u64);
 
         SAMPLES_MEMORY.with_borrow(|samples_map| {
             println!("{}", samples_map.len());
@@ -238,8 +238,8 @@ mod tests {
             id: 1,
         };
 
-        let _ = update_stored_voice_node(voice_node);
-        let _ = update_stored_voice_node(another_voice_node);
+        let _ = update_stored_voice_node(voice_node, Address::ZERO, 0u64);
+        let _ = update_stored_voice_node(another_voice_node, Address::ZERO, 0u64);
 
         SAMPLES_MEMORY.with_borrow(|samples_map| {
             println!("{}", samples_map.len());

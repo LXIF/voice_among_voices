@@ -2,6 +2,7 @@
     import { showInfoModal } from "$lib/state/uxState";
     import Button from "./Button.svelte";
     import Dialog from "./Dialog.svelte";
+    import LogsDisplay from "./LogsDisplay.svelte";
 
     type SelectedState = "info" | "log";
 
@@ -12,8 +13,11 @@
     }
 </script>
 
-<Dialog onClose={() => ($showInfoModal = false)}>
-    <div class="mx-2 mt-1 flex items-center justify-center gap-2">
+<Dialog
+    class="max-h-[50vh] text-slate-950 dark:text-white"
+    onClose={() => ($showInfoModal = false)}
+>
+    <div class="mx-2 mb-2 mt-1 flex items-center justify-center gap-2">
         <Button
             onclick={() => handleClick("info")}
             class="{selected === 'info'
@@ -35,6 +39,8 @@
             vel.
         </div>
     {:else if selected === "log"}
-        <div>LOG</div>
+        <div class="h-[calc(50vh-4rem)] overflow-hidden">
+            <LogsDisplay />
+        </div>
     {/if}
 </Dialog>

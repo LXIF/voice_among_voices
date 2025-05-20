@@ -1,4 +1,4 @@
-use candid::{CandidType, Decode, Encode};
+use candid::CandidType;
 use ic_stable_structures::{storable::Bound, Storable};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -34,13 +34,16 @@ impl VoiceLog {
 
 impl Storable for VoiceLog {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
+        Cow::Owned(serde_cbor::to_vec(self).unwrap())
     }
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
+        serde_cbor::from_slice(&bytes).unwrap()
     }
 
-    const BOUND: Bound = Bound::Unbounded; // could become bounded but not sure what the actual size is
+    const BOUND: Bound = Bound::Bounded {
+        max_size: 256,
+        is_fixed_size: false,
+    }; // TODO: max_size may be false
 }
 
 #[derive(CandidType, Serialize, Deserialize)]

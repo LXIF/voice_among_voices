@@ -1,9 +1,9 @@
 type AddVoiceNodeError = variant {
   EvmError : text;
+  SetupError : text;
   Unauthorized;
   NotValidAudioFileError : text;
   NotWithinCircleError : text;
-  SetupError : text;
 };
 type AddressEgress = record { address : text };
 type AudioParameters = record {
@@ -13,6 +13,11 @@ type AudioParameters = record {
   total_length_ms : nat32;
   chunk_size : nat64;
 };
+type AuthorizationError = variant {
+  EvmError : text;
+  SetupError : text;
+  Unauthorized;
+};
 type ColliderCoordinate = record { x : float64; y : float64 };
 type HttpStreamingResponse = record {
   body : blob;
@@ -21,7 +26,7 @@ type HttpStreamingResponse = record {
   streaming_strategy : opt StreamingStrategy;
   status_code : nat16;
 };
-type Result = variant { Ok : bool; Err : text };
+type Result = variant { Ok : AddressEgress; Err : AuthorizationError };
 type Result_1 = variant { Ok : vec VoiceNodeEgress; Err : text };
 type Result_2 = variant { Ok : text; Err : text };
 type Result_3 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };

@@ -5,24 +5,20 @@ pub mod storage;
 mod structs;
 pub mod test_functions;
 mod utils;
-
 use audio::*;
 use candid::Principal;
 use ic_cdk::{
-    api::{canister_self, msg_caller, performance_counter, time},
-    call::Call,
-    export_candid,
-    futures::spawn,
-    init, post_upgrade, query, update,
+    api::{msg_caller, performance_counter, time},
+    export_candid, init, post_upgrade, query, trap, update,
 };
 use ic_cdk_timers::set_timer;
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{panic::RefUnwindSafe, str::FromStr, time::Duration, u64};
+use std::{time::Duration, u64};
 use storage::{
     files_and_voices::{get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk},
     init::*,
-    voice_log::{PositionLog, VoiceAction, VoiceLog},
+    voice_log::VoiceLog,
     voice_nodes::update_stored_voice_node,
     *,
 };
@@ -55,7 +51,11 @@ async fn update_voice_node(
     node: VoiceNodeIngress,
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
     match check_auth_for_single_node_id(node.id).await {
-        Ok(address) => update_stored_voice_node(node, address),
+        Ok(address) => {
+            let res = update_stored_voice_node(node, address, time());
+            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update); // TODO: use this result
+            res
+        }
         Err(err) => Err(err.into()),
     }
 }
@@ -70,8 +70,10 @@ async fn get_angle_file(angle: u64) -> HttpStreamingResponse {
     if angle > 360 || angle < 1 {
         ic_cdk::trap("invalid angle")
     };
-    check_auth_for_single_node_id(angle as usize).await;
-    get_file_for_angle(angle)
+    match check_auth_for_single_node_id(angle as usize).await {
+        Ok(_address) => get_file_for_angle(angle),
+        Err(err) => trap(format!("{:?}", err)), //TODO: maybe use Result here
+    }
 }
 
 #[query]
@@ -121,8 +123,10 @@ async fn get_wallet_address() -> Result<String, String> {
 }
 
 #[update]
-async fn get_is_owner_of_node(node_id: usize) -> Result<bool, String> {
-    caller_is_owner_of(node_id as u64).await
+async fn get_is_owner_of_node(node_id: usize) -> Result<AddressEgress, AuthorizationError> {
+    caller_is_owner_of(node_id as u64)
+        .await
+        .and_then(|address| Ok(address.into()))
 }
 
 // LOGS

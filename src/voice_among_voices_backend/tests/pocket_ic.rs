@@ -1,8 +1,9 @@
 use candid::{define_function, encode_one, CandidType, Decode, Deserialize, Principal};
 use hound::{WavSpec, WavWriter};
 use ic_http_certification::HeaderField;
-use pocket_ic::{PocketIc, WasmResult};
+use pocket_ic::PocketIc;
 use rand::prelude::*;
+use serde::Serialize;
 use serde_bytes::ByteBuf;
 use std::io::Cursor;
 use std::{fs::read, path::PathBuf};
@@ -59,17 +60,15 @@ fn pocket_ic_get_sim_params() {
     let pic = PocketIc::new();
     let canister_id = pic_initialize_canister(&pic);
 
-    let result = pic
-        .query_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_simulation_parameters",
-            candid::encode_one(()).unwrap(),
-        )
-        .expect("failed to call canister");
+    let result = pic.query_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_simulation_parameters",
+        candid::encode_one(()).unwrap(),
+    );
 
     match result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             let decoded_result = Decode!(&bytes, SimulationParameters);
 
             match decoded_result {
@@ -83,7 +82,7 @@ fn pocket_ic_get_sim_params() {
                 }
             }
         }
-        WasmResult::Reject(error) => {
+        Err(error) => {
             println!("query rejected: {:?}", error);
             assert!(false);
         }
@@ -95,17 +94,15 @@ fn pocket_ic_get_zero_file() {
     let pic = PocketIc::new();
     let canister_id = pic_initialize_canister(&pic);
 
-    let get_zero_file_result = pic
-        .query_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_zero_file",
-            candid::encode_one(()).unwrap(),
-        )
-        .expect("Failed to call get_zero_file");
+    let get_zero_file_result = pic.query_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_zero_file",
+        candid::encode_one(()).unwrap(),
+    );
 
     match get_zero_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -124,7 +121,7 @@ fn pocket_ic_get_zero_file() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -148,20 +145,18 @@ fn pocket_ic_sample_to_angle_file_single() {
     };
 
     // Add the voice node to the canister
-    let add_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "update_voice_node",
-            candid::encode_one(voice_node).unwrap(),
-        )
-        .expect("Failed to call update_voice_node");
+    let add_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "update_voice_node",
+        candid::encode_one(voice_node).unwrap(),
+    );
 
     match add_result {
-        WasmResult::Reply(_) => {
+        Ok(_) => {
             println!("Voice node successfully added.");
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("update_voice_node rejected: {:?}", err);
             assert!(false);
         }
@@ -169,17 +164,15 @@ fn pocket_ic_sample_to_angle_file_single() {
 
     // Generate an angle file by querying the canister
     let angle = 1u64; // Using angle 0.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -198,7 +191,7 @@ fn pocket_ic_sample_to_angle_file_single() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -224,22 +217,18 @@ fn pocket_ic_smoke_test_50_files_1ms() {
         };
 
         // Add the voice node to the canister
-        let add_result = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "update_voice_node",
-                candid::encode_one(voice_node).unwrap(),
-            )
-            .expect(&format!(
-                "Failed to call update_voice_node for angle {angle}"
-            ));
+        let add_result = pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "update_voice_node",
+            candid::encode_one(voice_node).unwrap(),
+        );
 
         match add_result {
-            WasmResult::Reply(_) => {
+            Ok(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
-            WasmResult::Reject(err) => {
+            Err(err) => {
                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
@@ -248,17 +237,15 @@ fn pocket_ic_smoke_test_50_files_1ms() {
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
     let test_angle = 180u64; // Using angle 180.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(test_angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(test_angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -277,7 +264,7 @@ fn pocket_ic_smoke_test_50_files_1ms() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -303,22 +290,18 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
         };
 
         // Add the voice node to the canister
-        let add_result = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "update_voice_node",
-                candid::encode_one(voice_node).unwrap(),
-            )
-            .expect(&format!(
-                "Failed to call update_voice_node for angle {angle}"
-            ));
+        let add_result = pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "update_voice_node",
+            candid::encode_one(voice_node).unwrap(),
+        );
 
         match add_result {
-            WasmResult::Reply(_) => {
+            Ok(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
-            WasmResult::Reject(err) => {
+            Err(err) => {
                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
@@ -327,17 +310,15 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
     let test_angle = 180u64; // Using angle 180.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(test_angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(test_angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -356,7 +337,7 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -382,22 +363,18 @@ fn pocket_ic_smoke_test_100_files_1ms() {
         };
 
         // Add the voice node to the canister
-        let add_result = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "update_voice_node",
-                candid::encode_one(voice_node).unwrap(),
-            )
-            .expect(&format!(
-                "Failed to call update_voice_node for angle {angle}"
-            ));
+        let add_result = pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "update_voice_node",
+            candid::encode_one(voice_node).unwrap(),
+        );
 
         match add_result {
-            WasmResult::Reply(_) => {
+            Ok(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
-            WasmResult::Reject(err) => {
+            Err(err) => {
                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
@@ -406,17 +383,15 @@ fn pocket_ic_smoke_test_100_files_1ms() {
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
     let test_angle = 180u64; // Using angle 180.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(test_angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(test_angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -435,7 +410,7 @@ fn pocket_ic_smoke_test_100_files_1ms() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -461,22 +436,18 @@ fn pocket_ic_smoke_test_360_files_1ms() {
         };
 
         // Add the voice node to the canister
-        let add_result = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "update_voice_node",
-                candid::encode_one(voice_node).unwrap(),
-            )
-            .expect(&format!(
-                "Failed to call update_voice_node for angle {angle}"
-            ));
+        let add_result = pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "update_voice_node",
+            candid::encode_one(voice_node).unwrap(),
+        );
 
         match add_result {
-            WasmResult::Reply(_) => {
+            Ok(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
-            WasmResult::Reject(err) => {
+            Err(err) => {
                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
@@ -485,17 +456,15 @@ fn pocket_ic_smoke_test_360_files_1ms() {
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
     let test_angle = 180u64; // Using angle 180.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(test_angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(test_angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -514,7 +483,7 @@ fn pocket_ic_smoke_test_360_files_1ms() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -540,22 +509,18 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
         };
 
         // Add the voice node to the canister
-        let add_result = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "update_voice_node",
-                candid::encode_one(voice_node).unwrap(),
-            )
-            .expect(&format!(
-                "Failed to call update_voice_node for angle {angle}"
-            ));
+        let add_result = pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "update_voice_node",
+            candid::encode_one(voice_node).unwrap(),
+        );
 
         match add_result {
-            WasmResult::Reply(_) => {
+            Ok(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
-            WasmResult::Reject(err) => {
+            Err(err) => {
                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
@@ -564,17 +529,15 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
     let test_angle = 180u64; // Using angle 180.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(test_angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(test_angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -593,7 +556,7 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -619,22 +582,18 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
         };
 
         // Add the voice node to the canister
-        let add_result = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "update_voice_node",
-                candid::encode_one(voice_node).unwrap(),
-            )
-            .expect(&format!(
-                "Failed to call update_voice_node for angle {angle}"
-            ));
+        let add_result = pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "update_voice_node",
+            candid::encode_one(voice_node).unwrap(),
+        );
 
         match add_result {
-            WasmResult::Reply(_) => {
+            Ok(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
-            WasmResult::Reject(err) => {
+            Err(err) => {
                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
@@ -643,17 +602,15 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
     let test_angle = 180u64; // Using angle 180.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(test_angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(test_angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -672,7 +629,7 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
             assert!(false);
         }
@@ -702,22 +659,18 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
         };
 
         // Add the voice node to the canister
-        let add_result = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "update_voice_node",
-                candid::encode_one(voice_node).unwrap(),
-            )
-            .expect(&format!(
-                "Failed to call update_voice_node for angle {angle}"
-            ));
+        let add_result = pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "update_voice_node",
+            candid::encode_one(voice_node).unwrap(),
+        );
 
         match add_result {
-            WasmResult::Reply(_) => {
+            Ok(_) => {
                 println!("Voice node successfully added for angle {angle}.");
             }
-            WasmResult::Reject(err) => {
+            Err(err) => {
                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
                 assert!(false);
             }
@@ -726,17 +679,15 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
     let test_angle = 180u64; // Using angle 180.0 for this test
-    let get_angle_file_result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "get_angle_file",
-            candid::encode_one(test_angle).unwrap(),
-        )
-        .expect("Failed to call get_angle_file");
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_one(test_angle).unwrap(),
+    );
 
     match get_angle_file_result {
-        WasmResult::Reply(bytes) => {
+        Ok(bytes) => {
             // Decode the response as an HttpStreamingResponse
             let decoded_response = Decode!(&bytes, HttpStreamingResponse);
 
@@ -755,8 +706,142 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
                 }
             }
         }
-        WasmResult::Reject(err) => {
+        Err(err) => {
             println!("get_angle_file rejected: {:?}", err);
+            assert!(false);
+        }
+    }
+}
+
+#[test]
+fn pocket_ic_voice_logs() {
+    let pic = PocketIc::new();
+    let canister_id = pic_initialize_canister(&pic);
+
+    // Add a voice node to generate a log
+    let test_wav = generate_test_wav(1000, 44100);
+    let voice_node = VoiceNodeIngress {
+        id: 0,
+        x: 0.0,
+        y: 0.0,
+        sample: test_wav.clone(),
+    };
+
+    // Add the voice node
+    let add_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "update_voice_node",
+        candid::encode_one(voice_node).unwrap(),
+    );
+
+    match add_result {
+        Ok(_) => {
+            println!("Voice node successfully added.");
+        }
+        Err(err) => {
+            println!("update_voice_node rejected: {:?}", err);
+            assert!(false);
+        }
+    }
+
+    // Retrieve voice logs
+    let get_logs_result = pic.query_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_voice_logs",
+        candid::encode_args((0u64, 10u64)).unwrap(),
+    );
+
+    match get_logs_result {
+        Ok(bytes) => {
+            let decoded_logs = Decode!(&bytes, Vec<VoiceLog>);
+
+            match decoded_logs {
+                Ok(logs) => {
+                    // Verify we got at least one log
+                    assert!(!logs.is_empty());
+
+                    // Verify the log content
+                    let log = &logs[0];
+                    assert_eq!(log.id, 0);
+                    assert!(matches!(log.action, VoiceAction::Drop));
+                    assert!(log.position.is_some());
+                    let position = log.position.as_ref().unwrap();
+                    assert_eq!(position.x, 0.0);
+                    assert_eq!(position.y, 0.0);
+                }
+                Err(e) => {
+                    println!("Failed to decode logs: {:?}", e);
+                    assert!(false);
+                }
+            }
+        }
+        Err(err) => {
+            println!("get_voice_logs rejected: {:?}", err);
+            assert!(false);
+        }
+    }
+
+    // Test pagination by adding another voice node
+    let another_voice_node = VoiceNodeIngress {
+        id: 1,
+        x: 10.0,
+        y: 10.0,
+        sample: test_wav,
+    };
+
+    let add_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "update_voice_node",
+        candid::encode_one(another_voice_node).unwrap(),
+    );
+
+    match add_result {
+        Ok(_) => {
+            println!("Second voice node successfully added.");
+        }
+        Err(err) => {
+            println!("update_voice_node rejected: {:?}", err);
+            assert!(false);
+        }
+    }
+
+    // Test pagination by retrieving only the second log
+    let get_logs_result = pic.query_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_voice_logs",
+        candid::encode_args((1u64, 1u64)).unwrap(),
+    );
+
+    match get_logs_result {
+        Ok(bytes) => {
+            let decoded_logs = Decode!(&bytes, Vec<VoiceLog>);
+
+            match decoded_logs {
+                Ok(logs) => {
+                    // Verify we got exactly one log
+                    assert_eq!(logs.len(), 1);
+
+                    // Verify it's the second log
+                    let log = &logs[0];
+                    assert_eq!(log.id, 1);
+                    assert!(matches!(log.action, VoiceAction::Drop));
+                    assert!(log.position.is_some());
+                    let position = log.position.as_ref().unwrap();
+                    assert_eq!(position.x, 10.0);
+                    assert_eq!(position.y, 10.0);
+                }
+                Err(e) => {
+                    println!("Failed to decode logs: {:?}", e);
+                    assert!(false);
+                }
+            }
+        }
+        Err(err) => {
+            println!("get_voice_logs rejected: {:?}", err);
             assert!(false);
         }
     }
@@ -796,7 +881,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
 //             WasmResult::Reply(_) => {
 //                 println!("Voice node successfully added for angle {angle}.");
 //             }
-//             WasmResult::Reject(err) => {
+//             Err(err) => {
 //                 println!("update_voice_node rejected for angle {angle}: {:?}", err);
 //                 assert!(false);
 //             }
@@ -834,7 +919,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
 //                 }
 //             }
 //         }
-//         WasmResult::Reject(err) => {
+//         Err(err) => {
 //             println!("get_angle_file rejected: {:?}", err);
 //             assert!(false);
 //         }
@@ -934,4 +1019,30 @@ pub struct VoiceAmongVoicesInit {
     pub siwe_canister_principal: Option<Principal>,
     pub token_address: Option<String>,
     pub dev_mode: Option<bool>,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub enum VoiceAction {
+    Drop,
+    Censor,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct VoiceLog {
+    timestamp: u64, // nanos since epoch
+    id: u64,
+    action: VoiceAction,
+    initiator: AddressEgress,
+    position: Option<PositionLog>,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct PositionLog {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct AddressEgress {
+    pub address: String,
 }
