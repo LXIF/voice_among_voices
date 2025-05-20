@@ -430,7 +430,7 @@
 
         const voiceNode: VoiceNodeIngress = {
             id: BigInt($selectedAngle!),
-            x: rotatedX,
+            x: -rotatedX,
             y: rotatedY,
             sample: [],
         };
@@ -440,12 +440,12 @@
         );
 
         if (updatableNode) {
-            updatableNode.x = rotatedX;
+            updatableNode.x = -rotatedX;
             updatableNode.y = rotatedY;
             updatableNode.radius = nodeRadius;
         } else {
             localNodes.push({
-                x: rotatedX,
+                x: -rotatedX,
                 y: rotatedY,
                 radius: nodeRadius,
                 id: BigInt($selectedAngle!),
