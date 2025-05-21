@@ -142,7 +142,7 @@ async fn get_voice(node_id: u64) -> Result<AudioSample, CensorshipError> {
 
 #[update]
 async fn censor(node_id: u64) -> Result<(), CensorshipError> {
-    match check_auth_for_single_node_id(0).await {
+    match check_auth_for_single_node_id(admin_id() as usize).await {
         Ok(address) => {
             let res = files_and_voices::censor_voice(node_id, address, time());
             let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
