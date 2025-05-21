@@ -18,6 +18,9 @@ pub fn update_stored_voice_node(
     address: Address, // needed for logging
     timestamp: u64,
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
+    if node.id < 1 || node.id > 359 {
+        return Err(AddVoiceNodeError::InvalidNodeId);
+    }
     // first check radius
     let (sample_length_samples, sample_length_ms) = get_sample_length(&node.sample)?;
     let max_sample_length = AUDIO_PARAMETERS.max_sample_length_ms;

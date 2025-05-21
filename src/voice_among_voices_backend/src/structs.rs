@@ -117,6 +117,7 @@ pub struct AudioParameters {
 pub enum AddVoiceNodeError {
     NotWithinCircleError(String),
     NotValidAudioFileError(String),
+    InvalidNodeId,
     Unauthorized,
     EvmError(String),
     SetupError(String),

@@ -19,7 +19,7 @@ dfx deploy voice_among_voices_backend --ic --identity LXIF-private --argument $'
         siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider --ic)'";
         token_address = opt "0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13";
         dev_mode = opt true;
-        admin_token_id = opt 0;
+        admin_token_id = opt 360;
         token_buy_link = opt "https://basescan.org/address/0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13#writeContract#F2";
     }
 )'
