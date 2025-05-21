@@ -189,14 +189,14 @@ mod tests {
             x: 0.,
             y: 40.,
             sample: generate_test_wav(1000, 44100),
-            id: 0,
+            id: 1,
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: -45.,
             y: 0.,
             sample: generate_test_wav(1000, 44100),
-            id: 1,
+            id: 2,
         };
 
         let result_a = update_stored_voice_node(voice_node, Address::ZERO, 0u64);
@@ -204,11 +204,11 @@ mod tests {
         let _ = update_stored_voice_node(another_voice_node, Address::ZERO, 0u64);
 
         SAMPLES_MEMORY.with_borrow(|samples_map| {
-            let id = samples_map.get(0).expect("No sample!").id;
-            let another_id = samples_map.get(1).expect("No another_sample!").id;
+            let id = samples_map.get(1).expect("No sample!").id;
+            let another_id = samples_map.get(2).expect("No another_sample!").id;
 
-            assert_eq!(id, 0);
-            assert_eq!(another_id, 1);
+            assert_eq!(id, 1);
+            assert_eq!(another_id, 2);
         });
     }
 

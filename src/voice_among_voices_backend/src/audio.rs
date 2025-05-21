@@ -2,8 +2,8 @@ use hound::{WavReader, WavWriter};
 use std::io::Cursor;
 
 use crate::{
-    structs::AudioSample, AddVoiceNodeError, AudioParameters, AudioSampleMemory,
-    SimulationParameters, VoiceNodeLocalMemory,
+    AddVoiceNodeError, AudioParameters, AudioSampleMemory, SimulationParameters,
+    VoiceNodeLocalMemory,
 };
 
 #[derive(Debug)]
@@ -809,7 +809,7 @@ mod tests {
                     begins_at: 0.0,
                     sample_id: 0,
                     sample_length_samples: 44100,
-                    pan_position: -1.0, // Full left pan
+                    pan_position: 1.0, // Full left pan
                 }],
                 &audio_params,
                 samples,
@@ -841,7 +841,7 @@ mod tests {
                 &vec![SamplePosition {
                     begins_at: 0.0,
                     sample_id: 0,
-                    pan_position: 1.0,
+                    pan_position: -1.0,
                     sample_length_samples: 44100,
                 }],
                 &audio_params,

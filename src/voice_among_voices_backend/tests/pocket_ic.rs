@@ -788,7 +788,7 @@ fn pocket_ic_voice_logs() {
     // Add a voice node to generate a log
     let test_wav = generate_test_wav(1000, 44100);
     let voice_node = VoiceNodeIngress {
-        id: 0,
+        id: 1,
         x: 0.0,
         y: 0.0,
         sample: test_wav.clone(),
@@ -831,7 +831,7 @@ fn pocket_ic_voice_logs() {
 
                     // Verify the log content
                     let log = &logs[0];
-                    assert_eq!(log.id, 0);
+                    assert_eq!(log.id, 1);
                     assert!(matches!(log.action, VoiceAction::Drop));
                     assert!(log.position.is_some());
                     let position = log.position.as_ref().unwrap();

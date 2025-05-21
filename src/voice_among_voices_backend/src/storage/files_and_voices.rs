@@ -13,7 +13,7 @@ use crate::{
 
 use super::{
     store_voice_log,
-    voice_log::{PositionLog, VoiceAction, VoiceLog},
+    voice_log::{VoiceAction, VoiceLog},
 };
 
 pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {

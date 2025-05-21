@@ -34,25 +34,25 @@ pub async fn get_caller_wallet_address() -> Result<String, String> {
         .map_err(|err| format!("Candid Decode Failed Error: {:?}", err))?
 }
 
-async fn retry<F, Fut, T>(mut f: F, max_retries: u32) -> Result<T, String>
-where
-    F: FnMut() -> Fut,
-    Fut: Future<Output = Result<T, String>>,
-{
-    let mut attempt = 0;
+// async fn retry<F, Fut, T>(mut f: F, max_retries: u32) -> Result<T, String>
+// where
+//     F: FnMut() -> Fut,
+//     Fut: Future<Output = Result<T, String>>,
+// {
+//     let mut attempt = 0;
 
-    loop {
-        match f().await {
-            Ok(result) => return Ok(result),
-            Err(e) => {
-                attempt += 1;
-                if attempt >= max_retries {
-                    return Err(e);
-                }
-            }
-        }
-    }
-}
+//     loop {
+//         match f().await {
+//             Ok(result) => return Ok(result),
+//             Err(e) => {
+//                 attempt += 1;
+//                 if attempt >= max_retries {
+//                     return Err(e);
+//                 }
+//             }
+//         }
+//     }
+// }
 
 // TODO: this function is affected by one-after issue
 async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError> {

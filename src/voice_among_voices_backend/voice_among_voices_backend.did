@@ -1,6 +1,7 @@
 type AddVoiceNodeError = variant {
   EvmError : text;
   SetupError : text;
+  InvalidNodeId;
   Unauthorized;
   NotValidAudioFileError : text;
   NotWithinCircleError : text;

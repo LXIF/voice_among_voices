@@ -242,8 +242,9 @@
         duration: 500,
         easing: elasticOut,
     }}
-    disabled={!$applicationState.recorderActive || $selectedAngle === 0}
-    >Rec</button
+    disabled={!$applicationState.recorderActive ||
+        $selectedAngle < 1 ||
+        $selectedAngle > 359}>Rec</button
 >
 
 <style lang="postcss">
