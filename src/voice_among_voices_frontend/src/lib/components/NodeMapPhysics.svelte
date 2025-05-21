@@ -253,6 +253,7 @@
                                 bodyPos.x - bodyWithinReachPos.x,
                                 bodyPos.y - bodyWithinReachPos.y,
                             );
+
                             // add vector to the magnetic forces
                             magneticForces.push(
                                 new RAPIER.Vector2(
@@ -515,7 +516,8 @@
         }
 
         // Map the playhead position to logical coordinates
-        const mappedPlayHeadPosition = playHeadPosition * 2 * logical_radius;
+        const mappedPlayHeadPosition =
+            2 * logical_radius - playHeadPosition * 2 * logical_radius;
 
         // Calculate distance from the node to the playhead
         const distanceFromPlayhead = Math.abs(
@@ -570,7 +572,13 @@
                           ? `hsla(${node.id}, 100%, 50%, 60%)`
                           : !!node.absvel
                             ? `hsla(${30 + colorVel(node.absvel) / 10}, 80%, ${colorVel(node.absvel)}%, ${colorVel(node.absvel)}%)`
-                            : "hsla(0,0,0,0)"}
+                            : isNodeTouchedByPlayhead(
+                                    node.x,
+                                    node.y,
+                                    node.radius,
+                                )
+                              ? `hsla(${node.id}, 100%, 50%, 80)`
+                              : "hsla(0,0,0,0)"}
                     class={$isAdmin ? "cursor-pointer" : ""}
                 />
                 {#if $showCensorModal && $selectedManagementNode === Number(node.id)}
