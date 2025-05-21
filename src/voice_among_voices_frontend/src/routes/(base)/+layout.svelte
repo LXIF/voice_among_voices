@@ -1,5 +1,5 @@
 <script>
-    import "../app.css";
+    import "../../app.css";
     import Toast from "$lib/components/Toast.svelte";
     import { toastMessage } from "$lib/state/uxState";
 
