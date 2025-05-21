@@ -6,12 +6,15 @@ mod structs;
 pub mod test_functions;
 mod utils;
 use audio::*;
+mod http;
+mod images;
 use candid::Principal;
 use ic_cdk::{
-    api::{msg_caller, performance_counter, time},
+    api::{certified_data_set, msg_caller, performance_counter, time},
     export_candid, init, post_upgrade, query, trap, update,
 };
 use ic_cdk_timers::set_timer;
+use ic_http_certification::{utils::skip_certification_certified_data, HttpRequest, HttpResponse};
 use physics::*;
 use serde_bytes::ByteBuf;
 use std::{time::Duration, u64};
@@ -32,6 +35,7 @@ use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddr
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
     initialize_storage(maybe_arg);
+    certified_data_set(&skip_certification_certified_data());
 }
 
 #[query]
@@ -42,6 +46,7 @@ fn get_siwe_principal() -> Principal {
 #[post_upgrade]
 fn post_upgrade(maybe_arg: Option<VoiceAmongVoicesInit>) {
     upgrade_storage(maybe_arg);
+    certified_data_set(&skip_certification_certified_data());
 }
 
 #[update]
@@ -162,6 +167,12 @@ fn get_token_buy_link() -> String {
 #[query]
 fn get_config() -> StorableConfig {
     storage::config()
+}
+
+// IMAGE GENERATION
+#[query]
+fn http_request(req: HttpRequest) -> HttpResponse {
+    http::http_request(req)
 }
 
 export_candid!();

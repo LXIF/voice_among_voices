@@ -28,6 +28,19 @@ type CensorshipError = variant {
   VoiceNotFound;
 };
 type ColliderCoordinate = record { x : float64; y : float64 };
+type HttpRequest = record {
+  url : text;
+  method : text;
+  body : blob;
+  headers : vec record { text; text };
+  certificate_version : opt nat16;
+};
+type HttpResponse = record {
+  body : blob;
+  headers : vec record { text; text };
+  upgrade : opt bool;
+  status_code : nat16;
+};
 type HttpStreamingResponse = record {
   body : blob;
   headers : vec record { text; text };
@@ -120,6 +133,7 @@ service : (opt VoiceAmongVoicesInit) -> {
   get_voice_nodes : () -> (Result_2) query;
   get_wallet_address : () -> (Result_3) composite_query;
   get_zero_file : () -> (HttpStreamingResponse) query;
+  http_request : (HttpRequest) -> (HttpResponse) query;
   http_request_streaming_callback : (StreamingCallbackToken) -> (
       StreamingCallbackHttpResponse,
     ) query;
