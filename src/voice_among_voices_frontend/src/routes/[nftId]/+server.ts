@@ -1,52 +1,44 @@
 import { error } from "@sveltejs/kit";
 import { angleToRadians, hsvToRgb } from "$lib/utils/convUtils";
-import type { Handle } from "@sveltejs/kit";
 import sharp from "sharp";
-import type { VoiceNodeEgress } from "../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+import type { VoiceNodeEgress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+import { Actor, HttpAgent } from "@dfinity/agent";
 import {
     canisterId,
-    createActor,
     idlFactory,
-} from "../../declarations/voice_among_voices_backend";
-import { Actor, HttpAgent } from "@dfinity/agent";
+} from "../../../../declarations/voice_among_voices_backend";
 
-export const handle: Handle = async ({ event, resolve }) => {
-    const nftMatch = event.url.pathname.match(/^\/(\d+)$/);
-    if (nftMatch) {
-        const nftId = parseInt(nftMatch[1], 10);
-        if (nftId < 1 || nftId > 360) {
-            throw error(404, "Not Found");
-        }
-        // Create an agent for server-side
-        const agent = await HttpAgent.create({
-            host:
-                process.env.DFX_NETWORK === "ic"
-                    ? "https://ic0.app"
-                    : "http://127.0.0.1:4943",
-        });
-
-        // Fetch root key in development mode
-        if (process.env.DFX_NETWORK !== "ic") {
-            await agent.fetchRootKey();
-        }
-
-        // Create the actor
-        const actor = Actor.createActor(idlFactory, {
-            agent,
-            canisterId,
-        });
-        let nodesResponse = (await actor.get_voice_nodes()) as
-            | { Ok: VoiceNodeEgress[] }
-            | { Err: string };
-        if ("Ok" in nodesResponse) {
-            return await generatePng(nodesResponse.Ok, nftId);
-        } else {
-            throw error(404, "Not Found");
-        }
+export async function GET({ params }) {
+    const nftId = parseInt(params.nftId, 10);
+    if (nftId < 1 || nftId > 360) {
+        throw error(404, "Not Found");
     }
 
-    return await resolve(event);
-};
+    const agent = await HttpAgent.create({
+        host:
+            process.env.DFX_NETWORK === "ic"
+                ? "https://ic0.app"
+                : "http://127.0.0.1:4943",
+    });
+
+    if (process.env.DFX_NETWORK !== "ic") {
+        await agent.fetchRootKey();
+    }
+
+    const actor = Actor.createActor(idlFactory, {
+        agent,
+        canisterId,
+    });
+
+    const nodesResponse = (await actor.get_voice_nodes()) as
+        | { Ok: VoiceNodeEgress[] }
+        | { Err: string };
+    if ("Ok" in nodesResponse) {
+        return await generatePng(nodesResponse.Ok, nftId);
+    } else {
+        throw error(404, "Not Found");
+    }
+}
 
 async function generatePng(nodes: VoiceNodeEgress[], nftId: number) {
     const centerX = 0;
@@ -152,9 +144,3 @@ function getLineColor(angle: number): string {
     // Normal state
     return hsvToRgb(angle, 100, 100);
 }
-
-// ${Array.from({ length: 10 }, (_, i) => i)
-// .map((angle) => {
-//     return `<circle cx="0" cy="0" r="${angle * 5 + 5}" stroke-width="0.5" stroke="${getLineColor(angle)}" fill="none" />`;
-// })
-// .join(" ")}
