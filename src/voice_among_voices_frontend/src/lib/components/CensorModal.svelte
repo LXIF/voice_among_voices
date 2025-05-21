@@ -94,7 +94,7 @@
     alwaysOnBottom
 >
     <div class="p-4">
-        <h2 class="mb-4 text-xl font-bold">Voice Management</h2>
+        <h2 class="mb-4 text-xl font-bold">Voice Censoring</h2>
         {#if $selectedManagementNode}
             <div class="max-h-[40vh] space-y-2 overflow-y-auto">
                 <div
