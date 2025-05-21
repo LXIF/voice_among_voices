@@ -40,6 +40,7 @@
         getSimulationParameters,
         getVoiceNodes,
     } from "$lib/icInteractions";
+    import { clamp, mapRange } from "$lib/utils/mathUtils";
 
     let {
         nodes,
@@ -63,7 +64,7 @@
         class?: string;
     } = $props();
 
-    let localNodes: VoiceNodeEgress[] = $state([]);
+    let localNodes: (VoiceNodeEgress & { absvel?: number })[] = $state([]);
 
     let container: HTMLDivElement | null = null;
     let svgElement: SVGSVGElement | null = null;
@@ -363,6 +364,10 @@
                             y,
                             id: body.voiceNode.id,
                             radius: body.voiceNode.radius,
+                            absvel: Math.sqrt(
+                                body.rigidBody.linvel().x ** 2 +
+                                    body.rigidBody.linvel().y ** 2,
+                            ),
                         };
                     });
                 }
@@ -519,6 +524,10 @@
 
         return distanceFromPlayhead <= nodeRadius;
     }
+
+    function colorVel(absVel: number) {
+        return clamp(mapRange(absVel, 0, 2, 0, 100), 0, 100);
+    }
 </script>
 
 <div
@@ -559,7 +568,9 @@
                         ? `hsl(${node.id}, 100%, 50%)`
                         : Number(node.id) === $hoveredAngle
                           ? `hsla(${node.id}, 100%, 50%, 60%)`
-                          : "hsla(0, 0%, 0%, 0%)"}
+                          : !!node.absvel
+                            ? `hsla(${30 + colorVel(node.absvel) / 10}, 80%, ${colorVel(node.absvel)}%, ${colorVel(node.absvel)}%)`
+                            : "hsla(0,0,0,0)"}
                     class={$isAdmin ? "cursor-pointer" : ""}
                 />
                 {#if $showCensorModal && $selectedManagementNode === Number(node.id)}
