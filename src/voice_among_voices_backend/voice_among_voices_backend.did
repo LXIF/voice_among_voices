@@ -51,6 +51,11 @@ type SimulationParameters = record {
   max_distance : float64;
   linear_damping : float64;
 };
+type StorableConfig = record {
+  admin_id : nat64;
+  dev_mode : bool;
+  token_buy_link : text;
+};
 type StreamingCallbackHttpResponse = record {
   token : opt StreamingCallbackToken;
   body : blob;
@@ -76,6 +81,7 @@ type VoiceAmongVoicesInit = record {
   token_address : opt text;
   dev_mode : opt bool;
   admin_token_id : opt nat64;
+  token_buy_link : opt text;
 };
 type VoiceLog = record {
   id : nat64;
@@ -102,10 +108,12 @@ service : (opt VoiceAmongVoicesInit) -> {
   get_angle_file : (nat64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;
+  get_config : () -> (StorableConfig) query;
   get_my_principal : () -> (text) query;
   get_simulation_parameters : () -> (SimulationParameters) query;
   get_siwe_principal : () -> (principal) query;
   get_token_address : () -> (AddressEgress) query;
+  get_token_buy_link : () -> (text) query;
   get_voice : (nat64) -> (Result_1) query;
   get_voice_logs : (nat64, nat64) -> (vec VoiceLog) query;
   get_voice_nodes : () -> (Result_2) query;

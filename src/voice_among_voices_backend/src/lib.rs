@@ -152,4 +152,16 @@ async fn censor(node_id: u64) -> Result<(), CensorshipError> {
     }
 }
 
+// ADVERTISEMENT
+#[query]
+fn get_token_buy_link() -> String {
+    token_buy_link()
+}
+
+// CONFIG
+#[query]
+fn get_config() -> StorableConfig {
+    storage::config()
+}
+
 export_candid!();

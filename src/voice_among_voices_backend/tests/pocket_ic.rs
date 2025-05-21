@@ -32,6 +32,8 @@ const INIT_ARGS: VoiceAmongVoicesInit = VoiceAmongVoicesInit {
     siwe_canister_principal: None,
     token_address: None,
     dev_mode: Some(true),
+    token_buy_link: None,
+    admin_token_id: Some(0),
 };
 
 fn pic_initialize_canister(pic: &PocketIc) -> Principal {
@@ -49,6 +51,27 @@ fn pic_initialize_canister(pic: &PocketIc) -> Principal {
     let wasm_bytes = read(wasm_path).expect("failed to read wasm");
 
     let encoded_args = encode_one(INIT_ARGS).unwrap();
+
+    pic.install_canister(canister_id, wasm_bytes, encoded_args, None);
+
+    canister_id
+}
+
+fn pic_initialize_canister_with_args(pic: &PocketIc, args: VoiceAmongVoicesInit) -> Principal {
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, 2_000_000_000_000);
+
+    let mut wasm_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    wasm_path.pop();
+    wasm_path.pop();
+    wasm_path.push("target/wasm32-unknown-unknown/release/voice_among_voices_backend.wasm");
+    // wasm_path
+    //     .push(".dfx/local/canisters/voice_among_voices_backend/voice_among_voices_backend.wasm");
+    println!("{:?}", wasm_path);
+
+    let wasm_bytes = read(wasm_path).expect("failed to read wasm");
+
+    let encoded_args = encode_one(args).unwrap();
 
     pic.install_canister(canister_id, wasm_bytes, encoded_args, None);
 
@@ -74,6 +97,50 @@ fn pocket_ic_get_sim_params() {
             match decoded_result {
                 Ok(sim_params) => {
                     println!("Simulation Parameters: {:?}", sim_params);
+                    assert!(true);
+                }
+                Err(e) => {
+                    println!("failed to decode: {:?}", e);
+                    assert!(false);
+                }
+            }
+        }
+        Err(error) => {
+            println!("query rejected: {:?}", error);
+            assert!(false);
+        }
+    }
+}
+
+#[test]
+fn pocket_ic_get_config() {
+    let pic = PocketIc::new();
+    let args = VoiceAmongVoicesInit {
+        siwe_canister_principal: None,
+        token_address: Some("0x0000000000000000000000000000000000000000".to_string()),
+        dev_mode: Some(true),
+        token_buy_link: Some("https://www.example.com".to_string()),
+        admin_token_id: Some(3),
+    };
+    let canister_id = pic_initialize_canister_with_args(&pic, args);
+
+    let result = pic.query_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_config",
+        candid::encode_one(()).unwrap(),
+    );
+
+    match result {
+        Ok(bytes) => {
+            let decoded_result = Decode!(&bytes, StorableConfig);
+
+            match decoded_result {
+                Ok(config) => {
+                    println!("Config: {:?}", config);
+                    assert_eq!(config.token_buy_link, "https://www.example.com");
+                    assert_eq!(config.dev_mode, true);
+                    assert_eq!(config.admin_id, 3);
                     assert!(true);
                 }
                 Err(e) => {
@@ -1018,7 +1085,9 @@ struct VoiceNodeIngress {
 pub struct VoiceAmongVoicesInit {
     pub siwe_canister_principal: Option<Principal>,
     pub token_address: Option<String>,
+    pub token_buy_link: Option<String>,
     pub dev_mode: Option<bool>,
+    pub admin_token_id: Option<u64>,
 }
 
 #[derive(CandidType, Serialize, Deserialize)]
@@ -1045,4 +1114,13 @@ pub struct PositionLog {
 #[derive(CandidType, Serialize, Deserialize)]
 pub struct AddressEgress {
     pub address: String,
+}
+
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, CandidType, Serialize, Deserialize,
+)]
+pub struct StorableConfig {
+    pub dev_mode: bool,
+    pub admin_id: u64,
+    pub token_buy_link: String,
 }

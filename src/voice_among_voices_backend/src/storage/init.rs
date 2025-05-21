@@ -7,7 +7,7 @@ use crate::{
 use alloy::primitives::Address;
 use std::str::FromStr;
 
-use super::{store_admin_token_id, store_dev_mode};
+use super::{store_admin_token_id, store_dev_mode, store_token_buy_link};
 
 // abstracting this because during dev things change and i don't want to restart dfx all the time
 pub fn collider_init() {
@@ -79,6 +79,9 @@ pub fn upgrade_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
             let parsed_address =
                 Address::from_str(&token_address).expect("Could not parse token address");
             let _ = store_token_address(parsed_address);
+        }
+        if let Some(token_buy_link) = args.token_buy_link {
+            let _ = store_token_buy_link(token_buy_link);
         }
         if let Some(dev_mode) = args.dev_mode {
             let _ = store_dev_mode(dev_mode);

@@ -154,8 +154,24 @@ pub fn store_admin_token_id(id: u64) -> Result<StorableConfig, ValueError> {
     })
 }
 
+pub fn store_token_buy_link(token_buy_link: String) -> Result<StorableConfig, ValueError> {
+    CONFIG.with_borrow_mut(|config| {
+        let mut current = config.get().clone();
+        current.token_buy_link = token_buy_link;
+        config.set(current)
+    })
+}
+
 pub fn admin_id() -> u64 {
     CONFIG.with_borrow(|config| config.get().admin_id)
+}
+
+pub fn token_buy_link() -> String {
+    CONFIG.with_borrow(|config| config.get().token_buy_link.clone())
+}
+
+pub fn config() -> StorableConfig {
+    CONFIG.with_borrow(|config| config.get().clone())
 }
 
 #[cfg(test)]

@@ -23,8 +23,10 @@
             class="flex-1 text-center text-xl">Censor</Button
         >
     {/if}
-    <Button
-        onclick={() => ($showInfoModal = !$showInfoModal)}
-        class="flex-1 text-right text-xl">Info</Button
-    >
+    <div class="flex flex-1 items-end justify-end">
+        <Button
+            onclick={() => ($showInfoModal = !$showInfoModal)}
+            class="origin-center text-right text-xl">Info</Button
+        >
+    </div>
 </footer>

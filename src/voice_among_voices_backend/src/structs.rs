@@ -211,16 +211,18 @@ pub struct StreamingCallbackHttpResponse {
 pub struct VoiceAmongVoicesInit {
     pub siwe_canister_principal: Option<Principal>,
     pub token_address: Option<String>,
+    pub token_buy_link: Option<String>,
     pub dev_mode: Option<bool>,
     pub admin_token_id: Option<u64>,
 }
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, CandidType, Serialize, Deserialize,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, CandidType, Serialize, Deserialize,
 )]
 pub struct StorableConfig {
     pub dev_mode: bool,
     pub admin_id: u64,
+    pub token_buy_link: String,
 }
 
 impl StorableConfig {
@@ -228,16 +230,19 @@ impl StorableConfig {
         StorableConfig {
             dev_mode: false,
             admin_id: 0,
+            token_buy_link: "".to_string(),
         }
     }
 }
 
 impl Storable for StorableConfig {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(serde_cbor::to_vec(&self).unwrap())
     }
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        serde_cbor::from_slice(&bytes).unwrap()
     }
+
     const BOUND: Bound = Bound::Unbounded;
 }

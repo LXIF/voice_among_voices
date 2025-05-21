@@ -116,10 +116,10 @@
     <div
         class={[
             // Container base/dialog/bottomsheet
-            "relative flex max-h-screen flex-col overflow-hidden border-x border-t  bg-slate-50 dark:bg-slate-950",
+            "relative flex max-h-screen flex-col overflow-hidden  bg-slate-50 dark:bg-slate-950",
             alwaysOnBottom
-                ? "bottom-0 top-auto w-full rounded-t-2xl px-4 pb-6 pt-4"
-                : "sm:w-100 w-full rounded-t-2xl px-4 pb-6 pt-4 sm:m-auto sm:rounded-2xl sm:px-6 sm:pb-8 sm:pt-6",
+                ? "bottom-0 top-auto w-full rounded-t-2xl border-x border-t px-4 pb-6 pt-4"
+                : "sm:w-100 w-full rounded-t-2xl border px-4 pb-6 pt-4 sm:m-auto sm:rounded-2xl sm:px-6 sm:pb-8 sm:pt-6",
             className,
         ]}
     >
@@ -129,7 +129,9 @@
         >
             <div class="h-24 rounded-t-2xl bg-slate-50 dark:bg-slate-950"></div>
         </div>
-        <div class="z-1 relative flex flex-1 flex-col">
+        <div
+            class="z-1 relative flex flex-1 flex-col text-slate-950 dark:text-slate-50"
+        >
             {@render children?.()}
             <!-- Element that pushes bottom sheet away from mobile keyboard or gesture navigation -->
             <div class="flex sm:hidden">

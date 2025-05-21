@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import Button from "./Button.svelte";
     import { appkitModal, wagmiConfig } from "$lib/appKit";
-    import { identityAgent } from "$lib/canisters";
+    import { backend, identityAgent } from "$lib/canisters";
     import { abbreviateWalletAddress } from "$lib/utils/convUtils";
     import {
         walletAddress,
@@ -20,10 +20,12 @@
     let walletConnected = $state(false);
     let isLoggingIn = $state(false);
     let isLoggingOut = $state(false);
+    let tokenBuyLink = $state("");
 
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
-
+        tokenBuyLink = await backend.get_token_buy_link();
+        // console.log(await backend.get_token_buy_link());
         setAddress();
     });
 
@@ -137,8 +139,14 @@
 
 {#if $hasNoTokens}
     <Dialog>
-        You don't own any Voice among Voices NFTs. In order to contribute your
-        voice, please acquire one.
+        <p>
+            You don't own any Voice among Voices NFTs. In order to contribute
+            your voice, please acquire one <a
+                target="_blank"
+                class="origin-center underline outline-none transition-transform hover:scale-110"
+                href={tokenBuyLink}>here</a
+            >.
+        </p>
         <div class="m-2 mt-4 flex items-center justify-center lg:min-w-96">
             <Button
                 class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
