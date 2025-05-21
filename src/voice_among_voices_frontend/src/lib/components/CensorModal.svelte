@@ -78,7 +78,7 @@
     // Clean up audio URL when component is destroyed
     onMount(() => {
         $selectedManagementNode = Math.min(
-            $voiceNodes.map((node) => Number(node.id)).sort()[0],
+            $voiceNodes.map((node) => Number(node.id)).sort((a, b) => a - b)[0],
         );
         return () => {
             if (audioElement?.src) {
