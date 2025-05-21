@@ -35,7 +35,9 @@ export const handle: Handle = async ({ event, resolve }) => {
             agent,
             canisterId,
         });
-        let nodesResponse = await actor.get_voice_nodes();
+        let nodesResponse = (await actor.get_voice_nodes()) as
+            | { Ok: VoiceNodeEgress[] }
+            | { Err: string };
         if ("Ok" in nodesResponse) {
             return await generatePng(nodesResponse.Ok, nftId);
         } else {
