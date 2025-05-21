@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, untrack } from "svelte";
-    import { mapRange, clamp } from "$lib/utils/mathUtils";
+
     // import RAPIER from "@dimforge/rapier2d-compat";
     import RAPIER from "@dimforge/rapier2d-deterministic-compat";
 
@@ -30,6 +30,9 @@
         applicationStates,
         voiceNodes,
         toastMessage,
+        isAdmin,
+        selectedManagementNode,
+        showCensorModal,
     } from "$lib/state/uxState";
     import { isDarkMode } from "$lib/utils/uxUtils";
     import {
@@ -557,7 +560,46 @@
                         : Number(node.id) === $hoveredAngle
                           ? `hsla(${node.id}, 100%, 50%, 60%)`
                           : "hsla(0, 0%, 0%, 0%)"}
+                    class={$isAdmin ? "cursor-pointer" : ""}
                 />
+                {#if $showCensorModal && $selectedManagementNode === Number(node.id)}
+                    <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius + 2}
+                        stroke="hsl({node.id}, 100%, 50%)"
+                        stroke-width={bodyLineWidth}
+                        fill={Number(node.id) === $selectedAngle
+                            ? `hsl(${node.id}, 100%, 50%)`
+                            : Number(node.id) === $hoveredAngle
+                              ? `hsla(${node.id}, 100%, 50%, 60%)`
+                              : "hsla(0, 0%, 0%, 0%)"}
+                    />
+                    <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius + 1}
+                        stroke="hsl({node.id}, 100%, 50%)"
+                        stroke-width={bodyLineWidth}
+                        fill={Number(node.id) === $selectedAngle
+                            ? `hsl(${node.id}, 100%, 50%)`
+                            : Number(node.id) === $hoveredAngle
+                              ? `hsla(${node.id}, 100%, 50%, 60%)`
+                              : "hsla(0, 0%, 0%, 0%)"}
+                    />
+                    <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius + 3}
+                        stroke="hsl({node.id}, 100%, 50%)"
+                        stroke-width={bodyLineWidth}
+                        fill={Number(node.id) === $selectedAngle
+                            ? `hsl(${node.id}, 100%, 50%)`
+                            : Number(node.id) === $hoveredAngle
+                              ? `hsla(${node.id}, 100%, 50%, 60%)`
+                              : "hsla(0, 0%, 0%, 0%)"}
+                    />
+                {/if}
             {/each}
             {#if $applicationState.showBackendResult}
                 {#each backendNodes as node}

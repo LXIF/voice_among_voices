@@ -7,7 +7,7 @@ use crate::{
 use alloy::primitives::Address;
 use std::str::FromStr;
 
-use super::store_dev_mode;
+use super::{store_admin_token_id, store_dev_mode};
 
 // abstracting this because during dev things change and i don't want to restart dfx all the time
 pub fn collider_init() {
@@ -61,10 +61,15 @@ pub fn zero_cache_init() {
 }
 
 pub fn initialize_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
-    collider_init();
     nodes_init();
     samples_init();
+
+    upgrade_storage(maybe_arg);
+}
+
+pub fn upgrade_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
     zero_cache_init();
+    collider_init();
 
     if let Some(args) = maybe_arg {
         if let Some(siwe_principal) = args.siwe_canister_principal {
@@ -77,6 +82,9 @@ pub fn initialize_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
         }
         if let Some(dev_mode) = args.dev_mode {
             let _ = store_dev_mode(dev_mode);
+        }
+        if let Some(admin_token_id) = args.admin_token_id {
+            let _ = store_admin_token_id(admin_token_id);
         }
     }
 }

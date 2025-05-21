@@ -11,6 +11,7 @@
         closeOnOutsideClick?: boolean;
         showCloseButton?: boolean;
         backdrop?: boolean;
+        alwaysOnBottom?: boolean;
     };
 
     const {
@@ -21,6 +22,7 @@
         closeOnOutsideClick = true,
         showCloseButton = true,
         backdrop = true,
+        alwaysOnBottom = false,
         ...props
     }: Props = $props();
 
@@ -99,8 +101,9 @@
     class={[
         // Layout base/dialog/bottomsheet
         "fixed flex max-w-full flex-col overflow-hidden bg-transparent",
-        "sm:w-100 sm:m-auto sm:min-h-[100dvh]",
-        "w-full max-sm:bottom-0 max-sm:top-auto",
+        alwaysOnBottom
+            ? "bottom-0 top-auto w-full"
+            : "sm:w-100 w-full max-sm:bottom-0 max-sm:top-auto sm:m-auto sm:min-h-[100dvh]",
         // Backdrop base/visible
         "backdrop:bg-bg-overlay backdrop:opacity-0 backdrop:transition-opacity backdrop:duration-200",
         backdrop && "[&[data-visible]]:backdrop:opacity-80",
@@ -113,15 +116,16 @@
     <div
         class={[
             // Container base/dialog/bottomsheet
-            "border-border-secondary relative flex max-h-screen flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 dark:sm:border",
-            "sm:w-100 sm:m-auto sm:rounded-2xl sm:px-6 sm:pb-8 sm:pt-6",
-            "w-full rounded-t-2xl px-4 pb-6 pt-4",
+            "relative flex max-h-screen flex-col overflow-hidden border-x border-t  bg-slate-50 dark:bg-slate-950",
+            alwaysOnBottom
+                ? "bottom-0 top-auto w-full rounded-t-2xl px-4 pb-6 pt-4"
+                : "sm:w-100 w-full rounded-t-2xl px-4 pb-6 pt-4 sm:m-auto sm:rounded-2xl sm:px-6 sm:pb-8 sm:pt-6",
             className,
         ]}
     >
         <!-- Non-interactive element to render dark-mode bottom sheet border gradient -->
         <div
-            class="from-border-secondary pointer-events-none absolute left-0 right-0 top-0 z-0 hidden rounded-t-2xl to-transparent p-[1px] max-sm:dark:block"
+            class=" pointer-events-none absolute left-0 right-0 top-0 z-0 hidden rounded-t-2xl p-[1px] max-sm:dark:block"
         >
             <div class="h-24 rounded-t-2xl bg-slate-50 dark:bg-slate-950"></div>
         </div>

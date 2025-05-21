@@ -13,10 +13,18 @@ type AudioParameters = record {
   total_length_ms : nat32;
   chunk_size : nat64;
 };
-type AuthorizationError = variant {
+type AudioSample = record {
+  id : nat64;
+  sample : blob;
+  sample_length_samples : nat32;
+  sample_length_ms : float64;
+};
+type CensorshipError = variant {
   EvmError : text;
+  InternalCanisterError : text;
   SetupError : text;
   Unauthorized;
+  VoiceNotFound;
 };
 type ColliderCoordinate = record { x : float64; y : float64 };
 type HttpStreamingResponse = record {
@@ -26,10 +34,11 @@ type HttpStreamingResponse = record {
   streaming_strategy : opt StreamingStrategy;
   status_code : nat16;
 };
-type Result = variant { Ok : AddressEgress; Err : AuthorizationError };
-type Result_1 = variant { Ok : vec VoiceNodeEgress; Err : text };
-type Result_2 = variant { Ok : text; Err : text };
-type Result_3 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
+type Result = variant { Ok; Err : CensorshipError };
+type Result_1 = variant { Ok : AudioSample; Err : CensorshipError };
+type Result_2 = variant { Ok : vec VoiceNodeEgress; Err : text };
+type Result_3 = variant { Ok : text; Err : text };
+type Result_4 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
 type SimulationParameters = record {
   logical_radius : float64;
   density : float64;
@@ -66,6 +75,7 @@ type VoiceAmongVoicesInit = record {
   siwe_canister_principal : opt principal;
   token_address : opt text;
   dev_mode : opt bool;
+  admin_token_id : opt nat64;
 };
 type VoiceLog = record {
   id : nat64;
@@ -87,20 +97,22 @@ type VoiceNodeIngress = record {
   sample : blob;
 };
 service : (opt VoiceAmongVoicesInit) -> {
+  censor : (nat64) -> (Result);
+  get_admin_id : () -> (nat64) query;
   get_angle_file : (nat64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;
-  get_is_owner_of_node : (nat64) -> (Result);
   get_my_principal : () -> (text) query;
   get_simulation_parameters : () -> (SimulationParameters) query;
   get_siwe_principal : () -> (principal) query;
   get_token_address : () -> (AddressEgress) query;
+  get_voice : (nat64) -> (Result_1) query;
   get_voice_logs : (nat64, nat64) -> (vec VoiceLog) query;
-  get_voice_nodes : () -> (Result_1) query;
-  get_wallet_address : () -> (Result_2) composite_query;
+  get_voice_nodes : () -> (Result_2) query;
+  get_wallet_address : () -> (Result_3) composite_query;
   get_zero_file : () -> (HttpStreamingResponse) query;
   http_request_streaming_callback : (StreamingCallbackToken) -> (
       StreamingCallbackHttpResponse,
     ) query;
-  update_voice_node : (VoiceNodeIngress) -> (Result_3);
+  update_voice_node : (VoiceNodeIngress) -> (Result_4);
 }

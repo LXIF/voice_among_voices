@@ -2,8 +2,8 @@ use hound::{WavReader, WavWriter};
 use std::io::Cursor;
 
 use crate::{
-    AddVoiceNodeError, AudioParameters, AudioSampleMemory, SimulationParameters,
-    VoiceNodeLocalMemory,
+    structs::AudioSample, AddVoiceNodeError, AudioParameters, AudioSampleMemory,
+    SimulationParameters, VoiceNodeLocalMemory,
 };
 
 #[derive(Debug)]
