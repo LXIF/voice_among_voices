@@ -579,7 +579,6 @@
                                 )
                               ? `hsla(${node.id}, 100%, 50%, 80)`
                               : "hsla(0,0,0,0)"}
-                    class={$isAdmin ? "cursor-pointer" : ""}
                 />
                 {#if $showCensorModal && $selectedManagementNode === Number(node.id)}
                     <circle
