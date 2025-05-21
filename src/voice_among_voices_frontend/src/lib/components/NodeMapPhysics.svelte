@@ -40,6 +40,7 @@
         getSimulationParameters,
         getVoiceNodes,
     } from "$lib/icInteractions";
+    import { clamp, mapRange } from "$lib/utils/mathUtils";
 
     let {
         nodes,
@@ -63,7 +64,7 @@
         class?: string;
     } = $props();
 
-    let localNodes: VoiceNodeEgress[] = $state([]);
+    let localNodes: (VoiceNodeEgress & { absvel?: number })[] = $state([]);
 
     let container: HTMLDivElement | null = null;
     let svgElement: SVGSVGElement | null = null;
@@ -252,6 +253,7 @@
                                 bodyPos.x - bodyWithinReachPos.x,
                                 bodyPos.y - bodyWithinReachPos.y,
                             );
+
                             // add vector to the magnetic forces
                             magneticForces.push(
                                 new RAPIER.Vector2(
@@ -363,6 +365,10 @@
                             y,
                             id: body.voiceNode.id,
                             radius: body.voiceNode.radius,
+                            absvel: Math.sqrt(
+                                body.rigidBody.linvel().x ** 2 +
+                                    body.rigidBody.linvel().y ** 2,
+                            ),
                         };
                     });
                 }
@@ -433,7 +439,7 @@
 
         const voiceNode: VoiceNodeIngress = {
             id: BigInt($selectedAngle!),
-            x: rotatedX,
+            x: -rotatedX,
             y: rotatedY,
             sample: [],
         };
@@ -443,12 +449,12 @@
         );
 
         if (updatableNode) {
-            updatableNode.x = rotatedX;
+            updatableNode.x = -rotatedX;
             updatableNode.y = rotatedY;
             updatableNode.radius = nodeRadius;
         } else {
             localNodes.push({
-                x: rotatedX,
+                x: -rotatedX,
                 y: rotatedY,
                 radius: nodeRadius,
                 id: BigInt($selectedAngle!),
@@ -510,7 +516,8 @@
         }
 
         // Map the playhead position to logical coordinates
-        const mappedPlayHeadPosition = playHeadPosition * 2 * logical_radius;
+        const mappedPlayHeadPosition =
+            2 * logical_radius - playHeadPosition * 2 * logical_radius;
 
         // Calculate distance from the node to the playhead
         const distanceFromPlayhead = Math.abs(
@@ -518,6 +525,10 @@
         );
 
         return distanceFromPlayhead <= nodeRadius;
+    }
+
+    function colorVel(absVel: number) {
+        return clamp(mapRange(absVel, 0, 2, 0, 100), 0, 100);
     }
 </script>
 
@@ -559,7 +570,15 @@
                         ? `hsl(${node.id}, 100%, 50%)`
                         : Number(node.id) === $hoveredAngle
                           ? `hsla(${node.id}, 100%, 50%, 60%)`
-                          : "hsla(0, 0%, 0%, 0%)"}
+                          : !!node.absvel
+                            ? `hsla(${30 + colorVel(node.absvel) / 10}, 80%, ${colorVel(node.absvel)}%, ${colorVel(node.absvel)}%)`
+                            : isNodeTouchedByPlayhead(
+                                    node.x,
+                                    node.y,
+                                    node.radius,
+                                )
+                              ? `hsla(${node.id}, 100%, 50%, 80)`
+                              : "hsla(0,0,0,0)"}
                     class={$isAdmin ? "cursor-pointer" : ""}
                 />
                 {#if $showCensorModal && $selectedManagementNode === Number(node.id)}
