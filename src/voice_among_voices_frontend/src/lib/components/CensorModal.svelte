@@ -11,7 +11,9 @@
 
     let audioElement: HTMLAudioElement;
     let currentPlayingId: number | null = $state(null);
-    let censorSuccess = $state(false);
+    let censorState = $state<"idle" | "censoring" | "success" | "failure">(
+        "idle",
+    );
 
     function incrementManagementNode() {
         const currentId = $selectedManagementNode;
@@ -59,14 +61,17 @@
     }
 
     async function censorVoice(id: number) {
+        censorState = "censoring";
         try {
             const response = await backend.censor(BigInt(id));
             if ("Ok" in response) {
-                censorSuccess = true;
-                setTimeout(() => (censorSuccess = false), 2000);
+                censorState = "success";
+                setTimeout(() => (censorState = "idle"), 2000);
             }
         } catch (error) {
             console.error("Error censoring voice:", error);
+            censorState = "failure";
+            setTimeout(() => (censorState = "idle"), 2000);
         }
     }
 
@@ -125,7 +130,15 @@
                                 censorVoice($selectedManagementNode!)}
                             variant="danger"
                         >
-                            {censorSuccess ? "Success!" : "Censor"}
+                            {censorState === "idle"
+                                ? "Censor"
+                                : censorState === "success"
+                                  ? "Success!"
+                                  : censorState === "censoring"
+                                    ? "Censoring..."
+                                    : censorState === "failure"
+                                      ? "Error"
+                                      : ""}
                         </Button>
                     </div>
                 </div>
