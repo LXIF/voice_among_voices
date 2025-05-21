@@ -7,8 +7,9 @@ import {
     canisterId,
     idlFactory,
 } from "../../../../declarations/voice_among_voices_backend";
+import type { RequestHandler } from "./$types";
 
-export async function GET({ params }) {
+export const GET: RequestHandler = async ({ params }) => {
     const nftId = parseInt(params.nftId, 10);
     if (nftId < 1 || nftId > 360) {
         throw error(404, "Not Found");
@@ -38,7 +39,7 @@ export async function GET({ params }) {
     } else {
         throw error(404, "Not Found");
     }
-}
+};
 
 async function generatePng(nodes: VoiceNodeEgress[], nftId: number) {
     const centerX = 0;
