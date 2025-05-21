@@ -3,11 +3,18 @@ import type {
     VoiceNodeEgress,
     AudioParameters,
 } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-import { writable, type Subscriber, type Updater } from "svelte/store";
+import {
+    derived,
+    get,
+    writable,
+    type Subscriber,
+    type Updater,
+} from "svelte/store";
 import { Tween } from "svelte/motion";
 import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
 import { browser } from "$app/environment";
 import { getVoiceNodes } from "$lib/icInteractions";
+import { backend } from "$lib/canisters";
 
 if (browser) {
     console.log("[Debug] uxState.svelte.ts module initialization");
@@ -29,6 +36,12 @@ export const simulationParameters = writable<SimulationParameters | null>(null);
 export const audioParameters = writable<AudioParameters | null>(null);
 export const myAddress = writable<string>("");
 export const myTokens = writable<number[]>([]);
+export const adminTokenId = writable<number>(0);
+
+export const isAdmin = derived([myTokens, adminTokenId], () => {
+    return get(myTokens).includes(get(adminTokenId));
+});
+export const selectedManagementNode = writable<number>(1);
 export const mapRotation = new Tween(0, {
     easing: cubicOut,
     duration: 800,
@@ -43,6 +56,7 @@ export const nodeWidthPx = writable<number>(0);
 export const nodeWidthLogical = writable<number>(0);
 export const hasNoTokens = writable<boolean>(false);
 export const showInfoModal = writable<boolean>(false);
+export const showCensorModal = writable<boolean>(false);
 export const toastMessage = writable<string>("");
 
 export const resetUxState = () => {
@@ -244,3 +258,7 @@ export type ApplicationState = {
 };
 
 export const applicationState = createApplicationState();
+
+export async function fetchAdminTokenId() {
+    adminTokenId.set(Number(await backend.get_admin_id()));
+}

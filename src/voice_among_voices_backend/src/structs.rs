@@ -139,6 +139,25 @@ pub enum AuthorizationError {
     SetupError(String),
 }
 
+#[derive(CandidType, Debug)]
+pub enum CensorshipError {
+    Unauthorized,
+    EvmError(String),
+    SetupError(String),
+    VoiceNotFound,
+    InternalCanisterError(String),
+}
+
+impl From<AuthorizationError> for CensorshipError {
+    fn from(error: AuthorizationError) -> Self {
+        match error {
+            AuthorizationError::Unauthorized => CensorshipError::Unauthorized,
+            AuthorizationError::EvmError(e) => CensorshipError::EvmError(e),
+            AuthorizationError::SetupError(e) => CensorshipError::SetupError(e),
+        }
+    }
+}
+
 #[derive(CandidType, Deserialize, Clone, Default)]
 pub struct HttpStreamingResponse {
     pub status_code: u16,
@@ -193,6 +212,7 @@ pub struct VoiceAmongVoicesInit {
     pub siwe_canister_principal: Option<Principal>,
     pub token_address: Option<String>,
     pub dev_mode: Option<bool>,
+    pub admin_token_id: Option<u64>,
 }
 
 #[derive(
@@ -200,11 +220,15 @@ pub struct VoiceAmongVoicesInit {
 )]
 pub struct StorableConfig {
     pub dev_mode: bool,
+    pub admin_id: u64,
 }
 
 impl StorableConfig {
     pub fn default() -> Self {
-        StorableConfig { dev_mode: false }
+        StorableConfig {
+            dev_mode: false,
+            admin_id: 0,
+        }
     }
 }
 

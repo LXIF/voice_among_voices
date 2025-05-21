@@ -27,9 +27,7 @@ use test_functions::generate_test_wav;
 use utils::{node_within_circle, split_into_chunks};
 use voice_nodes::get_stored_voice_nodes;
 
-use evm::{
-    caller_is_owner_of, check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress,
-};
+use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress};
 
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
@@ -42,8 +40,8 @@ fn get_siwe_principal() -> Principal {
 }
 
 #[post_upgrade]
-fn post_upgrade() {
-    collider_init();
+fn post_upgrade(maybe_arg: Option<VoiceAmongVoicesInit>) {
+    upgrade_storage(maybe_arg);
 }
 
 #[update]
@@ -53,7 +51,7 @@ async fn update_voice_node(
     match check_auth_for_single_node_id(node.id).await {
         Ok(address) => {
             let res = update_stored_voice_node(node, address, time());
-            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update); // TODO: use this result
+            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
             res
         }
         Err(err) => Err(err.into()),
@@ -122,17 +120,36 @@ async fn get_wallet_address() -> Result<String, String> {
     get_caller_wallet_address().await
 }
 
-#[update]
-async fn get_is_owner_of_node(node_id: usize) -> Result<AddressEgress, AuthorizationError> {
-    caller_is_owner_of(node_id as u64)
-        .await
-        .and_then(|address| Ok(address.into()))
-}
-
 // LOGS
 #[query]
 async fn get_voice_logs(skip: u64, take: u64) -> Vec<VoiceLog> {
     retrieve_voice_logs(skip as usize, take as usize)
+}
+
+// CENSORSHIP
+#[query]
+fn get_admin_id() -> u64 {
+    admin_id()
+}
+
+#[query]
+async fn get_voice(node_id: u64) -> Result<AudioSample, CensorshipError> {
+    match check_auth_for_single_node_id(admin_id() as usize).await {
+        Ok(_) => files_and_voices::get_voice(node_id).ok_or(CensorshipError::VoiceNotFound),
+        Err(err) => Err(err.into()),
+    }
+}
+
+#[update]
+async fn censor(node_id: u64) -> Result<(), CensorshipError> {
+    match check_auth_for_single_node_id(admin_id() as usize).await {
+        Ok(address) => {
+            let res = files_and_voices::censor_voice(node_id, address, time());
+            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
+            res
+        }
+        Err(err) => Err(err.into()),
+    }
 }
 
 export_candid!();

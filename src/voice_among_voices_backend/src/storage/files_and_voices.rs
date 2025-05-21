@@ -1,9 +1,19 @@
+use std::io::Cursor;
+
+use alloy::primitives::Address;
+use hound::{WavSpec, WavWriter};
+
 use crate::{
-    generate_angle_file, performance_counter, set_timer,
-    split_into_chunks, ByteBuf, Duration, HttpStreamingResponse,
-    StreamingCallbackHttpResponse, StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_CACHE,
-    AUDIO_PARAMETERS, SAMPLES_MEMORY, SIMULATION_PARAMETERS, STREAMING_CALLBACK,
-    VOICE_NODES_MEMORY, ZERO_DEGREE_FILE_CACHE,
+    generate_angle_file, performance_counter, set_timer, split_into_chunks,
+    structs::{AudioSample, CensorshipError},
+    ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
+    StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_CACHE, AUDIO_PARAMETERS, SAMPLES_MEMORY,
+    SIMULATION_PARAMETERS, STREAMING_CALLBACK, VOICE_NODES_MEMORY, ZERO_DEGREE_FILE_CACHE,
+};
+
+use super::{
+    store_voice_log,
+    voice_log::{PositionLog, VoiceAction, VoiceLog},
 };
 
 pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
@@ -119,8 +129,59 @@ pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHt
     }
 }
 
+pub fn get_voice(node_id: u64) -> Option<AudioSample> {
+    SAMPLES_MEMORY.with_borrow(|samples| samples.get(node_id))
+}
+
+pub fn censor_voice(node_id: u64, address: Address, timestamp: u64) -> Result<(), CensorshipError> {
+    SAMPLES_MEMORY.with_borrow_mut(|samples| {
+        let sample = samples.get(node_id).unwrap(); // TODO improve
+        let length_samples = sample.sample_length_samples;
+        let censored_sample =
+            generate_censored_wav(length_samples, crate::storage::AUDIO_PARAMETERS.sample_rate);
+        samples.set(
+            node_id,
+            &AudioSample {
+                sample: censored_sample,
+                ..sample
+            },
+        );
+    });
+    store_voice_log(VoiceLog::new(
+        timestamp,
+        node_id,
+        VoiceAction::Censor,
+        address.into(),
+        None,
+    ))
+    .map_err(|err| CensorshipError::InternalCanisterError(format!("{}", err)))
+}
+
 fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {
     let callback = STREAMING_CALLBACK.clone();
 
     Some(StreamingStrategy::Callback { token, callback })
+}
+
+fn generate_censored_wav(duration_samples: u32, sample_rate: u32) -> Vec<u8> {
+    let spec = WavSpec {
+        channels: 1,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let mut buffer = Vec::new();
+    let mut writer = WavWriter::new(Cursor::new(&mut buffer), spec).unwrap();
+
+    let amplitude = i16::MAX as f32;
+
+    for t in 0..duration_samples {
+        let sample = ((t as f32 / sample_rate as f32) * 440. * 2. * std::f32::consts::PI).sin();
+        writer.write_sample((sample * amplitude) as i16).unwrap();
+    }
+
+    writer.finalize().unwrap();
+
+    buffer
 }

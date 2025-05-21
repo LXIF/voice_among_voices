@@ -62,7 +62,7 @@
     });
 
     async function fetchOwnedTokens() {
-        let tokens = await $myTokens;
+        let tokens = $myTokens;
         if (tokens.length === 0) {
             $applicationState = applicationStates.loadingTokens;
         }

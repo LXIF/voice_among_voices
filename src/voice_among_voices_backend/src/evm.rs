@@ -26,13 +26,12 @@ sol! {
 }
 
 pub async fn get_caller_wallet_address() -> Result<String, String> {
-    let response = Call::bounded_wait(siwe_principal(), "get_address")
+    Call::bounded_wait(siwe_principal(), "get_address")
         .with_arg(ByteBuf::from(msg_caller().as_slice().to_vec()))
         .await
         .map(|res| res.candid())
         .map_err(|err| format!("Call Failed Error: {:?}", err))?
-        .map_err(|err| format!("Candid Decode Failed Error: {:?}", err))?;
-    response
+        .map_err(|err| format!("Candid Decode Failed Error: {:?}", err))?
 }
 
 async fn retry<F, Fut, T>(mut f: F, max_retries: u32) -> Result<T, String>
@@ -56,7 +55,7 @@ where
 }
 
 // TODO: this function is affected by one-after issue
-pub async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError> {
+async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError> {
     let CallObjects {
         owner,
         token_contract,
