@@ -11,7 +11,7 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
     let center_x = 600.0;
     let center_y = 600.0;
     let map_radius = 500.0;
-    let scale = (radius / SIMULATION_PARAMETERS.logical_radius as f32);
+    let scale = map_radius / SIMULATION_PARAMETERS.logical_radius as f32;
     let mut stroke = Stroke::default();
     stroke.width = 2.;
 
