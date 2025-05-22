@@ -20,10 +20,10 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
         let rad = (90.0 - angle as f32).to_radians();
         let is_selected = nft_id == angle;
 
-        let x1 = center_x - rad.cos() * map_radius * if is_selected { 0.3 } else { 1.01 };
-        let y1 = center_y + rad.sin() * map_radius * if is_selected { 0.3 } else { 1.01 };
-        let x2 = center_x - rad.cos() * map_radius * if is_selected { 1.2 } else { 1.1 };
-        let y2 = center_y + rad.sin() * map_radius * if is_selected { 1.2 } else { 1.1 };
+        let x1 = center_x - rad.cos() * map_radius * if is_selected { 0.3 } else { 1.02 };
+        let y1 = center_y + rad.sin() * map_radius * if is_selected { 0.3 } else { 1.02 };
+        let x2 = center_x - rad.cos() * map_radius * if is_selected { 1.15 } else { 1.1 };
+        let y2 = center_y + rad.sin() * map_radius * if is_selected { 1.15 } else { 1.1 };
 
         let mut paint = Paint::default();
         let (r, g, b) = hsv_to_rgb(angle as f32, 100.0, 100.0);
