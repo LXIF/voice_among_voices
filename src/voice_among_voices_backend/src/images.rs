@@ -10,7 +10,7 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
 
     let center_x = 600.0;
     let center_y = 600.0;
-    let radius = 450.0;
+    let radius = 500.0;
     let mut stroke = Stroke::default();
     stroke.width = 2.;
 
@@ -106,7 +106,7 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
     pixmap.encode_png().unwrap()
 }
 
-fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
+pub fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
     let s = s / 100.0;
     let v = v / 100.0;
     let i = (h / 60.0).floor() as i32;
