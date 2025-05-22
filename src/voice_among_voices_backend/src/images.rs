@@ -1,6 +1,6 @@
 use tiny_skia::{Paint, PathBuilder, Pixmap, Stroke};
 
-use crate::structs::VoiceNodeEgress;
+use crate::{storage::SIMULATION_PARAMETERS, structs::VoiceNodeEgress};
 
 pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
     let mut pixmap = Pixmap::new(1200, 1200).unwrap();
@@ -10,7 +10,8 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
 
     let center_x = 600.0;
     let center_y = 600.0;
-    let radius = 500.0;
+    let map_radius = 500.0;
+    let scale = (radius / SIMULATION_PARAMETERS.logical_radius as f32);
     let mut stroke = Stroke::default();
     stroke.width = 2.;
 
@@ -19,10 +20,10 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
         let rad = (90.0 - angle as f32).to_radians();
         let is_selected = nft_id == angle;
 
-        let x1 = center_x - rad.cos() * radius * if is_selected { 0.3 } else { 1.0 };
-        let y1 = center_y + rad.sin() * radius * if is_selected { 0.3 } else { 1.0 };
-        let x2 = center_x - rad.cos() * radius * if is_selected { 1.2 } else { 1.1 };
-        let y2 = center_y + rad.sin() * radius * if is_selected { 1.2 } else { 1.1 };
+        let x1 = center_x - rad.cos() * map_radius * if is_selected { 0.3 } else { 1.01 };
+        let y1 = center_y + rad.sin() * map_radius * if is_selected { 0.3 } else { 1.01 };
+        let x2 = center_x - rad.cos() * map_radius * if is_selected { 1.2 } else { 1.1 };
+        let y2 = center_y + rad.sin() * map_radius * if is_selected { 1.2 } else { 1.1 };
 
         let mut paint = Paint::default();
         let (r, g, b) = hsv_to_rgb(angle as f32, 100.0, 100.0);
@@ -45,9 +46,9 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
     // Draw nodes
     for node in nodes {
         let is_selected = node.id == nft_id as usize;
-        let x = center_x + node.x as f32 * 10.0;
-        let y = center_y - node.y as f32 * 10.0;
-        let radius = node.radius as f32 * 10.0;
+        let x = center_x + node.x as f32 * scale;
+        let y = center_y - node.y as f32 * scale;
+        let radius = node.radius as f32 * scale;
 
         let mut paint = Paint::default();
         let (r, g, b) = hsv_to_rgb(node.id as f32, 100.0, 100.0);
@@ -83,7 +84,7 @@ pub fn generate_nft_image(nodes: &[VoiceNodeEgress], nft_id: u32) -> Vec<u8> {
             // Additional circles for selected node
             for offset in 1..=2 {
                 let mut path = PathBuilder::new();
-                path.push_circle(x, y, radius + offset as f32 * 10.0);
+                path.push_circle(x, y, radius + offset as f32 * scale);
 
                 let opacity = ((1.0 - offset as f32 * 0.33) * 255.0) as u8;
                 let mut paint = Paint::default();
