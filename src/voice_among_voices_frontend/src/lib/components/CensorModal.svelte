@@ -14,6 +14,7 @@
     let censorState = $state<"idle" | "censoring" | "success" | "failure">(
         "idle",
     );
+    let sampleLoading = $state(false);
 
     function incrementManagementNode() {
         const currentId = $selectedManagementNode;
@@ -39,6 +40,7 @@
             return;
         }
         try {
+            sampleLoading = true;
             const response = await backend.get_voice(BigInt(id));
             console.log(response);
             if ("Ok" in response) {
@@ -51,8 +53,10 @@
                 const audioUrl = URL.createObjectURL(audioBlob);
                 audioElement.src = audioUrl;
                 currentPlayingId = id;
+                sampleLoading = false;
                 await audioElement.play();
             } else {
+                sampleLoading = false;
                 throw response.Err;
             }
         } catch (error) {
@@ -124,9 +128,11 @@
                                 ? "bg-green-500"
                                 : ""}
                         >
-                            {currentPlayingId === $selectedManagementNode
-                                ? "Playing..."
-                                : "Play"}
+                            {sampleLoading
+                                ? "Loading..."
+                                : currentPlayingId === $selectedManagementNode
+                                  ? "Playing..."
+                                  : "Play"}
                         </Button>
                         <Button
                             onclick={() =>
