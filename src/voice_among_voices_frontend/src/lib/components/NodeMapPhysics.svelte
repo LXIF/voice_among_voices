@@ -473,16 +473,16 @@
         if (!showPlayHead) return false;
 
         // Get current rotation in radians
-        const rotationRadians = (mapRotation.current * Math.PI) / 180;
+        // const rotationRadians = (mapRotation.current * Math.PI) / 180;
 
         // Rotate the node position by the inverse of the canvas rotation
         // This gives us the node position in the non-rotated coordinate system
-        const rotatedNodeX =
-            nodeX * Math.cos(rotationRadians) +
-            nodeY * Math.sin(rotationRadians);
-        const rotatedNodeY =
-            nodeX * Math.sin(rotationRadians) -
-            nodeY * Math.cos(rotationRadians);
+        // const rotatedNodeX =
+        //     nodeX * Math.cos(rotationRadians) +
+        //     nodeY * Math.sin(rotationRadians);
+        // const rotatedNodeY =
+        //     nodeX * Math.sin(rotationRadians) -
+        //     nodeY * Math.cos(rotationRadians);
 
         // Convert playhead angle to radians
         const angleRadians = (playHeadAngle * Math.PI) / 180;
@@ -493,9 +493,9 @@
         let distanceToTangent;
 
         if (playHeadAngle % 180 === 0) {
-            distanceToTangent = Math.abs(rotatedNodeY - tangentY);
+            distanceToTangent = Math.abs(nodeY - tangentY);
         } else if (playHeadAngle % 90 === 0) {
-            distanceToTangent = Math.abs(rotatedNodeX - tangentX);
+            distanceToTangent = Math.abs(nodeX - tangentX);
         } else {
             // Tangent slope
             let tangentSlope = -tangentX / tangentY;
@@ -508,16 +508,12 @@
 
             // Calculate distance from rotated node to the tangent line
             distanceToTangent =
-                Math.abs(
-                    aTangent * rotatedNodeX +
-                        bTangent * rotatedNodeY +
-                        cTangent,
-                ) / Math.sqrt(aTangent * aTangent + bTangent * bTangent);
+                Math.abs(aTangent * nodeX + bTangent * nodeY + cTangent) /
+                Math.sqrt(aTangent * aTangent + bTangent * bTangent);
         }
 
         // Map the playhead position to logical coordinates
-        const mappedPlayHeadPosition =
-            2 * logical_radius - playHeadPosition * 2 * logical_radius;
+        const mappedPlayHeadPosition = playHeadPosition * 2 * logical_radius;
 
         // Calculate distance from the node to the playhead
         const distanceFromPlayhead = Math.abs(

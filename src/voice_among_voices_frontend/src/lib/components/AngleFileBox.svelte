@@ -134,9 +134,9 @@
             await tick();
             downloadLink!.href = audioURL;
             downloadLink!.download = `voice_among_voices_${$selectedAngle}°_${Date.now()}.wav`;
-            setTimeout(() => {
-                $applicationState = applicationStates.playingFile;
-            }, 750);
+            // setTimeout(() => {
+            //     $applicationState = applicationStates.playingFile;
+            // }, 750);
             onFileAngle($selectedAngle);
             onFileLoaded(true);
             togglePlayPause();
@@ -148,15 +148,27 @@
     }
 
     // Toggle play/pause
-    function togglePlayPause() {
+    async function togglePlayPause() {
         if (isPlaying) {
             audioElement!.pause();
             isPlaying = false;
             $applicationState = applicationStates.loggedInIdle;
         } else {
-            audioElement!.play();
-            isPlaying = true;
-            $applicationState = applicationStates.playingFile;
+            try {
+                const playPromise = audioElement!.play();
+                if (playPromise !== undefined) {
+                    await playPromise;
+                    isPlaying = true;
+                    $applicationState = applicationStates.playingFile;
+                } else {
+                    throw "empty audio element play promise!";
+                }
+            } catch (error) {
+                console.error("Playback failed:", error);
+                // If autoplay fails, we'll let the user manually trigger play
+                isPlaying = false;
+                $applicationState = applicationStates.loggedInIdle;
+            }
         }
     }
 
