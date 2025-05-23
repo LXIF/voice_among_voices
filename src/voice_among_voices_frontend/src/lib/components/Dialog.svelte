@@ -119,7 +119,7 @@
             "relative flex max-h-screen flex-col overflow-hidden  bg-slate-50 dark:bg-slate-950",
             alwaysOnBottom
                 ? "bottom-0 top-auto w-full rounded-t-2xl border-x border-t px-4 pb-6 pt-4"
-                : "sm:w-100 w-full rounded-t-2xl border px-4 pb-6 pt-4 sm:m-auto sm:rounded-2xl sm:px-6 sm:pb-8 sm:pt-6",
+                : "sm:w-100 w-full rounded-t-2xl border border-b-0 px-4 pb-6 pt-4 sm:m-auto sm:rounded-2xl sm:border-b sm:px-6 sm:pb-8 sm:pt-6",
             className,
         ]}
     >
