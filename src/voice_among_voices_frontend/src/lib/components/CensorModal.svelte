@@ -28,7 +28,7 @@
         const currentId = $selectedManagementNode;
         const availableIds = $voiceNodes.map((node) => Number(node.id));
         const nextId =
-            availableIds.find((id) => id < currentId) ??
+            availableIds.findLast((id) => id < currentId) ??
             Math.max(...availableIds);
         $selectedManagementNode = nextId;
     }
@@ -111,14 +111,14 @@
                         >
                         <Button
                             onclick={decrementManagementNode}
-                            class="px-2 py-2 ">←</Button
+                            class="touch-manipulation px-2 py-2">←</Button
                         >
                         <div class="inline-block min-w-16">
                             Voice {$selectedManagementNode}
                         </div>
                         <Button
                             onclick={incrementManagementNode}
-                            class="px-2 py-2 ">→</Button
+                            class="touch-manipulation px-2 py-2">→</Button
                         ></span
                     >
                     <div class="space-x-2">
