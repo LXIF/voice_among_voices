@@ -31,7 +31,7 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         let json_data = json!({
             "id": nft_id,
             "name": format!("VaV {}°", nft_id),
-            "image": format!("https://{}.icp0.io/nft_images/{}", ic_cdk::api::canister_self(), nft_id),
+            "image": format!("https://{}.icp0.io/nft_images/{}", ic_cdk::api::id(), nft_id),
             "external_url": "https://hb4ki-2qaaa-aaaad-aalpq-cai.icp0.io/",
             "description": "This token gives access to your own listening angle and voice in Voice among Voices",
             "background_color": hex_color

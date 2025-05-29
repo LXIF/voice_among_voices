@@ -11,8 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 rapier2d = { version = "0.26.0", features = ["enhanced-determinism"] }
 candid = "0.10.13"
-ic-cdk = "0.18.0"
-ic-cdk-timers = "0.12.0"
+ic-cdk-timers = "0.11.0"
 serde = "^1.0"
 futures = "0.3"
 hound = "3.5.1"
@@ -24,6 +23,7 @@ ic-stable-structures = "0.6.5"
 alloy = { git = "https://github.com/ic-alloy/ic-alloy.git", tag = "v0.3.5-icp.1", default-features = false, features = [
   "icp",
   "sol-types",
+  "json",
   "contract",
 ] }
 
@@ -35,13 +35,8 @@ ic-canister-sig-creation = "1.3.0"
 ic-certification = "3.0.3"
 tiny-skia = "0.11.4"
 serde_json = "1.0.140"
+ic-cdk = "0.17.2"
 
 [dev-dependencies]
 pocket-ic = "9.0.0"
 rand = "0.8.5"
-
-[package.metadata.cargo-udeps.ignore]
-ic-cdk-timers = "0.12.0"
-
-[patch.crates-io]
-ic-cdk-timers = "0.12.0"

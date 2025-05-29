@@ -25,9 +25,9 @@ dfx deploy voice_among_voices_backend --ic --identity LXIF-private --argument $'
 )'
 
 # dfx deploy evm_rpc --argument '(record {})'
-dfx deps pull --ic --identity LXIF-private
-dfx deps init evm_rpc --argument '(record {})' --ic --identity LXIF-private
-dfx deps deploy --ic --identity LXIF-private
+# dfx deps pull --ic --identity LXIF-private
+# dfx deps init evm_rpc --argument '(record {})' --ic --identity LXIF-private
+# dfx deps deploy --ic --identity LXIF-private
 
 dfx deploy ic_siwe_provider --ic --identity LXIF-private --argument $'(
     record {
