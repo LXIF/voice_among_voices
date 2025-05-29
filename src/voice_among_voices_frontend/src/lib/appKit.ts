@@ -1,5 +1,5 @@
 import { type AppKit, createAppKit } from "@reown/appkit";
-import { base, sepolia } from "@reown/appkit/networks";
+import { base } from "@reown/appkit/networks";
 import {
     WagmiAdapter,
     type WagmiAdapter as WagmiAdapterType,
@@ -11,7 +11,7 @@ import { toastMessage } from "./state/uxState";
 // Force immediate execution
 const initializeStores = () => {
     const projectId = "da65f4e00cada14e87d84160b45060f5";
-    const networks = [sepolia];
+    const networks = [base];
 
     // Create stores with initial values
     const wagmiAdapter = readable<WagmiAdapterType | undefined>(

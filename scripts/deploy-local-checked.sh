@@ -1,35 +1,34 @@
 npm run extract-candid
 
-dfx canister create --all
+dfx canister create ic_siwe_provider
+
+dfx deps pull
+dfx deps init evm_rpc --argument '(record {})'
+dfx deps deploy
 
 # OLD on Sepolia
-dfx deploy voice_among_voices_backend --argument $'(
-    opt record {
-        siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider)'";
-        token_address = opt "0x1d0406e0df3f50a1399d299c28e58f8444508013";
-        dev_mode = opt false;
-        admin_token_id = opt 360;
-        token_buy_link = opt "https://basescan.org/address/0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13#writeContract#F2";
-    }
-)'
-
-# NEW on Base Mainnet
 # dfx deploy voice_among_voices_backend --argument $'(
 #     opt record {
 #         siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider)'";
-#         token_address = opt "0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13";
+#         token_address = opt "0x1d0406e0df3f50a1399d299c28e58f8444508013";
 #         dev_mode = opt false;
 #         admin_token_id = opt 360;
 #         token_buy_link = opt "https://basescan.org/address/0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13#writeContract#F2";
 #     }
 # )'
 
-dfx deploy voice_among_voices_frontend
+# NEW on Base Mainnet
+dfx deploy voice_among_voices_backend --argument $'(
+    opt record {
+        siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider)'";
+        token_address = opt "0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13";
+        dev_mode = opt false;
+        admin_token_id = opt 360;
+        token_buy_link = opt "https://basescan.org/address/0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13#writeContract#F2";
+    }
+)'
 
-# dfx deploy evm_rpc --argument '(record {})'
-dfx deps pull
-dfx deps init evm_rpc --argument '(record {})'
-dfx deps deploy
+dfx deploy voice_among_voices_frontend
 
 dfx deploy ic_siwe_provider --argument $'(
     record {

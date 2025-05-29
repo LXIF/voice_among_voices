@@ -1,5 +1,9 @@
 npm run extract-candid
 
+dfx deps pull
+dfx deps init evm_rpc --argument '(record {})'
+dfx deps deploy
+
 dfx canister create --all
 
 # OLD on Sepolia
@@ -24,10 +28,6 @@ dfx deploy voice_among_voices_backend --argument $'(
 
 dfx deploy voice_among_voices_frontend
 
-# dfx deploy evm_rpc --argument '(record {})'
-dfx deps pull
-dfx deps init evm_rpc --argument '(record {})'
-dfx deps deploy
 
 dfx deploy ic_siwe_provider --argument $'(
     record {

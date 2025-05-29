@@ -9,29 +9,45 @@ use alloy::{
     sol,
     transports::icp::{IcpConfig, IcpTransport, L2MainnetService, RpcService},
 };
-use ic_cdk::{api::msg_caller, call::Call};
+use candid::CandidType;
+use ic_cdk::api::call::CallResult;
+use ic_cdk::{api::caller, call};
 use ic_stable_structures::{storable::Bound, Storable};
-use serde_bytes::ByteBuf;
+use serde::Deserialize;
 use IERC721::IERC721Instance;
 
 // Define relevant ERC721 interface
 sol! {
     #[sol(rpc)]
     contract IERC721 {
-        function balanceOf(address owner) external view returns (uint256);
-        function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256);
+        // function balanceOf(address owner) external view returns (uint256);
+        // function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256);
         function ownerOf(uint256 tokenId) external view returns (address);
     }
 }
 
+#[derive(CandidType, Debug, Deserialize)]
+enum GetAddressResponse {
+    Ok(String),
+    Err(String),
+}
+
 pub async fn get_caller_wallet_address() -> Result<String, String> {
     ic_cdk::println!("get_caller_wallet_address called");
-    Call::bounded_wait(siwe_principal(), "get_address")
-        .with_arg(ByteBuf::from(msg_caller().as_slice().to_vec()))
-        .await
-        .map(|res| res.candid())
-        .map_err(|err| format!("Call Failed Error: {:?}", err))?
-        .map_err(|err| format!("Candid Decode Failed Error: {:?}", err))?
+    let result = call::<_, (GetAddressResponse,)>(
+        siwe_principal(),
+        "get_address",
+        (caller().to_bytes().into_owned(),),
+    )
+    .await
+    .map_err(|(_code, err)| err)?;
+
+    ic_cdk::println!("result: {:?}", result);
+
+    match result.0 {
+        GetAddressResponse::Ok(address) => Ok(address),
+        GetAddressResponse::Err(err) => Err(err),
+    }
 }
 
 // async fn retry<F, Fut, T>(mut f: F, max_retries: u32) -> Result<T, String>
@@ -78,6 +94,7 @@ async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError
     // )
     // .await?;
 
+    ic_cdk::println!("HERE HERE! about to call...");
     let call_response = token_contract
         .ownerOf(Uint::from(token_id))
         .call()
@@ -130,8 +147,7 @@ async fn setup_call_objects() -> Result<CallObjects, String> {
 
 fn setup_evm_provider() -> RootProvider<IcpTransport> {
     //TODO: change for mainnet (or put in config)
-    // let rpc_service = RpcService::BaseMainnet(L2MainnetService::PublicNode);
-    let rpc_service = RpcService::EthSepolia(alloy::transports::icp::EthSepoliaService::PublicNode);
+    let rpc_service = RpcService::BaseMainnet(L2MainnetService::PublicNode);
     let config = IcpConfig::new(rpc_service);
     ProviderBuilder::new().on_icp(config)
 }

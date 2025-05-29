@@ -10,7 +10,7 @@ mod http;
 mod images;
 use candid::Principal;
 use ic_cdk::{
-    api::{certified_data_set, msg_caller, performance_counter, time},
+    api::{caller, performance_counter, set_certified_data, time},
     export_candid, init, post_upgrade, query, trap, update,
 };
 use ic_cdk_timers::set_timer;
@@ -35,7 +35,7 @@ use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddr
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
     initialize_storage(maybe_arg);
-    certified_data_set(&skip_certification_certified_data());
+    set_certified_data(&skip_certification_certified_data());
 }
 
 #[query]
@@ -46,7 +46,7 @@ fn get_siwe_principal() -> Principal {
 #[post_upgrade]
 fn post_upgrade(maybe_arg: Option<VoiceAmongVoicesInit>) {
     upgrade_storage(maybe_arg);
-    certified_data_set(&skip_certification_certified_data());
+    set_certified_data(&skip_certification_certified_data());
 }
 
 #[update]
@@ -85,7 +85,7 @@ async fn get_angle_file(angle: u64) -> HttpStreamingResponse {
     };
     match check_auth_for_single_node_id(angle as usize).await {
         Ok(_address) => get_file_for_angle(angle),
-        Err(err) => trap(format!("{:?}", err)), //TODO: maybe use Result here
+        Err(err) => trap(&format!("{:?}", err)), //TODO: maybe use Result here
     }
 }
 
@@ -106,7 +106,7 @@ fn http_request_streaming_callback(token: StreamingCallbackToken) -> StreamingCa
 
 #[query]
 fn get_my_principal() -> String {
-    format!("{}", msg_caller())
+    format!("{}", caller())
 }
 
 #[query]
