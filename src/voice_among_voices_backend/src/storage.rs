@@ -8,7 +8,7 @@ use candid::CandidType;
 use candid::Principal;
 
 use crate::storage::voice_log::VoiceLog;
-use ic_cdk::api::msg_caller;
+use ic_cdk::api::caller;
 use ic_stable_structures::{
     cell::ValueError,
     memory_manager::{MemoryId, MemoryManager},
@@ -51,7 +51,7 @@ thread_local! {
 }
 
 pub static STREAMING_CALLBACK: Lazy<CallbackFunc> =
-    Lazy::new(|| CallbackFunc::new(msg_caller(), "http_request_streaming_callback".to_string()));
+    Lazy::new(|| CallbackFunc::new(caller(), "http_request_streaming_callback".to_string()));
 
 pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     total_length_ms: 4 * 60 * 1000,
