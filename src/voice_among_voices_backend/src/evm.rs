@@ -9,7 +9,6 @@ use alloy::{
     sol,
     transports::icp::{IcpConfig, IcpTransport, L2MainnetService, RpcService},
 };
-use futures::Future;
 use ic_cdk::{api::msg_caller, call::Call};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde_bytes::ByteBuf;
@@ -26,6 +25,7 @@ sol! {
 }
 
 pub async fn get_caller_wallet_address() -> Result<String, String> {
+    ic_cdk::println!("get_caller_wallet_address called");
     Call::bounded_wait(siwe_principal(), "get_address")
         .with_arg(ByteBuf::from(msg_caller().as_slice().to_vec()))
         .await
@@ -56,12 +56,15 @@ pub async fn get_caller_wallet_address() -> Result<String, String> {
 
 // TODO: this function is affected by one-after issue
 async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError> {
+    ic_cdk::println!("caller_is_owner_of called");
     let CallObjects {
         owner,
         token_contract,
     } = setup_call_objects()
         .await
         .map_err(AuthorizationError::EvmError)?;
+    ic_cdk::println!("owner: {:?}", owner);
+    ic_cdk::println!("token_contract: {:?}", token_contract);
 
     // let call_response = retry(
     //     || async {
@@ -80,18 +83,24 @@ async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError
         .call()
         .await
         .map_err(|e| AuthorizationError::EvmError(format!("Failed to call ownerOf: {}", e)))?;
+    ic_cdk::println!("call_response: {:?}", call_response._0);
 
     if call_response._0 == owner {
+        ic_cdk::println!("authorized");
         Ok(owner)
     } else {
+        ic_cdk::println!("not authorized");
         Err(AuthorizationError::Unauthorized)
     }
 }
 
 pub async fn check_auth_for_single_node_id(node_id: usize) -> Result<Address, AuthorizationError> {
+    ic_cdk::println!("check auth called");
     if dev_mode() {
+        ic_cdk::println!("dev mode");
         return Ok(Address::ZERO);
     };
+    ic_cdk::println!("not dev mode");
     caller_is_owner_of(node_id as u64).await
 }
 
@@ -101,14 +110,18 @@ struct CallObjects {
 }
 
 async fn setup_call_objects() -> Result<CallObjects, String> {
+    ic_cdk::println!("setup_call_objects called");
     let caller_address = get_caller_wallet_address().await?;
+    ic_cdk::println!("caller_address: {}", caller_address);
     let provider = setup_evm_provider();
+    ic_cdk::println!("provider: {:?}", provider);
     let contract_address = token_address();
+    ic_cdk::println!("contract_address: {}", contract_address);
 
     let owner =
         Address::from_str(&caller_address).map_err(|e| format!("Invalid address: {}", e))?;
     let token_contract = IERC721::new(contract_address, provider);
-
+    ic_cdk::println!("token_contract: {:?}", token_contract);
     Ok(CallObjects {
         owner,
         token_contract,
@@ -117,7 +130,8 @@ async fn setup_call_objects() -> Result<CallObjects, String> {
 
 fn setup_evm_provider() -> RootProvider<IcpTransport> {
     //TODO: change for mainnet (or put in config)
-    let rpc_service = RpcService::BaseMainnet(L2MainnetService::PublicNode);
+    // let rpc_service = RpcService::BaseMainnet(L2MainnetService::PublicNode);
+    let rpc_service = RpcService::EthSepolia(alloy::transports::icp::EthSepoliaService::PublicNode);
     let config = IcpConfig::new(rpc_service);
     ProviderBuilder::new().on_icp(config)
 }

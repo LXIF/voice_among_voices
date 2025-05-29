@@ -53,10 +53,20 @@ fn post_upgrade(maybe_arg: Option<VoiceAmongVoicesInit>) {
 async fn update_voice_node(
     node: VoiceNodeIngress,
 ) -> Result<VoiceNodeEgressStore, AddVoiceNodeError> {
+    ic_cdk::println!("update_voice_node called, about to check auth");
     match check_auth_for_single_node_id(node.id).await {
         Ok(address) => {
+            ic_cdk::println!(
+                "have received auth for {}, about to update stored voice node",
+                address
+            );
             let res = update_stored_voice_node(node, address, time());
+            ic_cdk::println!(
+                "finished call to update_stored_voice_node, result is {:?}, about to set timer",
+                res
+            );
             let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
+            ic_cdk::println!("set timer, about to return result");
             res
         }
         Err(err) => Err(err.into()),
