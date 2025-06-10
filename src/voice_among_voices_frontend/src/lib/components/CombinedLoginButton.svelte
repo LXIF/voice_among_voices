@@ -16,11 +16,14 @@
     import { siwe } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
     import { getWalletClient, type Config } from "@wagmi/core";
+    import { scale } from "svelte/transition";
+    import { elasticIn, elasticInOut, elasticOut } from "svelte/easing";
 
     let walletConnected = $state(false);
     let isLoggingIn = $state(false);
     let isLoggingOut = $state(false);
     let tokenBuyLink = $state("");
+    let showCopied = $state(false);
 
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
@@ -111,7 +114,26 @@
     <!-- TODO handle styling -->
     <div class="flex flex-col items-end justify-end">
         <Button class="text-xl font-bold" onclick={handleLogout}>Logout</Button>
-        <p>{abbreviateWalletAddress($walletAddress)}</p>
+        <Button
+            class="relative font-light"
+            onclick={() => {
+                navigator.clipboard.writeText($walletAddress);
+                showCopied = true;
+                setTimeout(() => (showCopied = false), 2000);
+            }}
+        >
+            {abbreviateWalletAddress($walletAddress)}
+            {#if showCopied}
+                <div
+                    class="absolute -top-8 left-1/2 -translate-x-1/2 transform rounded bg-slate-800 px-2 py-1 text-sm text-white"
+                    transition:scale={{
+                        easing: elasticOut,
+                    }}
+                >
+                    Copied!
+                </div>
+            {/if}
+        </Button>
     </div>
 {/if}
 {#if isLoggingIn && !isLoggingOut}
@@ -145,7 +167,8 @@
                 target="_blank"
                 class="origin-center underline outline-none transition-transform hover:scale-110"
                 href={tokenBuyLink}>here</a
-            >.
+            >
+            and send it to your wallet <span>{$walletAddress}</span>.
         </p>
         <div class="m-2 mt-4 flex items-center justify-center lg:min-w-96">
             <Button

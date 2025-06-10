@@ -49,7 +49,11 @@ const initializeStores = () => {
                         ],
                     },
                     projectId,
-                    features: { analytics: true },
+                    features: {
+                        analytics: true,
+                        email: true,
+                        socials: ["google"],
+                    },
                 });
                 set(modal);
             } catch (error) {
