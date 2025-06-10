@@ -8,6 +8,7 @@
     import Dialog from "./Dialog.svelte";
     import { backend } from "$lib/canisters";
     import { onMount } from "svelte";
+    import { getVoiceNodes } from "$lib/icInteractions";
 
     let audioElement: HTMLAudioElement;
     let currentPlayingId: number | null = $state(null);
@@ -81,9 +82,14 @@
 
     // Clean up audio URL when component is destroyed
     onMount(() => {
-        $selectedManagementNode = Math.min(
-            $voiceNodes.map((node) => Number(node.id)).sort((a, b) => a - b)[0],
-        );
+        (async () => {
+            $voiceNodes = await getVoiceNodes();
+            $selectedManagementNode = Math.min(
+                $voiceNodes
+                    .map((node) => Number(node.id))
+                    .sort((a, b) => a - b)[0],
+            );
+        })();
         return () => {
             if (audioElement?.src) {
                 URL.revokeObjectURL(audioElement.src);
