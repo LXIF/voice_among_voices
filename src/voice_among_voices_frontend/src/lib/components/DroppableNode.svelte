@@ -173,5 +173,8 @@
                 />
             </svg>
         </div>
+        <span class="ml-4 hidden text-lg font-semibold md:inline">
+            Drag the recording onto the circle
+        </span>
     {/if}
 </div>
