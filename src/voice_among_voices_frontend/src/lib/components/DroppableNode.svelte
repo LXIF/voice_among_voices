@@ -34,15 +34,15 @@
     const handleWidth = 50;
     const pointOffset = 7;
     let nodeX = $derived(handleWidth / 2);
-    let nodeY = $derived(scaledNodeWidthPx / 2);
-    let handleY = $derived(nodeY + 70);
+    let nodeY = 8;
+    let handleY = $derived(5 + 2 * handleWidth - handleWidth / 2);
 
     async function handlePointerDown(e: PointerEvent) {
         e.preventDefault();
         if (!draggableElement) throw "should be unreachable";
         if (!$applicationState.droppingActive) return;
-        draggableElement.style.left = `${e.clientX - (nodeWidthPx / 2 + 25)}px`;
-        draggableElement.style.top = `${e.clientY - (nodeWidthPx / 2 + 70)}px`;
+        draggableElement.style.left = `${e.clientX - handleWidth / 2}px`;
+        draggableElement.style.top = `${e.clientY - handleY}px`;
         startDrag();
         $voiceNodes = await getVoiceNodes();
     }
@@ -50,8 +50,8 @@
     function pointerMove(e: PointerEvent) {
         e.preventDefault();
         if (!draggableElement) throw "should be unreachable";
-        draggableElement.style.left = `${e.clientX - (nodeWidthPx / 2 + 25)}px`;
-        draggableElement.style.top = `${e.clientY - (nodeWidthPx / 2 + 70)}px`;
+        draggableElement.style.left = `${e.clientX - handleWidth / 2}px`;
+        draggableElement.style.top = `${e.clientY - handleY}px`;
     }
 
     function startDrag() {
@@ -92,7 +92,7 @@
     <div class="relative top-14 bg-black dark:bg-white text-white dark:text-black min-w-10 min-h-10 rounded-full text-center flex justify-center items-center text-3xl">drag</div>
 </div> -->
 <!-- </div> -->
-<div class="flex w-20 items-center justify-center">
+<div class="flex h-36 w-20 items-center justify-center">
     {#if nodeWidthPx > 0 && $applicationState.showDraggableNode}
         <div
             role="button"
@@ -107,15 +107,12 @@
                 easing: elasticOut,
             }}
         >
-            <svg
-                width={handleWidth}
-                height={scaledNodeWidthPx + 2 * handleWidth}
-            >
+            <svg width={handleWidth} height={5 + 2 * handleWidth}>
                 <!-- Drag handle -->
                 <circle
                     cx={handleWidth / 2}
                     cy={handleY}
-                    r={25}
+                    r={handleWidth / 2}
                     class="fill-slate-950 dark:fill-slate-50"
                 />
 
