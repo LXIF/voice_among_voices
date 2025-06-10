@@ -24,6 +24,7 @@
     let isLoggingOut = $state(false);
     let tokenBuyLink = $state("");
     let showCopied = $state(false);
+    let showCopiedNoTokensModal = $state(false);
 
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
@@ -168,13 +169,33 @@
                 class="origin-center underline outline-none transition-transform hover:scale-110"
                 href={tokenBuyLink}>here</a
             >
-            and send it to your wallet <span>{$walletAddress}</span>.
+            and send it to your wallet:
+            <Button
+                class="mt-2 w-full rounded-full bg-slate-700 py-2 text-center text-xs hover:scale-105"
+                onclick={() => {
+                    navigator.clipboard.writeText($walletAddress);
+                    showCopiedNoTokensModal = true;
+                    setTimeout(() => (showCopiedNoTokensModal = false), 1000);
+                }}
+                >{$walletAddress}
+                {#if showCopiedNoTokensModal}
+                    <div
+                        class="absolute -top-8 left-1/2 -translate-x-1/2 transform rounded bg-slate-800 px-2 py-1 text-sm text-white"
+                        transition:scale={{
+                            easing: elasticOut,
+                        }}
+                    >
+                        Copied!
+                    </div>
+                {/if}</Button
+            >
         </p>
         <div class="m-2 mt-4 flex items-center justify-center lg:min-w-96">
             <Button
                 class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
-                onclick={handleLogout}>Disconnect</Button
-            >
+                onclick={handleLogout}
+                >Disconnect
+            </Button>
         </div>
     </Dialog>
 {/if}
