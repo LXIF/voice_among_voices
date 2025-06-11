@@ -434,6 +434,7 @@
 
         if (distanceFromCenter > maxDistance) {
             console.log("out");
+            $applicationState = applicationStates.loggedInIdle;
             return;
         }
 

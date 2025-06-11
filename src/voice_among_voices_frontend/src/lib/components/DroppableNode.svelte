@@ -34,11 +34,16 @@
     const handleWidth = 50;
     const pointOffset = 7;
     let nodeX = $derived(handleWidth / 2);
-    let nodeY = 8;
-    let handleY = $derived(5 + 2 * handleWidth - handleWidth / 2);
+    let nodeY = 16;
+    let handleY = $derived(15 + 2 * handleWidth - handleWidth / 2);
+
+    let ctaLeft = $derived(
+        (draggableElement?.getBoundingClientRect().x ?? 0) + 50,
+    );
 
     async function handlePointerDown(e: PointerEvent) {
         e.preventDefault();
+        console.log(ctaLeft);
         if (!draggableElement) throw "should be unreachable";
         if (!$applicationState.droppingActive) return;
         draggableElement.style.left = `${e.clientX - handleWidth / 2}px`;
@@ -107,7 +112,7 @@
                 easing: elasticOut,
             }}
         >
-            <svg width={handleWidth} height={5 + 2 * handleWidth}>
+            <svg width={handleWidth} height={15 + 2 * handleWidth}>
                 <!-- Drag handle -->
                 <circle
                     cx={handleWidth / 2}
@@ -173,8 +178,12 @@
                 />
             </svg>
         </div>
-        <span class="ml-4 hidden text-lg font-semibold md:inline">
-            Drag the recording onto the circle
-        </span>
+        {#if $applicationState !== applicationStates.draggingVoice}
+            <div
+                class={`top-50 absolute ml-96 hidden min-w-48 text-lg font-semibold lg:inline`}
+            >
+                Drag the recording onto the circle
+            </div>
+        {/if}
     {/if}
 </div>
