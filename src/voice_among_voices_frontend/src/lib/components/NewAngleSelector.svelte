@@ -367,6 +367,10 @@
         // Create the SVG arc path
         return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
     }
+
+    function openBuyPage(angle: number) {
+        console.log(angle);
+    }
 </script>
 
 <svg
@@ -444,15 +448,23 @@
                             radius *
                             (hoveredAngle === angle ? 1.18 : 1.1) *
                             getPulseScale()}
-                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : "cursor-wait"}`}
-                    onmouseover={() =>
-                        isAngleAvailable(angle) &&
-                        $applicationState.wheelActive &&
-                        (hoveredAngle = angle)}
+                    class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : !$identityAgent ? "cursor-pointer" : "cursor-wait"}`}
+                    onmouseover={() => {
+                        if (
+                            isAngleAvailable(angle) &&
+                            $applicationState.wheelActive
+                        ) {
+                            hoveredAngle = angle;
+                        } else if (!$identityAgent) {
+                            hoveredAngle = angle;
+                        }
+                    }}
                     onmouseleave={() => (hoveredAngle = null)}
                     onpointerdown={(e) => {
-                        if (!$identityAgent || !$applicationState.wheelActive)
+                        if (!$identityAgent || !$applicationState.wheelActive) {
+                            openBuyPage(angle);
                             return;
+                        }
                         if (isAngleAvailable(angle)) {
                             handleSelectAngle(angle);
                         } else {
@@ -479,7 +491,9 @@
                     isAngleAvailable(angle) &&
                     $applicationState.wheelActive
                         ? "auto"
-                        : "none"}
+                        : !$identityAgent
+                          ? "auto"
+                          : "none"}
                 />
             {/each}
         </g>

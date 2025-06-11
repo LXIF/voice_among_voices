@@ -82,6 +82,7 @@
     }
 
     async function handleLogout() {
+        console.log("Logging out of Voice among Voices!"); // somehow needs to be here lol
         isLoggingOut = true;
         if (!$appkitModal) throw "Appkit Modal not initialized!";
         await $appkitModal.disconnect();
@@ -160,7 +161,7 @@
     </Dialog>
 {/if}
 
-{#if $hasNoTokens}
+{#if $hasNoTokens && $identityAgent}
     <Dialog>
         <p>
             You don't own any Voice among Voices NFTs. In order to contribute
