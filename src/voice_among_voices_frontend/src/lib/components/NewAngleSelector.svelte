@@ -1,7 +1,6 @@
 <script lang="ts">
     import { angleToRadians, hsvToRgb } from "$lib/utils/convUtils";
     import type { VoiceNodeEgress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    import { usableCanvasWidth, usableCanvasHeight } from "$lib/config/nodeMap";
     import {
         mapRotation,
         selectedAngle,
@@ -16,6 +15,7 @@
     import { isDarkMode } from "$lib/utils/uxUtils";
     import { untrack } from "svelte";
     import { isTouch } from "$lib/state/isMobile";
+    import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
 
     let {
         class: classes = "",
@@ -231,84 +231,19 @@
         //prevent body scroll
         e.preventDefault();
         e.stopPropagation();
-        document
-            .querySelector("body")
-            ?.classList.add(
-                "touch-none",
-                "overflow-hidden",
-                "overflow-x-hidden",
-                "overscroll-none",
-                "scrolling-auto",
-                "fixed",
-                "w-full",
-                "h-full",
-            );
-        document
-            .querySelector("html")
-            ?.classList.add(
-                "touch-none",
-                "overflow-hidden",
-                "overflow-x-hidden",
-                "overscroll-none",
-                "scrolling-auto",
-                "fixed",
-                "w-full",
-                "h-full",
-            );
 
-        // Capture the starting point of the interaction
-        const startX = e.clientX;
-        const startY = e.clientY;
-        // let isDragging = false;
-        let lastAngle = 0;
-
-        // Calculate center of the circle in client coordinates
-        const svgRect = (
-            e.currentTarget as SVGElement
-        ).ownerSVGElement?.getBoundingClientRect();
-        if (!svgRect) return;
-
-        const centerX = svgRect.left + svgRect.width / 2;
-        const centerY = svgRect.top + svgRect.height / 2;
-
-        // Calculate starting angle
-        const initialAngle =
-            Math.atan2(startY - centerY, startX - centerX) * (180 / Math.PI);
-
-        // Handle pointer movement
-        function handlePointerMove(moveEvent: PointerEvent) {
-            moveEvent.preventDefault();
-            moveEvent.stopPropagation();
-            window.scrollTo(0, 0);
-            // Calculate current angle
-            const currentAngle =
-                Math.atan2(
-                    moveEvent.clientY - centerY,
-                    moveEvent.clientX - centerX,
-                ) *
-                (180 / Math.PI);
-
-            // Calculate the angle difference
-            let angleDiff = currentAngle - initialAngle;
-
-            // Update the map rotation based on the angle difference
-            mapRotation.set(mapRotation.current + angleDiff - lastAngle, {
-                duration: 0,
-            });
-            lastAngle = angleDiff;
-
-            // Update hoveredAngle to match current rotation
-            const currentRotation = -mapRotation.current; // Convert from map rotation to angle
-            const normalizedRotation =
-                Math.round(((currentRotation % 360) + 360) % 360) % 360; // Normalize to 0-359 and round
-            hoveredAngle = normalizedRotation;
+        // !!$identityAgent && $applicationState.wheelActive
+        //         ? "auto"
+        //         : "none"
+        if (!$identityAgent) {
+            openBuyPage(0);
+            return;
         }
 
-        // Handle pointer up
-        async function handlePointerUp(_upEvent: PointerEvent) {
+        if (!!$identityAgent && $applicationState.wheelActive) {
             document
                 .querySelector("body")
-                ?.classList.remove(
+                ?.classList.add(
                     "touch-none",
                     "overflow-hidden",
                     "overflow-x-hidden",
@@ -320,7 +255,7 @@
                 );
             document
                 .querySelector("html")
-                ?.classList.remove(
+                ?.classList.add(
                     "touch-none",
                     "overflow-hidden",
                     "overflow-x-hidden",
@@ -330,18 +265,95 @@
                     "w-full",
                     "h-full",
                 );
-            // Clean up event listeners
-            window.removeEventListener("pointermove", handlePointerMove);
-            window.removeEventListener("pointerup", handlePointerUp);
 
-            const availableAngles = [...$myTokens, 0];
+            // Capture the starting point of the interaction
+            const startX = e.clientX;
+            const startY = e.clientY;
+            // let isDragging = false;
+            let lastAngle = 0;
 
-            rotateToClosest(availableAngles);
+            // Calculate center of the circle in client coordinates
+            const svgRect = (
+                e.currentTarget as SVGElement
+            ).ownerSVGElement?.getBoundingClientRect();
+            if (!svgRect) return;
+
+            const centerX = svgRect.left + svgRect.width / 2;
+            const centerY = svgRect.top + svgRect.height / 2;
+
+            // Calculate starting angle
+            const initialAngle =
+                Math.atan2(startY - centerY, startX - centerX) *
+                (180 / Math.PI);
+
+            // Handle pointer movement
+            function handlePointerMove(moveEvent: PointerEvent) {
+                moveEvent.preventDefault();
+                moveEvent.stopPropagation();
+                window.scrollTo(0, 0);
+                // Calculate current angle
+                const currentAngle =
+                    Math.atan2(
+                        moveEvent.clientY - centerY,
+                        moveEvent.clientX - centerX,
+                    ) *
+                    (180 / Math.PI);
+
+                // Calculate the angle difference
+                let angleDiff = currentAngle - initialAngle;
+
+                // Update the map rotation based on the angle difference
+                mapRotation.set(mapRotation.current + angleDiff - lastAngle, {
+                    duration: 0,
+                });
+                lastAngle = angleDiff;
+
+                // Update hoveredAngle to match current rotation
+                const currentRotation = -mapRotation.current; // Convert from map rotation to angle
+                const normalizedRotation =
+                    Math.round(((currentRotation % 360) + 360) % 360) % 360; // Normalize to 0-359 and round
+                hoveredAngle = normalizedRotation;
+            }
+
+            // Handle pointer up
+            async function handlePointerUp(_upEvent: PointerEvent) {
+                document
+                    .querySelector("body")
+                    ?.classList.remove(
+                        "touch-none",
+                        "overflow-hidden",
+                        "overflow-x-hidden",
+                        "overscroll-none",
+                        "scrolling-auto",
+                        "fixed",
+                        "w-full",
+                        "h-full",
+                    );
+                document
+                    .querySelector("html")
+                    ?.classList.remove(
+                        "touch-none",
+                        "overflow-hidden",
+                        "overflow-x-hidden",
+                        "overscroll-none",
+                        "scrolling-auto",
+                        "fixed",
+                        "w-full",
+                        "h-full",
+                    );
+                // Clean up event listeners
+                window.removeEventListener("pointermove", handlePointerMove);
+                window.removeEventListener("pointerup", handlePointerUp);
+
+                const availableAngles = [...$myTokens, 0];
+
+                rotateToClosest(availableAngles);
+            }
+
+            // Add event listeners for move and up events
+            window.addEventListener("pointermove", handlePointerMove);
+            window.addEventListener("pointerup", handlePointerUp);
         }
-
-        // Add event listeners for move and up events
-        window.addEventListener("pointermove", handlePointerMove);
-        window.addEventListener("pointerup", handlePointerUp);
     }
 
     // Helper function to generate SVG arc path
@@ -370,7 +382,14 @@
     }
 
     function openBuyPage(angle: number) {
-        const url = `https://opensea.io/item/base/0xb6aec30a1252c71de5b14bb40c5339bd0b80fc13/${angle}`;
+        if (angle === 0) {
+            const url = PUBLIC_OPENSEA_URL;
+            //this is for touch
+            window.open(url, "_blank", "noopener,noreferrer");
+            return;
+        }
+
+        const url = `${PUBLIC_OPENSEA_URL}/${angle}`;
         window.open(url, "_blank", "noopener,noreferrer");
     }
 
@@ -574,12 +593,10 @@
             stroke="red"
             opacity="0"
             onpointerdown={handleCirclePointerDown}
-            pointer-events={!!$identityAgent && $applicationState.wheelActive
-                ? "auto"
-                : "none"}
+            pointer-events={"auto"}
             class={!!$identityAgent && $applicationState.wheelActive
                 ? "z-20 cursor-grab active:cursor-grabbing"
-                : "z-20"}
+                : "z-20 cursor-pointer"}
         />
     {/if}
 </svg>

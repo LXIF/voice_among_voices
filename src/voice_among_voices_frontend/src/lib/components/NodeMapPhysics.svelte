@@ -41,6 +41,8 @@
         getVoiceNodes,
     } from "$lib/icInteractions";
     import { clamp, mapRange } from "$lib/utils/mathUtils";
+    import { identityAgent } from "$lib/canisters";
+    import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
 
     let {
         nodes,
@@ -380,13 +382,21 @@
     }
 
     function handleClick(e: MouseEvent) {
-        const rect = svgElement!.getBoundingClientRect();
-        const mapY = e.clientY - rect.top;
+        if (!!$identityAgent) {
+            const rect = svgElement!.getBoundingClientRect();
+            const mapY = e.clientY - rect.top;
 
-        if (showPlayHead) {
-            const normalizedPosition = mapY / rect.height;
-            // Dispatch the movePlayHead event with the normalized position
-            movePlayHead(normalizedPosition);
+            if (showPlayHead) {
+                const normalizedPosition = mapY / rect.height;
+                // Dispatch the movePlayHead event with the normalized position
+                movePlayHead(normalizedPosition);
+            }
+        } else {
+            //if we are logged out, we just go to opensea.
+
+            const url = PUBLIC_OPENSEA_URL;
+
+            window.open(url, "_blank", "noopener,noreferrer");
         }
     }
 
