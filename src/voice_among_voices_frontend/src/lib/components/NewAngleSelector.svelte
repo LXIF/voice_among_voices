@@ -9,6 +9,7 @@
         loadingProgress,
         myTokens,
         applicationState,
+        buyTag,
     } from "$lib/state/uxState";
     import { identityAgent } from "$lib/canisters";
     import { blur } from "svelte/transition";
@@ -369,7 +370,26 @@
     }
 
     function openBuyPage(angle: number) {
-        console.log(angle);
+        const url = `https://opensea.io/item/base/0xb6aec30a1252c71de5b14bb40c5339bd0b80fc13/${angle}`;
+        window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    function handlePositionBuy(e: Event, angle: number) {
+        const rect = (e.target as Element).getBoundingClientRect();
+        let x = rect.left + rect.width / 2;
+        let y = rect.top + rect.height / 2;
+
+        // Offset distance in pixels
+        const offset = -100; // adjust as needed
+
+        // Convert angle to radians, with 0° = up (north), positive clockwise
+        const rad = ((90 - angle) * Math.PI) / 180;
+
+        // Calculate offset
+        x += Math.cos(rad) * offset;
+        y -= Math.sin(rad) * offset;
+
+        $buyTag = { x, y, angle };
     }
 </script>
 
@@ -441,15 +461,15 @@
                     x2={centerX +
                         Math.cos(adjustedAngleToRadians(angle)) *
                             radius *
-                            (hoveredAngle === angle ? 1.18 : 1.1) *
+                            (hoveredAngle === angle ? 1.16 : 1.1) *
                             getPulseScale()}
                     y2={centerY -
                         Math.sin(adjustedAngleToRadians(angle)) *
                             radius *
-                            (hoveredAngle === angle ? 1.18 : 1.1) *
+                            (hoveredAngle === angle ? 1.16 : 1.1) *
                             getPulseScale()}
                     class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : !$identityAgent ? "cursor-pointer" : "cursor-wait"}`}
-                    onmouseover={() => {
+                    onmouseover={(e) => {
                         if (
                             isAngleAvailable(angle) &&
                             $applicationState.wheelActive
@@ -458,6 +478,7 @@
                         } else if (!$identityAgent) {
                             hoveredAngle = angle;
                         }
+                        handlePositionBuy(e, angle);
                     }}
                     onmouseleave={() => (hoveredAngle = null)}
                     onpointerdown={(e) => {
@@ -471,10 +492,15 @@
                             handleCirclePointerDown(e);
                         }
                     }}
-                    onfocus={() =>
-                        isAngleAvailable(angle) &&
-                        $applicationState.wheelActive &&
-                        (hoveredAngle = angle)}
+                    onfocus={(e) => {
+                        if (
+                            isAngleAvailable(angle) &&
+                            $applicationState.wheelActive
+                        ) {
+                            hoveredAngle = angle;
+                            handlePositionBuy(e, angle);
+                        }
+                    }}
                     onblur={() => (hoveredAngle = null)}
                     onkeydown={(e) => {
                         if (
@@ -522,12 +548,12 @@
                     x2={centerX +
                         Math.cos(adjustedAngleToRadians(angle)) *
                             radius *
-                            (hoveredAngle === angle ? 1.18 : 1.1) *
+                            (hoveredAngle === angle ? 1.16 : 1.1) *
                             getPulseScale()}
                     y2={centerY -
                         Math.sin(adjustedAngleToRadians(angle)) *
                             radius *
-                            (hoveredAngle === angle ? 1.18 : 1.1) *
+                            (hoveredAngle === angle ? 1.16 : 1.1) *
                             getPulseScale()}
                     class={`z-20 outline-none transition-all duration-200 ease-in-out ${isAngleAvailable(angle) ? "" : !!$identityAgent && $applicationState.wheelActive ? "cursor-grab active:cursor-grabbing" : ""}`}
                     stroke={getLineColor(angle, isAngleAvailable(angle))}
@@ -536,6 +562,7 @@
                 />
             {/each}
         </g>
+
         <!-- ui element for drag-rotating -->
         <circle
             role="button"

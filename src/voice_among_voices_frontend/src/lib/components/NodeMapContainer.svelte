@@ -6,7 +6,7 @@
 
     import { identityAgent } from "$lib/canisters";
     import type { VoiceNodeIngress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    import { blobToUint8Array } from "$lib/utils/convUtils";
+    import { blobToUint8Array, hsvToRgb } from "$lib/utils/convUtils";
     import {
         voiceNodes,
         simulationParameters,
@@ -26,6 +26,7 @@
         sampleLength,
         nodeWidthPx,
         nodeWidthLogical,
+        buyTag,
     } from "$lib/state/uxState";
     import { blur } from "svelte/transition";
     import { fetchTokens } from "$lib/evm/evmInteractions.svelte";
@@ -179,3 +180,16 @@
         {/if}
     </div>
 </div>
+
+{#if $hoveredAngle !== null && !$identityAgent && $buyTag}
+    <div
+        class={`pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg text-center text-xl font-bold shadow-lg transition-all`}
+        style="top: {$buyTag.y}px; left: {$buyTag.x + 12}px; color:{hsvToRgb(
+            $hoveredAngle,
+            100,
+            100,
+        )};"
+    >
+        Buy {$hoveredAngle}°
+    </div>
+{/if}

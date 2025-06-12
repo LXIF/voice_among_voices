@@ -59,6 +59,10 @@ export const showInfoModal = writable<boolean>(false);
 export const showCensorModal = writable<boolean>(false);
 export const toastMessage = writable<string>("");
 
+export let buyTag = writable<{ x: number; y: number; angle: number } | null>(
+    null,
+);
+
 export const resetUxState = () => {
     selectedAngle.set(0);
     hoveredAngle.set(null);
