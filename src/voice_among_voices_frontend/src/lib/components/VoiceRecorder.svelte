@@ -236,7 +236,7 @@
 
 <button
     onpointerdown={handleRecordDown}
-    class={"pointer-events-auto h-20 w-20 cursor-pointer select-none rounded-full bg-red-600 text-2xl font-bold transition-all disabled:cursor-wait disabled:bg-slate-500"}
+    class={"pointer-events-auto h-20 w-20 cursor-pointer select-none rounded-full bg-red-600 text-2xl font-bold text-white transition-all disabled:cursor-wait disabled:bg-slate-500"}
     class:recording={$applicationState.state === "recordingVoice"}
     transition:scale={{
         duration: 500,

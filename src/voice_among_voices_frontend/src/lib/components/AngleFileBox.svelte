@@ -41,6 +41,8 @@
     let audioElement: HTMLAudioElement | undefined = $state();
     let downloadLink: HTMLAnchorElement | undefined = $state();
 
+    let generating = $state(false);
+
     // Fetch audio file based on angle
     async function fetchAudioFileOrPlayPause() {
         onPressPlay();
@@ -61,6 +63,7 @@
         $voiceNodes = await getVoiceNodes();
 
         try {
+            generating = true;
             loadingProgress.set(0, {
                 duration: 0,
             });
@@ -72,12 +75,15 @@
                     ? await getZeroFile()
                     : await getAngleFile($selectedAngle);
             if (!response) {
+                generating = false;
                 toastMessage.set("Error fetching the audio file.");
                 throw new Error("No response provided.");
             }
             if (!response.streaming_strategy) {
+                generating = false;
                 throw new Error("No streaming strategy provided.");
             }
+            generating = false;
             const chunks = [response.body];
 
             let streamingToken = response.streaming_strategy[0]?.Callback.token;
@@ -139,8 +145,10 @@
             // }, 750);
             onFileAngle($selectedAngle);
             onFileLoaded(true);
-            togglePlayPause();
+            // togglePlayPause();
+            $applicationState = applicationStates.loggedInIdle;
         } catch (e) {
+            generating = false;
             error = "Error fetching the audio file.";
             $toastMessage = "Error fetching the audio file.";
             console.error(e);
@@ -217,15 +225,28 @@
 </script>
 
 <div class="flex w-full flex-col items-center gap-4">
-    {#if $applicationState.showLoadingAnimation || $applicationState.showFileLoadingLine}
+    {#if generating}
+        <h1 class="w-min text-center text-2xl font-bold lg:text-5xl">
+            Generating...
+        </h1>
+    {:else if $applicationState.showLoadingAnimation || $applicationState.showFileLoadingLine}
         <h1 class="w-min text-center text-2xl font-bold lg:text-5xl">
             Loading...
         </h1>
+    {:else if audioURL && !isPlaying}
+        <Button
+            class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
+            onclick={togglePlayPause}>Play</Button
+        >
+    {:else if isPlaying}
+        <Button
+            class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
+            onclick={togglePlayPause}>Pause</Button
+        >
     {:else}
         <Button
             class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
-            onclick={fetchAudioFileOrPlayPause}
-            >{isPlaying ? "Pause" : "Play"}</Button
+            onclick={fetchAudioFileOrPlayPause}>Load</Button
         >
     {/if}
     <h1
