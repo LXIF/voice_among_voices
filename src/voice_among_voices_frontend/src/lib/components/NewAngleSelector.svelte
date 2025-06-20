@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { angleToRadians, hsvToRgb } from "$lib/utils/convUtils";
+    import { angleToRadians } from "$lib/utils/convUtils";
     import type { VoiceNodeEgress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     import {
         mapRotation,
@@ -66,8 +66,7 @@
             const rotationPromise = rotateTo(currentRotation + closestDistance);
             rotationPromise.then(() => {
                 mapRotation.set(-closestAngle, {
-                    duration: 0,
-                    easing: undefined,
+                    instant: true,
                 });
                 // Set a timeout to clear hoveredAngle 500ms after animation completes
                 setTimeout(() => {
@@ -135,11 +134,9 @@
             }
         }
 
-        const angleDifference = Math.abs(targetAngle - currentMapRotation);
-
         // Store the promise from the set operation and return it
         const rotationPromise = mapRotation.set(-targetAngle, {
-            duration: 200 + angleDifference * 10,
+            preserveMomentum: 1,
         });
 
         // Update the selected angle state
@@ -205,7 +202,7 @@
 
     function getLineColor(angle: number, isAvailable: boolean): string {
         if (!loggedIn) {
-            return hsvToRgb(angle, 100, 100);
+            return `hsl(${angle}, 100%, 49%)`;
         } else if ($applicationState.showLoadingAnimation) {
             // During loading, rotate the hue and create a wave effect for saturation
             const adjustedAngle = (angle + rotatingOffset) % 360;
@@ -215,16 +212,12 @@
                 50 + Math.cos(angleDiff * 2 * Math.PI) * 50;
             const pulsingBrightness =
                 60 + Math.sin(angleDiff * 2 * Math.PI) * 40;
-            return hsvToRgb(
-                adjustedAngle,
-                pulsingSaturation,
-                pulsingBrightness,
-            );
+            return `hsla(${adjustedAngle}, ${pulsingSaturation}%, 49%, ${pulsingBrightness}%)`;
         }
         // Normal state
         return isAvailable
-            ? hsvToRgb(angle, 100, 100)
-            : hsvToRgb(angle, 30, 20);
+            ? `hsla(${angle}, 100%, 49%, 100%)`
+            : `hsla(${angle}, 70%, 49%, 20%)`;
     }
 
     function handleCirclePointerDown(e: PointerEvent) {
@@ -304,7 +297,7 @@
 
                 // Update the map rotation based on the angle difference
                 mapRotation.set(mapRotation.current + angleDiff - lastAngle, {
-                    duration: 0,
+                    instant: true,
                 });
                 lastAngle = angleDiff;
 

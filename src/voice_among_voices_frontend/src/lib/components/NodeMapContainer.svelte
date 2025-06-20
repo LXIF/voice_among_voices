@@ -6,7 +6,7 @@
 
     import { identityAgent } from "$lib/canisters";
     import type { VoiceNodeIngress } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    import { blobToUint8Array, hsvToRgb } from "$lib/utils/convUtils";
+    import { blobToUint8Array } from "$lib/utils/convUtils";
     import {
         voiceNodes,
         simulationParameters,
@@ -172,7 +172,7 @@
             >
                 <h1
                     transition:blur={{ duration: 100 }}
-                    class="pointer-events-none select-none text-9xl backdrop-filter"
+                    class="pointer-events-none select-none text-9xl mix-blend-saturation dark:mix-blend-exclusion"
                 >
                     {$hoveredAngle}°
                 </h1>
@@ -183,12 +183,9 @@
 
 {#if $hoveredAngle !== null && !$identityAgent && $buyTag}
     <div
-        class={`pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg text-center text-xl font-bold shadow-lg transition-all`}
-        style="top: {$buyTag.y}px; left: {$buyTag.x + 12}px; color:{hsvToRgb(
-            $hoveredAngle,
-            100,
-            100,
-        )};"
+        class={`pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-lg text-center text-xl font-bold transition-all`}
+        style="top: {$buyTag.y}px; left: {$buyTag.x +
+            12}px; color: hsl({$hoveredAngle}, 100%, 50%);"
     >
         Buy {$hoveredAngle}°
     </div>

@@ -585,7 +585,7 @@
                                     node.radius,
                                 )
                               ? `hsla(${node.id}, 100%, 50%, 80)`
-                              : "hsla(0,0,0,0)"}
+                              : "none"}
                 />
                 {#if $showCensorModal && $selectedManagementNode === Number(node.id)}
                     <circle
@@ -647,6 +647,7 @@
                 y1={playHeadPosition * 100 - 50}
                 y2={playHeadPosition * 100 - 50}
                 stroke-width="0.2"
+                stroke={`hsl(${$selectedAngle}, 100%,50%)`}
                 clip-path="url(#cut-circle)"
             />
         {/if}

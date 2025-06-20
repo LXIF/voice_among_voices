@@ -3,14 +3,8 @@ import type {
     VoiceNodeEgress,
     AudioParameters,
 } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-import {
-    derived,
-    get,
-    writable,
-    type Subscriber,
-    type Updater,
-} from "svelte/store";
-import { Tween } from "svelte/motion";
+import { derived, get, writable } from "svelte/store";
+import { Tween, Spring } from "svelte/motion";
 import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
 import { browser } from "$app/environment";
 import { getVoiceNodes } from "$lib/icInteractions";
@@ -42,9 +36,9 @@ export const isAdmin = derived([myTokens, adminTokenId], () => {
     return get(myTokens).includes(get(adminTokenId));
 });
 export const selectedManagementNode = writable<number>(1);
-export const mapRotation = new Tween(0, {
-    easing: cubicOut,
-    duration: 800,
+export const mapRotation = new Spring(0, {
+    stiffness: 0.3,
+    damping: 0.4,
 });
 export const walletAddress = writable<string>("");
 export const loadingProgress = new Tween(0, {

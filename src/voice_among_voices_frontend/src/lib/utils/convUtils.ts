@@ -128,39 +128,3 @@ export function abbreviateWalletAddress(address: string) {
         address.slice(address.length - 4, address.length)
     );
 }
-
-export function hsvToRgb(h: number, s: number, v: number): string {
-    s = s / 100;
-    v = v / 100;
-    const i = Math.floor(h / 60);
-    const f = h / 60 - i;
-    const p = v * (1 - s);
-    const q = v * (1 - f * s);
-    const t = v * (1 - (1 - f) * s);
-
-    let r, g, b;
-    switch (i % 6) {
-        case 0:
-            [r, g, b] = [v, t, p];
-            break;
-        case 1:
-            [r, g, b] = [q, v, p];
-            break;
-        case 2:
-            [r, g, b] = [p, v, t];
-            break;
-        case 3:
-            [r, g, b] = [p, q, v];
-            break;
-        case 4:
-            [r, g, b] = [t, p, v];
-            break;
-        case 5:
-            [r, g, b] = [v, p, q];
-            break;
-        default:
-            [r, g, b] = [0, 0, 0];
-    }
-
-    return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
-}
