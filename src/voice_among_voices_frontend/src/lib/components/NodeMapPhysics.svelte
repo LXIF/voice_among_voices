@@ -382,21 +382,13 @@
     }
 
     function handleClick(e: MouseEvent) {
-        if (!!$identityAgent) {
-            const rect = svgElement!.getBoundingClientRect();
-            const mapY = e.clientY - rect.top;
+        const rect = svgElement!.getBoundingClientRect();
+        const mapY = e.clientY - rect.top;
 
-            if (showPlayHead) {
-                const normalizedPosition = mapY / rect.height;
-                // Dispatch the movePlayHead event with the normalized position
-                movePlayHead(normalizedPosition);
-            }
-        } else {
-            //if we are logged out, we just go to opensea.
-
-            const url = PUBLIC_OPENSEA_URL;
-
-            window.open(url, "_blank", "noopener,noreferrer");
+        if (showPlayHead) {
+            const normalizedPosition = mapY / rect.height;
+            // Dispatch the movePlayHead event with the normalized position
+            movePlayHead(normalizedPosition);
         }
     }
 
@@ -641,12 +633,11 @@
         </g>
         {#if showPlayHead && playHeadPosition > 0}
             <line
-                class="stroke-slate-950 dark:stroke-white"
                 x1="-50"
                 x2="50"
                 y1={playHeadPosition * 100 - 50}
                 y2={playHeadPosition * 100 - 50}
-                stroke-width="0.2"
+                stroke-width="0.4"
                 stroke={`hsl(${$selectedAngle}, 100%,50%)`}
                 clip-path="url(#cut-circle)"
             />
