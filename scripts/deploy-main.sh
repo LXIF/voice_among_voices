@@ -31,8 +31,8 @@ dfx deploy voice_among_voices_backend --ic --identity LXIF-private --argument $'
 
 dfx deploy ic_siwe_provider --ic --identity LXIF-private --argument $'(
     record {
-        domain = "'$(dfx canister id voice_among_voices_frontend --ic)'.icp0.io";
-        uri = "https://'$(dfx canister id voice_among_voices_frontend --ic)'.icp0.io";
+        domain = "voiceamongvoic.es";
+        uri = "https://voiceamongvoic.es";
         salt = "my-secret-salt";
         chain_id = opt 8453;
         scheme = opt "http";

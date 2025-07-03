@@ -41,12 +41,10 @@ const initializeStores = () => {
                     ) as WagmiAdapterType[],
                     networks: [base],
                     metadata: {
-                        name: "Voice among Voices",
-                        description: "Big Cool Sound Map Wee",
-                        url: browser ? window.location.origin : "",
-                        icons: [
-                            "https://avatars.githubusercontent.com/u/179229932",
-                        ],
+                        name: "Voice Among Voices",
+                        description: "Voice Among Voices",
+                        url: "voiceamongvoic.es",
+                        icons: [],
                     },
                     projectId,
                     features: {
