@@ -63,7 +63,7 @@ pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
 pub const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
     force_cutoff: 100.,
-    max_distance: 35.,
+    max_distance: 25.,
     force_strength: 3000.,
     linear_damping: 35.,
     logical_radius: 50.,

@@ -174,8 +174,8 @@ pub fn simulate_until_stopped(
                 // reset potential strays
 
                 if is_stray(position[0], position[1]) {
-                    node_to_be_updated.x = 0f64;
-                    node_to_be_updated.y = 0f64;
+                    node_to_be_updated.x = 0f64 + (physics_body.voice_node_id as f64 / 36.);
+                    node_to_be_updated.y = 0f64 + (physics_body.voice_node_id as f64 / 36.);
                 } else {
                     node_to_be_updated.x = position[0].into();
                     node_to_be_updated.y = position[1].into();
