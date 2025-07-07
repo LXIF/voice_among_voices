@@ -272,13 +272,13 @@ fn pocket_ic_smoke_test_50_files_1ms() {
     let canister_id = pic_initialize_canister(&pic);
 
     // Loop through 360 degrees and add a voice node for each angle
-    for angle in 0..50 {
+    for angle in 1..=50 {
         // Generate a test WAV audio file
         let test_wav = generate_test_wav(1, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
-            id: 0,
+            id: angle,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary y based on angle
             sample: test_wav,
@@ -345,13 +345,13 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
     let canister_id = pic_initialize_canister(&pic);
 
     // Loop through 360 degrees and add a voice node for each angle
-    for angle in 0..50 {
+    for angle in 1..=50 {
         // Generate a test WAV audio file
         let test_wav = generate_test_wav(1000, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
-            id: 0,
+            id: angle,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary y based on angle
             sample: test_wav,
@@ -418,13 +418,13 @@ fn pocket_ic_smoke_test_100_files_1ms() {
     let canister_id = pic_initialize_canister(&pic);
 
     // Loop through 360 degrees and add a voice node for each angle
-    for angle in 0..100 {
+    for angle in 1..=100 {
         // Generate a test WAV audio file
         let test_wav = generate_test_wav(1, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
-            id: 0,
+            id: angle,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary y based on angle
             sample: test_wav,
@@ -491,13 +491,13 @@ fn pocket_ic_smoke_test_360_files_1ms() {
     let canister_id = pic_initialize_canister(&pic);
 
     // Loop through 360 degrees and add a voice node for each angle
-    for angle in 0..360 {
+    for angle in 1..=359 {
         // Generate a test WAV audio file
         let test_wav = generate_test_wav(1, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
-            id: 0,
+            id: angle,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius / 2.), // Vary y based on angle
             sample: test_wav,
@@ -564,13 +564,13 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
     let canister_id = pic_initialize_canister(&pic);
 
     // Loop through 360 degrees and add a voice node for each angle
-    for angle in 0..360 {
+    for angle in 1..=359 {
         // Generate a test WAV audio file
         let test_wav = generate_test_wav(1000, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
-            id: 0,
+            id: angle,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary y based on angle
             sample: test_wav,
@@ -637,13 +637,13 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
     let canister_id = pic_initialize_canister(&pic);
 
     // Loop through 360 degrees and add a voice node for each angle
-    for angle in 0..360 {
+    for angle in 1..=359 {
         // Generate a test WAV audio file
         let test_wav = generate_test_wav(AUDIO_PARAMETERS.max_sample_length_ms, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let voice_node = VoiceNodeIngress {
-            id: 0,
+            id: angle,
             x: (angle as f64).cos() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary x based on angle
             y: (angle as f64).sin() * (SIMULATION_PARAMETERS.logical_radius * 0.99), // Vary y based on angle
             sample: test_wav,
@@ -711,14 +711,14 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
     let mut rng = rand::thread_rng();
 
     // Loop through 360 degrees and add a voice node for each angle
-    for angle in 0..360 {
+    for angle in 1..=359 {
         // Generate a test WAV audio file
         let test_wav = generate_test_wav(AUDIO_PARAMETERS.max_sample_length_ms, 44100);
 
         // Create a sample voice node, use angle to vary x and y
         let random_scale: f64 = rng.gen();
         let voice_node = VoiceNodeIngress {
-            id: 0,
+            id: angle,
             x: (angle as f64).cos()
                 * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * random_scale))), // Vary x based on angle
             y: (angle as f64).sin()
@@ -922,7 +922,7 @@ fn pocket_ic_voice_logs() {
 //     let mut rng = rand::thread_rng();
 
 //     // Loop through 360 degrees and add a voice node for each angle
-//     for angle in 0..360 {
+//     for angle in 1..=359 {
 //         // Generate a test WAV audio file
 //         let test_wav = generate_test_wav(AUDIO_PARAMETERS.max_sample_length_ms, 44100);
 
