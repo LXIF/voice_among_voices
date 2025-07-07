@@ -119,6 +119,7 @@ pub fn simulate_until_stopped(
             &mut rigid_body_set,
             &collider_set,
             &query_pipeline,
+            steps,
         );
         physics_pipeline.step(
             &gravity,
@@ -200,9 +201,11 @@ fn apply_magnetism_forces(
     rigid_body_set: &mut RigidBodySet,
     collider_set: &ColliderSet,
     query_pipeline: &QueryPipeline,
+    frame: u64,
 ) {
     let mut bodies_within_reach: Vec<ColliderHandle> = Vec::with_capacity(bodies.len());
     let mut magnetic_forces: Vec<Vector<Real>> = Vec::with_capacity(bodies.len());
+    let frame_scale_for_force = (parameters.max_steps - frame) as f32 / parameters.max_steps as f32;
 
     for body in bodies.iter() {
         let rigid_body = rigid_body_set.get(body.rigid_body_handle).unwrap();
@@ -254,8 +257,9 @@ fn apply_magnetism_forces(
                 );
 
                 if distance_between_bodies > 0.0 {
-                    let magnetic_force_scalar =
-                        (1. / distance_between_bodies.powi(2)) * parameters.force_strength as f32;
+                    let magnetic_force_scalar = (1. / distance_between_bodies.powi(2))
+                        * parameters.force_strength as f32
+                        * frame_scale_for_force;
                     let vector_between_bodies =
                         Vector2::new(body_position.translation.x, body_position.translation.y)
                             - Vector2::new(

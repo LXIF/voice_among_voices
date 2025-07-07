@@ -132,8 +132,8 @@ fn generate_audio_vectors(
             };
 
             // add the scaled sample to both sides
-            let left_sample = (*sample as f64 * left_gain * fade_factor) as i16;
-            let right_sample = (*sample as f64 * right_gain * fade_factor) as i16;
+            let left_sample = (*sample as f64 * left_gain * fade_factor * 0.8) as i16;
+            let right_sample = (*sample as f64 * right_gain * fade_factor * 0.8) as i16;
 
             left_channel[sample_index] = left_channel[sample_index]
                 .saturating_add(left_sample)

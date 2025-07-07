@@ -227,7 +227,10 @@
 
                 // Magnetism parameters in logical coords
 
-                function applyMagnetismForces() {
+                function applyMagnetismForces(frame: number) {
+                    let perFrameForceScale =
+                        (Number($simulationParameters?.max_steps) - frame) /
+                        Number($simulationParameters?.max_steps);
                     physicsBodies.forEach((body, i) => {
                         // Create array of all bodies within reach
                         const cutoffPosition = body.rigidBody.translation();
@@ -270,9 +273,11 @@
                                 (bodyWithinReachPos.x - bodyPos.x) ** 2 +
                                     (bodyWithinReachPos.y - bodyPos.y) ** 2,
                             );
+
                             const magneticForceScalar =
                                 (1 / distanceBetweenBodies ** 2) *
-                                force_strength;
+                                force_strength *
+                                perFrameForceScale;
                             const vectorBetweenBodies = new RAPIER.Vector2(
                                 bodyPos.x - bodyWithinReachPos.x,
                                 bodyPos.y - bodyWithinReachPos.y,
@@ -311,7 +316,10 @@
                     });
                 }
 
-                function applyAffineMagnetismForces() {
+                function applyAffineMagnetismForces(frame: number) {
+                    let perFrameForceScale =
+                        (Number($simulationParameters?.max_steps) - frame) /
+                        Number($simulationParameters?.max_steps);
                     physicsBodies.forEach((body, i) => {
                         // Create array of all bodies within reach
                         const cutoffPosition = body.rigidBody.translation();
@@ -356,7 +364,8 @@
                             );
                             const magneticForceScalar =
                                 (1 / distanceBetweenBodies ** 2) *
-                                force_strength;
+                                force_strength *
+                                perFrameForceScale;
                             const vectorBetweenBodies = new RAPIER.Vector2(
                                 bodyPos.x - bodyWithinReachPos.x,
                                 bodyPos.y - bodyWithinReachPos.y,
@@ -464,7 +473,7 @@
     function simulate(
         bodies: PhysicsBody[],
         world: any,
-        magnetismFunction: Function,
+        magnetismFunction: (frame: number) => void,
     ) {
         requestAnimationFrame((timestamp) => {
             if (then === undefined) {
@@ -486,7 +495,7 @@
                         // TODO: stop simulating
                         $applicationState.physicsActive = false;
                     }
-                    magnetismFunction();
+                    magnetismFunction(steps);
                     world.step();
                     checkIfStillMoving(bodies);
                     // update localNodes based off bodies
