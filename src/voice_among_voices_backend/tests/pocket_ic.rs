@@ -9,8 +9,8 @@ use std::io::Cursor;
 use std::{fs::read, path::PathBuf};
 
 const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
-    total_length_ms: 60 * 1000,
-    max_sample_length_ms: 2500, // tested up until 10000
+    total_length_ms: 4 * 60 * 1000,
+    max_sample_length_ms: 10_000, // tested up until 10000
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
     fade_ms: 30,
@@ -19,14 +19,14 @@ const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
 const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
     force_cutoff: 100.,
-    max_distance: 10.,
+    max_distance: 25.,
     force_strength: 3000.,
-    linear_damping: 10.,
+    linear_damping: 35.,
     logical_radius: 50.,
-    n_collider_vertices: 360,
-    friction: 0.5,
-    density: 2.,
-    max_steps: 2_500,
+    n_collider_vertices: 90,
+    friction: 0.7,
+    density: 1.,
+    max_steps: 1_000,
 };
 
 const INIT_ARGS: VoiceAmongVoicesInit = VoiceAmongVoicesInit {
@@ -39,7 +39,7 @@ const INIT_ARGS: VoiceAmongVoicesInit = VoiceAmongVoicesInit {
 
 fn pic_initialize_canister(pic: &PocketIc) -> Principal {
     let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, 2_000_000_000_000);
+    pic.add_cycles(canister_id, 100_000_000_000_000);
 
     let mut wasm_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     wasm_path.pop();
@@ -304,7 +304,7 @@ fn pocket_ic_smoke_test_50_files_1ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180u64; // Using angle 180.0 for this test
+    let test_angle = 173u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic.update_call(
         canister_id,
         Principal::anonymous(),
@@ -377,7 +377,7 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180u64; // Using angle 180.0 for this test
+    let test_angle = 173u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic.update_call(
         canister_id,
         Principal::anonymous(),
@@ -450,7 +450,7 @@ fn pocket_ic_smoke_test_100_files_1ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180u64; // Using angle 180.0 for this test
+    let test_angle = 173u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic.update_call(
         canister_id,
         Principal::anonymous(),
@@ -523,7 +523,7 @@ fn pocket_ic_smoke_test_360_files_1ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180u64; // Using angle 180.0 for this test
+    let test_angle = 173u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic.update_call(
         canister_id,
         Principal::anonymous(),
@@ -596,7 +596,7 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180u64; // Using angle 180.0 for this test
+    let test_angle = 173u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic.update_call(
         canister_id,
         Principal::anonymous(),
@@ -669,7 +669,7 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180u64; // Using angle 180.0 for this test
+    let test_angle = 173u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic.update_call(
         canister_id,
         Principal::anonymous(),
@@ -746,7 +746,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
     }
 
     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-    let test_angle = 180u64; // Using angle 180.0 for this test
+    let test_angle = 173u64; // Using angle 180.0 for this test
     let get_angle_file_result = pic.update_call(
         canister_id,
         Principal::anonymous(),
@@ -957,7 +957,7 @@ fn pocket_ic_voice_logs() {
 //     }
 
 //     // Generate an angle file by querying the canister for an angle (e.g., 180 degrees)
-//     let test_angle = 180u64; // Using angle 180.0 for this test
+//     let test_angle = 173u64; // Using angle 180.0 for this test
 //     let get_angle_file_result = pic
 //         .query_call(
 //             canister_id,
