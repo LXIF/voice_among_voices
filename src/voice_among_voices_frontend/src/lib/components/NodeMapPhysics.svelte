@@ -13,6 +13,7 @@
     import {
         convertColliderCoordinatesToFloat32Array,
         canvasToLogical,
+        angleToRadians,
     } from "$lib/utils/convUtils";
     import {
         canvasWidth as standardCanvasWidth,
@@ -43,6 +44,7 @@
     import { clamp, mapRange } from "$lib/utils/mathUtils";
     import { identityAgent } from "$lib/canisters";
     import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
+    import { AFFINITY_MODE } from "$lib/state/featureFlags";
 
     let {
         nodes,
@@ -180,13 +182,33 @@
         }
     });
 
-    function resetNodes() {
+    export function resetNodes() {
         console.log("Resetting nodes...");
         localNodes = [...nodes];
         backendNodes = [];
     }
 
     ///////////PHYSICS//////////
+
+    const closestDistance = (angleA: number, angleB: number) => {
+        let result = 0;
+        const standardDiff = Math.abs(angleA - angleB);
+
+        if (standardDiff <= 180) return standardDiff;
+
+        // If the standard difference is more than 180 degrees, take the shorter path
+
+        // If going clockwise across the 0° boundary
+        if (angleA > 180 && angleB < 180) {
+            result = angleA - 360 - angleB; // Add 360 to make it continue past 360
+        }
+        // If going counterclockwise across the 0° boundary
+        else if (angleA < 180 && angleB > 180) {
+            result = angleB - 360 - angleA; // Subtract 360 to make it go below 0
+        }
+
+        return Math.abs(result % 360);
+    };
 
     const setupAndSimulate = () => {
         console.log("Setting up physics engine and rendering...");
@@ -256,11 +278,114 @@
                                 bodyPos.y - bodyWithinReachPos.y,
                             );
 
+                            // AFFINITY MULTIPLIER
+
+                            // const id = Number(body.voiceNode.id);
+                            // const idWithinReach = Number(
+                            //     bodyWithinReach.userData.id,
+                            // );
+
+                            // const minimumDistance = closestDistance(
+                            //     id,
+                            //     idWithinReach,
+                            // );
+                            // const affinityMultiplier = Math.cos(
+                            //     angleToRadians(minimumDistance),
+                            // );
+
                             // add vector to the magnetic forces
                             magneticForces.push(
                                 new RAPIER.Vector2(
                                     vectorBetweenBodies.x * magneticForceScalar,
                                     vectorBetweenBodies.y * magneticForceScalar,
+                                ),
+                            );
+                        });
+
+                        // reset the forces
+                        body.rigidBody.resetForces(true);
+
+                        magneticForces.forEach((force) =>
+                            body.rigidBody.addForce(force, true),
+                        );
+                    });
+                }
+
+                function applyAffineMagnetismForces() {
+                    physicsBodies.forEach((body, i) => {
+                        // Create array of all bodies within reach
+                        const cutoffPosition = body.rigidBody.translation();
+                        const cutoffRotation = body.rigidBody.rotation();
+                        const cutoffShape = new RAPIER.Ball(max_distance);
+
+                        let bodiesWithinReach: any[] = [];
+                        let magneticForces: any[] = [];
+
+                        world.intersectionsWithShape(
+                            cutoffPosition,
+                            cutoffRotation,
+                            cutoffShape,
+                            (collider: any) => {
+                                const localBody = collider.parent();
+                                if (!localBody) return true;
+                                const localBodyUserData =
+                                    localBody?.userData as VoiceNodeEgress;
+                                if (localBodyUserData.id === body.voiceNode.id)
+                                    return true;
+                                bodiesWithinReach.push(localBody);
+                                return true;
+                            },
+                            undefined,
+                            undefined,
+                            undefined,
+                            body.rigidBody,
+                        );
+
+                        // Create resultant force out of all their vectors
+                        bodiesWithinReach.forEach((bodyWithinReach) => {
+                            // magnetism is 1/r^2
+                            // find vector between body and bodyWithinReach
+                            // scale it by 1/r^2
+                            const bodyPos = body.rigidBody.translation();
+                            const bodyWithinReachPos =
+                                bodyWithinReach.translation();
+
+                            const distanceBetweenBodies = Math.sqrt(
+                                (bodyWithinReachPos.x - bodyPos.x) ** 2 +
+                                    (bodyWithinReachPos.y - bodyPos.y) ** 2,
+                            );
+                            const magneticForceScalar =
+                                (1 / distanceBetweenBodies ** 2) *
+                                force_strength;
+                            const vectorBetweenBodies = new RAPIER.Vector2(
+                                bodyPos.x - bodyWithinReachPos.x,
+                                bodyPos.y - bodyWithinReachPos.y,
+                            );
+
+                            // AFFINITY MULTIPLIER
+
+                            const id = Number(body.voiceNode.id);
+                            const idWithinReach = Number(
+                                bodyWithinReach.userData.id,
+                            );
+
+                            const minimumDistance = closestDistance(
+                                id,
+                                idWithinReach,
+                            );
+                            const affinityMultiplier = Math.cos(
+                                angleToRadians(minimumDistance),
+                            );
+
+                            // add vector to the magnetic forces
+                            magneticForces.push(
+                                new RAPIER.Vector2(
+                                    vectorBetweenBodies.x *
+                                        magneticForceScalar *
+                                        affinityMultiplier,
+                                    vectorBetweenBodies.y *
+                                        magneticForceScalar *
+                                        affinityMultiplier,
                                 ),
                             );
                         });
@@ -307,7 +432,13 @@
                     };
                 });
 
-                simulate(physicsBodies, world, applyMagnetismForces);
+                simulate(
+                    physicsBodies,
+                    world,
+                    $AFFINITY_MODE
+                        ? applyAffineMagnetismForces
+                        : applyMagnetismForces,
+                );
             })
             .then(() => {
                 resetNodes();
@@ -614,6 +745,20 @@
                             ? `hsl(${node.id}, 100%, 50%)`
                             : Number(node.id) === $hoveredAngle
                               ? `hsla(${node.id}, 100%, 50%, 60%)`
+                              : "hsla(0, 0%, 0%, 0%)"}
+                    />
+                {/if}
+                {#if ($hoveredAngle && $hoveredAngle === Number(node.id)) || ($selectedAngle && $selectedAngle === Number(node.id))}
+                    <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius + 0.5}
+                        stroke="hsl({node.id}, 100%, 50%)"
+                        stroke-width={bodyLineWidth}
+                        fill={Number(node.id) === $selectedAngle
+                            ? `hsla(${node.id}, 100%, 50%, 60%)`
+                            : Number(node.id) === $hoveredAngle
+                              ? `hsla(${node.id}, 100%, 50%, 50%)`
                               : "hsla(0, 0%, 0%, 0%)"}
                     />
                 {/if}

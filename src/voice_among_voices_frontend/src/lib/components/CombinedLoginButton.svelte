@@ -29,7 +29,6 @@
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
         tokenBuyLink = await backend.get_token_buy_link();
-        // console.log(await backend.get_token_buy_link());
         setAddress();
     });
 
@@ -65,7 +64,6 @@
             try {
                 $walletAddress = $appkitModal?.getAddress()!;
             } catch {
-                console.log("Please connect a wallet first");
                 $toastMessage = "Please connect a wallet first";
                 return;
             }

@@ -43,7 +43,6 @@
         try {
             sampleLoading = true;
             const response = await backend.get_voice(BigInt(id));
-            console.log(response);
             if ("Ok" in response) {
                 const audioBlob = new Blob(
                     [new Uint8Array(response.Ok.sample)],

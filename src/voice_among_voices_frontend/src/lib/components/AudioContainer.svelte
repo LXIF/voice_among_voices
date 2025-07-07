@@ -14,6 +14,7 @@
         sampleLength,
         nodeWidthPx,
         nodeWidthLogical,
+        voiceNodes,
     } from "$lib/state/uxState";
     import DroppableNode from "./DroppableNode.svelte";
     import VoiceRecorder from "./VoiceRecorder.svelte";
@@ -25,10 +26,12 @@
     import {
         getAudioParameters,
         getSimulationParameters,
+        getVoiceNodes,
     } from "$lib/icInteractions";
 
     const {
         onDropNodeWithRadius,
+        onFinishRecord,
     }: {
         onDropNodeWithRadius: ({
             nodeX,
@@ -39,6 +42,7 @@
             nodeY: number;
             nodeRadius: number;
         }) => void;
+        onFinishRecord: () => void;
     } = $props();
 
     onMount(async () => {
@@ -83,8 +87,10 @@
         }
     };
 
-    const handleVoiceRecorded = (blob: Blob) => {
+    const handleVoiceRecorded = async (blob: Blob) => {
         $currentVoiceBlob = blob;
+        $voiceNodes = await getVoiceNodes();
+        onFinishRecord();
     };
 
     const handleDropNode = ({ x, y }: { x: number; y: number }) => {

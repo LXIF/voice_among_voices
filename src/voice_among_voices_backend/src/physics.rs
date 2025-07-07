@@ -171,14 +171,27 @@ pub fn simulate_until_stopped(
                     .translation();
                 let mut node_to_be_updated = nodes.get(physics_body.voice_node_id as u64).unwrap();
 
-                node_to_be_updated.x = position[0].into();
-                node_to_be_updated.y = position[1].into();
+                // reset potential strays
+
+                if is_stray(position[0], position[1]) {
+                    node_to_be_updated.x = 0f64;
+                    node_to_be_updated.y = 0f64;
+                } else {
+                    node_to_be_updated.x = position[0].into();
+                    node_to_be_updated.y = position[1].into();
+                }
 
                 nodes.set(physics_body.voice_node_id as u64, &node_to_be_updated);
             }
             break;
         }
     }
+}
+
+fn is_stray(x: f32, y: f32) -> bool {
+    let distance_from_center = distance(&Point2::new(x, y), &Point2::new(0f32, 0f32));
+
+    distance_from_center > SIMULATION_PARAMETERS.logical_radius as f32
 }
 
 fn apply_magnetism_forces(

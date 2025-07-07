@@ -22,11 +22,20 @@
             nodeMapCont.handleDrop({ nodeX, nodeY, nodeRadius });
         }
     };
+
+    const handleFinishRecord = () => {
+        if (nodeMapCont) {
+            nodeMapCont.resetNodes();
+        }
+    };
 </script>
 
 <Header />
 <NodeMapContainer bind:this={nodeMapCont} />
-<AudioContainer onDropNodeWithRadius={handleDropNodeWithRadius} />
+<AudioContainer
+    onDropNodeWithRadius={handleDropNodeWithRadius}
+    onFinishRecord={handleFinishRecord}
+/>
 {#if $showInfoModal}
     <InfoModal />
 {/if}

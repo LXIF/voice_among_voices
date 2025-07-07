@@ -43,7 +43,6 @@
 
     async function handlePointerDown(e: PointerEvent) {
         e.preventDefault();
-        console.log(ctaLeft);
         if (!draggableElement) throw "should be unreachable";
         if (!$applicationState.droppingActive) return;
         draggableElement.style.left = `${e.clientX - handleWidth / 2}px`;

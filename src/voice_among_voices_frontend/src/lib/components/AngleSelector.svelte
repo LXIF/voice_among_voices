@@ -17,9 +17,7 @@
 
     let hoveredAngle: number | null = $state(null);
 
-    const handleSelectAngle = (angle: number) => {
-        console.log(angle);
-    };
+    const handleSelectAngle = (angle: number) => {};
 
     // Adjusted scaling parameters for SVG
     const centerX = 100;

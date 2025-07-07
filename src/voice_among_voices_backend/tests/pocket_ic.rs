@@ -19,13 +19,14 @@ const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
 const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
     force_cutoff: 100.,
-    max_distance: 20.,
+    max_distance: 10.,
     force_strength: 3000.,
     linear_damping: 10.,
     logical_radius: 50.,
     n_collider_vertices: 360,
     friction: 0.5,
     density: 2.,
+    max_steps: 2_500,
 };
 
 const INIT_ARGS: VoiceAmongVoicesInit = VoiceAmongVoicesInit {
@@ -1013,6 +1014,7 @@ pub struct SimulationParameters {
     n_collider_vertices: u64,
     friction: f64,
     density: f64,
+    max_steps: u64,
 }
 
 fn generate_test_wav(duration_ms: u32, sample_rate: u32) -> Vec<u8> {

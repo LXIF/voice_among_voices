@@ -57,7 +57,6 @@
 
     $effect(() => {
         if ($walletAddress !== "") {
-            console.log("address changed, fetching tokens");
             untrack(() => fetchOwnedTokens());
         }
     });
@@ -136,6 +135,18 @@
             nodeMap.handleDrop({ nodeX, nodeY, nodeRadius });
         }
     }
+
+    export const resetNodes = () => {
+        if (nodeMap) {
+            nodeMap.resetNodes();
+        }
+    };
+
+    const handleSelectAngle = async (angle: number) => {
+        $selectedAngle = angle;
+        $voiceNodes = await getVoiceNodes();
+        resetNodes();
+    };
 </script>
 
 <div class="flex w-screen items-center justify-center">
@@ -159,9 +170,7 @@
             nodes={$voiceNodes}
             loggedIn={!!$identityAgent}
             class="absolute top-0 h-full w-full lg:max-w-[1200px]"
-            onSelectAngle={(angle) => {
-                $selectedAngle = angle;
-            }}
+            onSelectAngle={handleSelectAngle}
             onHoverAngle={(angle) => {
                 $hoveredAngle = angle;
             }}

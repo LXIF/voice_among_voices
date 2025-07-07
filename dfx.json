@@ -1,39 +1,36 @@
 {
-  "canisters": {
-    "voice_among_voices_backend": {
-      "candid": "src/voice_among_voices_backend/voice_among_voices_backend.did",
-      "declarations": {
-        "node_compatibility": true
-      },
-      "package": "voice_among_voices_backend",
-      "type": "rust"
+    "canisters": {
+        "voice_among_voices_backend": {
+            "candid": "src/voice_among_voices_backend/voice_among_voices_backend.did",
+            "declarations": {
+                "node_compatibility": true
+            },
+            "package": "voice_among_voices_backend",
+            "type": "rust"
+        },
+        "voice_among_voices_frontend": {
+            "dependencies": ["voice_among_voices_backend"],
+            "source": ["src/voice_among_voices_frontend/dist"],
+            "type": "assets",
+            "workspace": "voice_among_voices_frontend"
+        },
+        "ic_siwe_provider": {
+            "type": "custom",
+            "candid": "https://github.com/kristoferlund/ic-siwe/releases/download/v0.1.1/ic_siwe_provider.did",
+            "wasm": "https://github.com/kristoferlund/ic-siwe/releases/download/v0.1.1/ic_siwe_provider.wasm.gz"
+        },
+        "evm_rpc": {
+            "type": "pull",
+            "id": "7hfb6-caaaa-aaaar-qadga-cai"
+        }
     },
-    "voice_among_voices_frontend": {
-      "dependencies": [
-        "voice_among_voices_backend"
-      ],
-      "source": [
-        "src/voice_among_voices_frontend/dist"
-      ],
-      "type": "assets",
-      "workspace": "voice_among_voices_frontend"
+    "defaults": {
+        "build": {
+            "args": "",
+            "packtool": ""
+        }
     },
-    "ic_siwe_provider": {
-      "type": "custom",
-      "candid": "https://github.com/kristoferlund/ic-siwe/releases/download/v0.1.1/ic_siwe_provider.did",
-      "wasm": "https://github.com/kristoferlund/ic-siwe/releases/download/v0.1.1/ic_siwe_provider.wasm.gz"
-    },
-    "evm_rpc": {
-      "type": "pull",
-      "id": "7hfb6-caaaa-aaaar-qadga-cai"
-    }
-  },
-  "defaults": {
-    "build": {
-      "args": "",
-      "packtool": ""
-    }
-  },
-  "output_env_file": ".env",
-  "version": 1
+    "output_env_file": ".env",
+    "version": 1,
+    "profile": "Release"
 }

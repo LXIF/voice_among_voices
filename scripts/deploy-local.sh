@@ -19,9 +19,9 @@ dfx canister create --all
 dfx deploy voice_among_voices_backend --argument $'(
     opt record {
         siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider)'";
-        token_address = opt "0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13";
+        token_address = opt "0xfB5dA9f3657337E1d9B3eb3C5a052AD652e24B56";
         dev_mode = opt true;
-        admin_token_id = opt 360;
+        admin_token_id = opt 0;
         token_buy_link = opt "https://basescan.org/address/0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13#writeContract#F2";
     }
 )'
