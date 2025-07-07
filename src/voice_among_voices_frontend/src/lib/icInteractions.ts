@@ -45,18 +45,8 @@ export const getZeroFile = async () => {
 
 export const getAngleFile = async (angle: number) => {
     try {
-        const response = await withRetry(
-            () => backend.get_angle_file(BigInt(angle)),
-            {
-                maxRetries: 10,
-                delayMs: 150,
-                validate: (response) => response.status_code === 200,
-                onRetry: (attempt) =>
-                    console.log(
-                        `Retrying fetch angle file, attempt ${attempt}...`,
-                    ),
-            },
-        );
+        let response = await backend.get_angle_file(BigInt(angle));
+
         return response;
     } catch (error) {
         toastMessage.set("Error fetching angle file, please reload the page.");
