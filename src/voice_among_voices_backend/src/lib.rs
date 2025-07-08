@@ -74,9 +74,44 @@ async fn get_angle_file(angle: u64) -> HttpStreamingResponse {
         ic_cdk::trap("invalid angle")
     };
     match check_auth_for_single_node_id(angle as usize).await {
-        Ok(_address) => get_file_for_angle(angle),
+        Ok(_address) => {
+            let (result,) = ic_cdk::call(ic_cdk::id(), "generate_file_for_angle", (angle,))
+                .await
+                .expect("Failed to generate file");
+            result
+        }
         Err(err) => trap(&format!("{:?}", err)), //TODO: maybe use Result here
     }
+}
+
+#[update]
+fn generate_file_for_angle(angle: u64) -> HttpStreamingResponse {
+    if caller() != ic_cdk::id() {
+        ic_cdk::trap("Unauthorized");
+    }
+    get_file_for_angle(angle)
+}
+
+#[update]
+async fn populate_with_demo_content() -> Result<(), AuthorizationError> {
+    check_auth_for_single_node_id(0).await.and_then(|_address| {
+        for i in 1..=359 {
+            let node: VoiceNodeIngress = VoiceNodeIngress {
+                id: i,
+                x: (i as f64).cos()
+                    * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * i as f64))),
+                y: (i as f64).sin()
+                    * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * i as f64))),
+                sample: generate_test_wav(
+                    AUDIO_PARAMETERS.max_sample_length_ms,
+                    AUDIO_PARAMETERS.sample_rate,
+                ),
+            };
+            update_stored_voice_node(node, alloy::primitives::Address::ZERO, time())
+                .expect(&format!("Failed to add voice node {i}"));
+        }
+        Ok(())
+    })
 }
 
 #[query]

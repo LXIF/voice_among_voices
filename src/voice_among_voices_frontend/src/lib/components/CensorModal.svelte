@@ -95,6 +95,11 @@
             }
         };
     });
+
+    const handlePopulateAll = async () => {
+        const res = await backend.populate_with_demo_content();
+        console.log(res);
+    };
 </script>
 
 <Dialog
@@ -159,6 +164,7 @@
             </div>
         {/if}
     </div>
+    <Button onclick={handlePopulateAll}>Populate all</Button>
 </Dialog>
 
 <audio

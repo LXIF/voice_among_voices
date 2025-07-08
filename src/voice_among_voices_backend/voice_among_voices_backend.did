@@ -20,6 +20,11 @@ type AudioSample = record {
   sample_length_samples : nat32;
   sample_length_ms : float64;
 };
+type AuthorizationError = variant {
+  EvmError : text;
+  SetupError : text;
+  Unauthorized;
+};
 type CensorshipError = variant {
   EvmError : text;
   InternalCanisterError : text;
@@ -52,7 +57,8 @@ type Result = variant { Ok; Err : CensorshipError };
 type Result_1 = variant { Ok : AudioSample; Err : CensorshipError };
 type Result_2 = variant { Ok : vec VoiceNodeEgress; Err : text };
 type Result_3 = variant { Ok : text; Err : text };
-type Result_4 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
+type Result_4 = variant { Ok; Err : AuthorizationError };
+type Result_5 = variant { Ok : vec VoiceNodeEgress; Err : AddVoiceNodeError };
 type SimulationParameters = record {
   logical_radius : float64;
   density : float64;
@@ -118,6 +124,7 @@ type VoiceNodeIngress = record {
 };
 service : (opt VoiceAmongVoicesInit) -> {
   censor : (nat64) -> (Result);
+  generate_file_for_angle : (nat64) -> (HttpStreamingResponse);
   get_admin_id : () -> (nat64) query;
   get_angle_file : (nat64) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
@@ -137,5 +144,6 @@ service : (opt VoiceAmongVoicesInit) -> {
   http_request_streaming_callback : (StreamingCallbackToken) -> (
       StreamingCallbackHttpResponse,
     ) query;
-  update_voice_node : (VoiceNodeIngress) -> (Result_4);
+  populate_with_demo_content : () -> (Result_4);
+  update_voice_node : (VoiceNodeIngress) -> (Result_5);
 }
