@@ -219,6 +219,7 @@ fn pocket_ic_sample_to_angle_file_single() {
         "update_voice_node",
         candid::encode_one(voice_node).unwrap(),
     );
+    pic.tick();
 
     match add_result {
         Ok(_) => {
@@ -291,6 +292,7 @@ fn pocket_ic_smoke_test_50_files_1ms() {
             "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         );
+        pic.tick();
 
         match add_result {
             Ok(_) => {
@@ -364,6 +366,7 @@ fn pocket_ic_smoke_test_50_files_1000ms() {
             "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         );
+        pic.tick();
 
         match add_result {
             Ok(_) => {
@@ -437,6 +440,7 @@ fn pocket_ic_smoke_test_100_files_1ms() {
             "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         );
+        pic.tick();
 
         match add_result {
             Ok(_) => {
@@ -510,6 +514,7 @@ fn pocket_ic_smoke_test_360_files_1ms() {
             "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         );
+        pic.tick();
 
         match add_result {
             Ok(_) => {
@@ -583,6 +588,7 @@ fn pocket_ic_smoke_test_360_files_1000ms() {
             "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         );
+        pic.tick();
 
         match add_result {
             Ok(_) => {
@@ -656,6 +662,7 @@ fn pocket_ic_smoke_test_360_files_max_length_equal() {
             "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         );
+        pic.tick();
 
         match add_result {
             Ok(_) => {
@@ -733,6 +740,7 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
             "update_voice_node",
             candid::encode_one(voice_node).unwrap(),
         );
+        pic.tick();
 
         match add_result {
             Ok(_) => {
@@ -802,6 +810,7 @@ fn pocket_ic_voice_logs() {
         "update_voice_node",
         candid::encode_one(voice_node).unwrap(),
     );
+    pic.tick();
 
     match add_result {
         Ok(_) => {
@@ -865,6 +874,7 @@ fn pocket_ic_voice_logs() {
         "update_voice_node",
         candid::encode_one(another_voice_node).unwrap(),
     );
+    pic.tick();
 
     match add_result {
         Ok(_) => {

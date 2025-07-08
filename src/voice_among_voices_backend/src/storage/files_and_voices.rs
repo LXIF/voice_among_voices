@@ -41,8 +41,8 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
         cache.insert(angle as u32, chunks.clone());
     });
 
-    set_timer(Duration::from_secs(60), move || {
-        // invalidate after 60s for now
+    set_timer(Duration::from_secs(180), move || {
+        // invalidate after 180s for now
         ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
             cache.remove(&(angle as u32));
         });

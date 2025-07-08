@@ -69,7 +69,6 @@ pub async fn get_caller_wallet_address() -> Result<String, String> {
 //     }
 // }
 
-// TODO: this function is affected by one-after issue
 async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError> {
     let CallObjects {
         owner,
