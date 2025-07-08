@@ -41,7 +41,7 @@ pub fn generate_angle_file(
     // generate stereo sample vectors
     let (left_samples, right_samples) = unsafe {
         // generate_audio_vectors(&sample_positions, audio_params, samples);
-        generate_audio_vectors_optimized(&sample_positions, audio_params, samples)
+        generate_audio_vectors(&sample_positions, audio_params, samples)
     };
 
     // generate resulting file
@@ -152,238 +152,238 @@ fn generate_audio_vectors(
     (left_channel, right_channel)
 }
 
-#[target_feature(enable = "simd128")]
-fn generate_audio_vectors_optimized(
-    sample_positions: &[SamplePosition],
-    audio_params: &AudioParameters,
-    samples: &AudioSampleMemory,
-) -> (Vec<i16>, Vec<i16>) {
-    // Convert fade duration from milliseconds to samples
-    let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
+// #[target_feature(enable = "simd128")]
+// fn generate_audio_vectors_optimized(
+//     sample_positions: &[SamplePosition],
+//     audio_params: &AudioParameters,
+//     samples: &AudioSampleMemory,
+// ) -> (Vec<i16>, Vec<i16>) {
+//     // Convert fade duration from milliseconds to samples
+//     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
 
-    // create vectors with length, fill them with neutral => half of i16::MAX
-    let total_length_samples: u64 =
-        audio_params.total_length_ms as u64 * audio_params.sample_rate as u64 / 1000;
+//     // create vectors with length, fill them with neutral => half of i16::MAX
+//     let total_length_samples: u64 =
+//         audio_params.total_length_ms as u64 * audio_params.sample_rate as u64 / 1000;
 
-    let mut left_channel = vec![0i16; total_length_samples as usize];
-    let mut right_channel = vec![0i16; total_length_samples as usize];
+//     let mut left_channel = vec![0i16; total_length_samples as usize];
+//     let mut right_channel = vec![0i16; total_length_samples as usize];
 
-    let (fade_in, fade_out) = precompute_fade_curves(fade_samples);
+//     let (fade_in, fade_out) = precompute_fade_curves(fade_samples);
 
-    for sample_pos in sample_positions {
-        // find the exact sample where it begins
-        let start_sample = (sample_pos.begins_at * total_length_samples as f64)
-            .round()
-            .max(0.) as usize;
+//     for sample_pos in sample_positions {
+//         // find the exact sample where it begins
+//         let start_sample = (sample_pos.begins_at * total_length_samples as f64)
+//             .round()
+//             .max(0.) as usize;
 
-        let end_sample = (start_sample + sample_pos.sample_length_samples as usize - 1)
-            .min(total_length_samples as usize - 1);
-        // use reader to read sample
-        let input_samples = read_wav(&samples.get(sample_pos.sample_id as u64).unwrap().sample);
+//         let end_sample = (start_sample + sample_pos.sample_length_samples as usize - 1)
+//             .min(total_length_samples as usize - 1);
+//         // use reader to read sample
+//         let input_samples = read_wav(&samples.get(sample_pos.sample_id as u64).unwrap().sample);
 
-        // Precompute fixed-point gains and fade factors
-        // Precompute fixed-point gains (Q1.15 format)
-        let (left_gain_vec, right_gain_vec) = precompute_gains_optimized(
-            sample_pos,
-            fade_samples,
-            input_samples.len(),
-            &fade_in,
-            &fade_out,
-        );
+//         // Precompute fixed-point gains and fade factors
+//         // Precompute fixed-point gains (Q1.15 format)
+//         let (left_gain_vec, right_gain_vec) = precompute_gains_optimized(
+//             sample_pos,
+//             fade_samples,
+//             input_samples.len(),
+//             &fade_in,
+//             &fade_out,
+//         );
 
-        let mut chunk_index = 0;
-        let sample_count = input_samples.len();
-        // Process samples in SIMD batches of 8
-        while chunk_index + 8 <= sample_count {
-            let out_index = start_sample + chunk_index;
-            if out_index + 8 > end_sample {
-                break;
-            }
+//         let mut chunk_index = 0;
+//         let sample_count = input_samples.len();
+//         // Process samples in SIMD batches of 8
+//         while chunk_index + 8 <= sample_count {
+//             let out_index = start_sample + chunk_index;
+//             if out_index + 8 > end_sample {
+//                 break;
+//             }
 
-            unsafe {
-                // Load 8 samples
-                let samples_ptr = input_samples.as_ptr().add(chunk_index);
-                let samples_v = v128_load(samples_ptr as *const v128);
+//             unsafe {
+//                 // Load 8 samples
+//                 let samples_ptr = input_samples.as_ptr().add(chunk_index);
+//                 let samples_v = v128_load(samples_ptr as *const v128);
 
-                // Load gains
-                let left_gain_ptr = left_gain_vec.as_ptr().add(chunk_index);
-                let left_gain_v = v128_load(left_gain_ptr as *const v128);
+//                 // Load gains
+//                 let left_gain_ptr = left_gain_vec.as_ptr().add(chunk_index);
+//                 let left_gain_v = v128_load(left_gain_ptr as *const v128);
 
-                let right_gain_ptr = right_gain_vec.as_ptr().add(chunk_index);
-                let right_gain_v = v128_load(right_gain_ptr as *const v128);
+//                 let right_gain_ptr = right_gain_vec.as_ptr().add(chunk_index);
+//                 let right_gain_v = v128_load(right_gain_ptr as *const v128);
 
-                // Calculate samples
-                let left_samples_v = fixed_point_multiply(samples_v, left_gain_v);
-                let right_samples_v = fixed_point_multiply(samples_v, right_gain_v);
+//                 // Calculate samples
+//                 let left_samples_v = fixed_point_multiply(samples_v, left_gain_v);
+//                 let right_samples_v = fixed_point_multiply(samples_v, right_gain_v);
 
-                // Load current output
-                let left_out_ptr = left_channel.as_mut_ptr().add(out_index);
-                let right_out_ptr = right_channel.as_mut_ptr().add(out_index);
+//                 // Load current output
+//                 let left_out_ptr = left_channel.as_mut_ptr().add(out_index);
+//                 let right_out_ptr = right_channel.as_mut_ptr().add(out_index);
 
-                let left_current_v = v128_load(left_out_ptr as *const v128);
-                let right_current_v = v128_load(right_out_ptr as *const v128);
+//                 let left_current_v = v128_load(left_out_ptr as *const v128);
+//                 let right_current_v = v128_load(right_out_ptr as *const v128);
 
-                // Add with saturation and store
-                v128_store(
-                    left_out_ptr as *mut v128,
-                    i16x8_add_sat(left_current_v, left_samples_v),
-                );
-                v128_store(
-                    right_out_ptr as *mut v128,
-                    i16x8_add_sat(right_current_v, right_samples_v),
-                );
-            }
+//                 // Add with saturation and store
+//                 v128_store(
+//                     left_out_ptr as *mut v128,
+//                     i16x8_add_sat(left_current_v, left_samples_v),
+//                 );
+//                 v128_store(
+//                     right_out_ptr as *mut v128,
+//                     i16x8_add_sat(right_current_v, right_samples_v),
+//                 );
+//             }
 
-            chunk_index += 8;
-        }
+//             chunk_index += 8;
+//         }
 
-        // Process remaining samples
-        for index in chunk_index..sample_count {
-            let sample_index = start_sample + index;
-            if sample_index > end_sample {
-                break;
-            }
+//         // Process remaining samples
+//         for index in chunk_index..sample_count {
+//             let sample_index = start_sample + index;
+//             if sample_index > end_sample {
+//                 break;
+//             }
 
-            // Fixed-point multiplication with saturation
-            let sample = input_samples[index] as i32;
-            let left_gain = left_gain_vec[index] as i32;
-            let right_gain = right_gain_vec[index] as i32;
+//             // Fixed-point multiplication with saturation
+//             let sample = input_samples[index] as i32;
+//             let left_gain = left_gain_vec[index] as i32;
+//             let right_gain = right_gain_vec[index] as i32;
 
-            let left_sample = fixed_point_multiply_scalar(sample, left_gain);
-            let right_sample = fixed_point_multiply_scalar(sample, right_gain);
+//             let left_sample = fixed_point_multiply_scalar(sample, left_gain);
+//             let right_sample = fixed_point_multiply_scalar(sample, right_gain);
 
-            left_channel[sample_index] = left_channel[sample_index].saturating_add(left_sample);
+//             left_channel[sample_index] = left_channel[sample_index].saturating_add(left_sample);
 
-            right_channel[sample_index] = right_channel[sample_index].saturating_add(right_sample);
-        }
-    }
+//             right_channel[sample_index] = right_channel[sample_index].saturating_add(right_sample);
+//         }
+//     }
 
-    (left_channel, right_channel)
-}
+//     (left_channel, right_channel)
+// }
 
-// Fixed-point multiplication with scaling (Q1.15 format)
-fn fixed_point_multiply(a: v128, b: v128) -> v128 {
-    unsafe {
-        // Sign-extend to 32-bit
-        let a_low = i32x4_extend_low_i16x8(a);
-        let a_high = i32x4_extend_high_i16x8(a);
-        let b_low = i32x4_extend_low_i16x8(b);
-        let b_high = i32x4_extend_high_i16x8(b);
+// // Fixed-point multiplication with scaling (Q1.15 format)
+// fn fixed_point_multiply(a: v128, b: v128) -> v128 {
+//     unsafe {
+//         // Sign-extend to 32-bit
+//         let a_low = i32x4_extend_low_i16x8(a);
+//         let a_high = i32x4_extend_high_i16x8(a);
+//         let b_low = i32x4_extend_low_i16x8(b);
+//         let b_high = i32x4_extend_high_i16x8(b);
 
-        // Multiply
-        let product_low = i32x4_mul(a_low, b_low);
-        let product_high = i32x4_mul(a_high, b_high);
+//         // Multiply
+//         let product_low = i32x4_mul(a_low, b_low);
+//         let product_high = i32x4_mul(a_high, b_high);
 
-        // Add rounding constant (0x4000 = 1<<14)
-        let rounded_low = i32x4_add(product_low, i32x4_splat(0x4000));
-        let rounded_high = i32x4_add(product_high, i32x4_splat(0x4000));
+//         // Add rounding constant (0x4000 = 1<<14)
+//         let rounded_low = i32x4_add(product_low, i32x4_splat(0x4000));
+//         let rounded_high = i32x4_add(product_high, i32x4_splat(0x4000));
 
-        // Shift right by 15 (keep high 16 bits)
-        let shifted_low = i32x4_shr(rounded_low, 15);
-        let shifted_high = i32x4_shr(rounded_high, 15);
+//         // Shift right by 15 (keep high 16 bits)
+//         let shifted_low = i32x4_shr(rounded_low, 15);
+//         let shifted_high = i32x4_shr(rounded_high, 15);
 
-        // Narrow back to 16-bit with saturation
-        i16x8_narrow_i32x4(shifted_low, shifted_high)
-    }
-}
+//         // Narrow back to 16-bit with saturation
+//         i16x8_narrow_i32x4(shifted_low, shifted_high)
+//     }
+// }
 
-// Optimized scalar fixed-point multiplication with saturation
-#[inline]
-fn fixed_point_multiply_scalar(a: i32, b: i32) -> i16 {
-    let product = a * b + 0x4000;
-    let result = product >> 15;
+// // Optimized scalar fixed-point multiplication with saturation
+// #[inline]
+// fn fixed_point_multiply_scalar(a: i32, b: i32) -> i16 {
+//     let product = a * b + 0x4000;
+//     let result = product >> 15;
 
-    // Manual saturation (faster than clamp in this context)
-    if result > i16::MAX as i32 {
-        i16::MAX
-    } else if result < i16::MIN as i32 {
-        i16::MIN
-    } else {
-        result as i16
-    }
-}
+//     // Manual saturation (faster than clamp in this context)
+//     if result > i16::MAX as i32 {
+//         i16::MAX
+//     } else if result < i16::MIN as i32 {
+//         i16::MIN
+//     } else {
+//         result as i16
+//     }
+// }
 
-fn precompute_fade_curves(fade_samples: usize) -> (Vec<f64>, Vec<f64>) {
-    let fade_in: Vec<f64> = (0..fade_samples)
-        .map(|i| i as f64 / fade_samples as f64)
-        .collect();
+// fn precompute_fade_curves(fade_samples: usize) -> (Vec<f64>, Vec<f64>) {
+//     let fade_in: Vec<f64> = (0..fade_samples)
+//         .map(|i| i as f64 / fade_samples as f64)
+//         .collect();
 
-    let fade_out: Vec<f64> = fade_in.iter().rev().copied().collect();
+//     let fade_out: Vec<f64> = fade_in.iter().rev().copied().collect();
 
-    (fade_in, fade_out)
-}
+//     (fade_in, fade_out)
+// }
 
-// Optimized gain calculation using precomputed fade curves
-fn precompute_gains_optimized(
-    sample_pos: &SamplePosition,
-    fade_samples: usize,
-    sample_len: usize,
-    fade_in: &[f64],
-    fade_out: &[f64],
-) -> (Vec<i16>, Vec<i16>) {
-    let pan = sample_pos.pan_position;
-    let left_gain_base = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
-    let right_gain_base = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
+// // Optimized gain calculation using precomputed fade curves
+// fn precompute_gains_optimized(
+//     sample_pos: &SamplePosition,
+//     fade_samples: usize,
+//     sample_len: usize,
+//     fade_in: &[f64],
+//     fade_out: &[f64],
+// ) -> (Vec<i16>, Vec<i16>) {
+//     let pan = sample_pos.pan_position;
+//     let left_gain_base = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
+//     let right_gain_base = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
 
-    let base_gain_left = (left_gain_base * 32768.0).round() as i16;
-    let base_gain_right = (right_gain_base * 32768.0).round() as i16;
+//     let base_gain_left = (left_gain_base * 32768.0).round() as i16;
+//     let base_gain_right = (right_gain_base * 32768.0).round() as i16;
 
-    let mut left_gain_vec = vec![base_gain_left; sample_len];
-    let mut right_gain_vec = vec![base_gain_right; sample_len];
+//     let mut left_gain_vec = vec![base_gain_left; sample_len];
+//     let mut right_gain_vec = vec![base_gain_right; sample_len];
 
-    // Apply fade-in using precomputed curve
-    let fade_in_end = fade_samples.min(sample_len);
-    for i in 0..fade_in_end {
-        let factor = fade_in[i];
-        left_gain_vec[i] = (left_gain_base * factor * 32768.0).round() as i16;
-        right_gain_vec[i] = (right_gain_base * factor * 32768.0).round() as i16;
-    }
+//     // Apply fade-in using precomputed curve
+//     let fade_in_end = fade_samples.min(sample_len);
+//     for i in 0..fade_in_end {
+//         let factor = fade_in[i];
+//         left_gain_vec[i] = (left_gain_base * factor * 32768.0).round() as i16;
+//         right_gain_vec[i] = (right_gain_base * factor * 32768.0).round() as i16;
+//     }
 
-    // Apply fade-out using precomputed curve
-    let fade_out_start = sample_len.saturating_sub(fade_samples);
-    let fade_out_len = sample_len - fade_out_start;
+//     // Apply fade-out using precomputed curve
+//     let fade_out_start = sample_len.saturating_sub(fade_samples);
+//     let fade_out_len = sample_len - fade_out_start;
 
-    for i in 0..fade_out_len {
-        let factor = fade_out[i];
-        let idx = fade_out_start + i;
-        left_gain_vec[idx] = (left_gain_base * factor * 32768.0).round() as i16;
-        right_gain_vec[idx] = (right_gain_base * factor * 32768.0).round() as i16;
-    }
+//     for i in 0..fade_out_len {
+//         let factor = fade_out[i];
+//         let idx = fade_out_start + i;
+//         left_gain_vec[idx] = (left_gain_base * factor * 32768.0).round() as i16;
+//         right_gain_vec[idx] = (right_gain_base * factor * 32768.0).round() as i16;
+//     }
 
-    (left_gain_vec, right_gain_vec)
-}
+//     (left_gain_vec, right_gain_vec)
+// }
 
-fn precompute_gains(
-    sample_pos: &SamplePosition,
-    fade_samples: usize,
-    sample_len: usize,
-) -> (Vec<i16>, Vec<i16>) {
-    let pan = sample_pos.pan_position;
-    let left_gain_base = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
-    let right_gain_base = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
+// fn precompute_gains(
+//     sample_pos: &SamplePosition,
+//     fade_samples: usize,
+//     sample_len: usize,
+// ) -> (Vec<i16>, Vec<i16>) {
+//     let pan = sample_pos.pan_position;
+//     let left_gain_base = ((1.0 - pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
+//     let right_gain_base = ((1.0 + pan) * std::f64::consts::FRAC_PI_4).cos() * 0.8;
 
-    let mut left_gain_vec = vec![(left_gain_base * 32768.0).round() as i16; sample_len];
-    let mut right_gain_vec = vec![(right_gain_base * 32768.0).round() as i16; sample_len];
+//     let mut left_gain_vec = vec![(left_gain_base * 32768.0).round() as i16; sample_len];
+//     let mut right_gain_vec = vec![(right_gain_base * 32768.0).round() as i16; sample_len];
 
-    for index in 0..fade_samples {
-        let fade_factor = index as f64 / fade_samples as f64;
+//     for index in 0..fade_samples {
+//         let fade_factor = index as f64 / fade_samples as f64;
 
-        // Convert to Q1.15 fixed-point
-        left_gain_vec[index] = (left_gain_base * fade_factor * 32768.0).round() as i16;
-        right_gain_vec[index] = (right_gain_base * fade_factor * 32768.0).round() as i16;
-    }
-    for index in sample_len - fade_samples..sample_len {
-        let fade_factor = (sample_len - 1 - index) as f64 / fade_samples as f64;
+//         // Convert to Q1.15 fixed-point
+//         left_gain_vec[index] = (left_gain_base * fade_factor * 32768.0).round() as i16;
+//         right_gain_vec[index] = (right_gain_base * fade_factor * 32768.0).round() as i16;
+//     }
+//     for index in sample_len - fade_samples..sample_len {
+//         let fade_factor = (sample_len - 1 - index) as f64 / fade_samples as f64;
 
-        // Convert to Q1.15 fixed-point
-        left_gain_vec[index] = (left_gain_base * fade_factor * 32768.0).round() as i16;
-        right_gain_vec[index] = (right_gain_base * fade_factor * 32768.0).round() as i16;
-    }
+//         // Convert to Q1.15 fixed-point
+//         left_gain_vec[index] = (left_gain_base * fade_factor * 32768.0).round() as i16;
+//         right_gain_vec[index] = (right_gain_base * fade_factor * 32768.0).round() as i16;
+//     }
 
-    (left_gain_vec, right_gain_vec)
-}
+//     (left_gain_vec, right_gain_vec)
+// }
 
-fn read_wav(audio_data: &Vec<u8>) -> Vec<i16> {
+pub fn read_wav(audio_data: &Vec<u8>) -> Vec<i16> {
     let cursor = Cursor::new(audio_data);
     let mut reader = WavReader::new(cursor).unwrap();
 

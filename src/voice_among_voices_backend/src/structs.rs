@@ -68,7 +68,7 @@ pub type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 #[derive(Debug, CandidType, Clone, Deserialize, Serialize)]
 pub struct AudioSample {
     pub id: u64,
-    pub sample: Vec<u8>,
+    pub sample: Vec<i16>,
     pub sample_length_ms: f64,
     pub sample_length_samples: u32,
 }

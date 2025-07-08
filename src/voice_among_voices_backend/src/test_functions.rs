@@ -28,6 +28,24 @@ pub fn generate_test_wav(duration_ms: u32, sample_rate: u32, normal_amplitude: f
     buffer
 }
 
+pub fn generate_test_sample_vecs(
+    duration_ms: u32,
+    sample_rate: u32,
+    normal_amplitude: f32,
+) -> Vec<i16> {
+    let num_samples = (sample_rate * duration_ms / 1000) as usize;
+    let amplitude = i16::MAX as f32 * normal_amplitude;
+
+    let buffer = Vec<i16>::with_capacity(num_samples);
+
+    for i in 0..num_samples {
+        let sample = ((t as f32 / sample_rate as f32) * 440. * 2. * std::f32::consts::PI).sin();
+        output[i] == (sample * amplitude) as i16;
+    }
+
+    buffer
+}
+
 // needed because floats and trigo aren't perfect lol
 pub fn approximately_equal(a: f64, b: f64, epsilon: f64) -> bool {
     (a - b).abs() < epsilon
