@@ -3,7 +3,7 @@ use crate::{
     VoiceNodeLocalMemory,
 };
 use hound::{WavReader, WavWriter};
-use std::arch::wasm32::*;
+// use std::arch::wasm32::*;
 use std::io::Cursor;
 
 #[derive(Debug)]
@@ -110,7 +110,7 @@ fn generate_audio_vectors(
         let end_sample = (start_sample + sample_pos.sample_length_samples as usize - 1)
             .min(total_length_samples as usize - 1);
         // use reader to read sample
-        let input_samples = read_wav(&samples.get(sample_pos.sample_id as u64).unwrap().sample);
+        let input_samples: &Vec<i16> = &samples.get(sample_pos.sample_id as u64).unwrap().sample;
 
         // figure out the panning multipliers
         let pan = sample_pos.pan_position;
@@ -419,6 +419,37 @@ fn write_stereo_wav_to_vec(
         unsafe {
             sample_writer.write_sample_unchecked(left_sample);
             sample_writer.write_sample_unchecked(right_sample);
+        }
+    }
+
+    sample_writer.flush()?;
+    writer.finalize()?;
+
+    let wav_data = buffer.into_inner();
+
+    Ok(wav_data)
+}
+
+pub fn write_mono_wav_to_vec(
+    audio_params: &AudioParameters,
+    samples: &Vec<i16>,
+) -> Result<Vec<u8>, hound::Error> {
+    let sample_rate = audio_params.sample_rate;
+
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let mut buffer = Cursor::new(Vec::new());
+    let mut writer = WavWriter::new(&mut buffer, spec)?;
+    let mut sample_writer = writer.get_i16_writer((samples.len()) as u32);
+
+    for &sample in samples.iter() {
+        unsafe {
+            sample_writer.write_sample_unchecked(sample);
         }
     }
 
@@ -811,8 +842,8 @@ mod tests {
                 max_sample_length_ms: 60000,
                 chunk_size: 1024 * 1024,
             };
-            let sample = generate_static_test_sample(1000.0, 44100, 0);
-            let sample_positions = generate_test_sample_positions(&sample);
+            let sample = generate_static_test_sample_storable(1000.0, 44100, 0);
+            let sample_positions = generate_test_sample_positions_storable(&sample);
             samples_memory.push(&sample).unwrap();
 
             let (left_channel, right_channel) =
@@ -848,7 +879,7 @@ mod tests {
                 }
                 for i in 0..3 {
                     samples_memory
-                        .push(&generate_static_test_sample(10., 441, i))
+                        .push(&generate_static_test_sample_storable(10., 441, i))
                         .unwrap();
                 }
 
@@ -928,7 +959,7 @@ mod tests {
                 max_sample_length_ms: 1000,
                 chunk_size: 1024 * 1024,
             };
-            map.push(&generate_static_test_sample(1000., 44100, 1))
+            map.push(&generate_static_test_sample_storable(1000., 44100, 1))
                 .unwrap();
 
             let sample_positions = vec![SamplePosition {
@@ -1003,9 +1034,10 @@ mod tests {
             };
             // map.insert(0 as u128, generate_static_test_sample(1000.0, 44100, 1));
             samples
-                .push(&generate_extreme_test_sample(1000., 44100, 0))
+                .push(&generate_extreme_test_sample_storable(1000., 44100, 0))
                 .unwrap();
-            let sample_positions = generate_test_sample_positions(&samples.get(0 as u64).unwrap());
+            let sample_positions =
+                generate_test_sample_positions_storable(&samples.get(0 as u64).unwrap());
 
             let (left_channel, right_channel) =
                 generate_audio_vectors(&sample_positions, &audio_params, samples);
@@ -1031,7 +1063,7 @@ mod tests {
 
             for i in 0..3 {
                 samples
-                    .push(&generate_static_test_sample(1000.0, 44100, i))
+                    .push(&generate_static_test_sample_storable(1000.0, 44100, i))
                     .unwrap();
             }
 
@@ -1099,7 +1131,7 @@ mod tests {
 
             for i in 0..3 {
                 samples
-                    .push(&generate_static_test_sample(1000.0, 44100, i))
+                    .push(&generate_static_test_sample_storable(1000.0, 44100, i))
                     .unwrap();
             }
 

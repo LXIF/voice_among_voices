@@ -5,6 +5,7 @@ use crate::storage::{
     AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY, SIMULATION_PARAMETERS,
     VOICE_NODES_MEMORY,
 };
+use crate::structs::StorableAudioSample;
 use crate::{
     get_sample_length, node_within_circle, AddVoiceNodeError, AudioSample, VoiceNodeEgressStore,
     VoiceNodeIngress, VoiceNodeLocal,
@@ -12,6 +13,7 @@ use crate::{
 
 use super::store_voice_log;
 use super::voice_log::{PositionLog, VoiceAction, VoiceLog};
+use crate::audio::read_wav;
 
 pub fn update_stored_voice_node(
     node: VoiceNodeIngress,
@@ -44,9 +46,9 @@ pub fn update_stored_voice_node(
         ));
     };
     SAMPLES_MEMORY.with_borrow_mut(|samples_map| {
-        let new_sample = AudioSample {
+        let new_sample = StorableAudioSample {
             id: node.id as u64,
-            sample: node.sample,
+            sample: read_wav(&node.sample),
             sample_length_samples,
             sample_length_ms,
         };
@@ -124,9 +126,9 @@ pub fn update_stored_voice_node_without_simulation(
         ));
     };
     SAMPLES_MEMORY.with_borrow_mut(|samples_map| {
-        let new_sample = AudioSample {
+        let new_sample = StorableAudioSample {
             id: node.id as u64,
-            sample: node.sample,
+            sample: read_wav(&node.sample),
             sample_length_samples,
             sample_length_ms,
         };

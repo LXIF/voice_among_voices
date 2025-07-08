@@ -1,8 +1,8 @@
 use crate::{
-    create_circular_collider_coordinates, generate_test_wav, store_siwe_principal,
-    store_token_address, zero_cache_update, AudioSample, VoiceAmongVoicesInit, VoiceNodeLocal,
-    AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY, SIMULATION_PARAMETERS,
-    VOICE_NODES_MEMORY,
+    create_circular_collider_coordinates, store_siwe_principal, store_token_address,
+    structs::StorableAudioSample, test_functions::generate_test_sample_vec, zero_cache_update,
+    VoiceAmongVoicesInit, VoiceNodeLocal, AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY,
+    SIMULATION_PARAMETERS, VOICE_NODES_MEMORY,
 };
 use alloy::primitives::Address;
 use std::str::FromStr;
@@ -42,10 +42,10 @@ pub fn samples_init() {
     SAMPLES_MEMORY.with_borrow_mut(|samples| {
         let sample_length_ms = AUDIO_PARAMETERS.max_sample_length_ms;
         let sample_rate = AUDIO_PARAMETERS.sample_rate;
-        let start_sample = generate_test_wav(sample_length_ms, sample_rate, 1.);
+        let start_sample = generate_test_sample_vec(sample_length_ms, sample_rate, 1.);
         for i in 0..360 {
             samples
-                .push(&AudioSample {
+                .push(&StorableAudioSample {
                     id: i,
                     sample: start_sample.clone(),
                     sample_length_ms: sample_length_ms as f64,

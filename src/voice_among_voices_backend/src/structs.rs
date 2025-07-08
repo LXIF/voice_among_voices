@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::{borrow::Cow, collections::HashMap};
 
+use crate::{audio::write_mono_wav_to_vec, storage::AUDIO_PARAMETERS};
+
 // LIB ////////////////////
 
 pub type Memory = VirtualMemory<DefaultMemoryImpl>;
@@ -66,14 +68,14 @@ pub type VoiceNodeLocalMemory = StableVec<VoiceNodeLocal, Memory>;
 pub type VoiceNodeEgressStore = Vec<VoiceNodeEgress>;
 
 #[derive(Debug, CandidType, Clone, Deserialize, Serialize)]
-pub struct AudioSample {
+pub struct StorableAudioSample {
     pub id: u64,
     pub sample: Vec<i16>,
     pub sample_length_ms: f64,
     pub sample_length_samples: u32,
 }
 
-impl Storable for AudioSample {
+impl Storable for StorableAudioSample {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Owned(Encode!(self).unwrap()) // TODO: perhaps more graceful handling
     }
@@ -86,7 +88,27 @@ impl Storable for AudioSample {
     };
 }
 
-pub type AudioSampleMemory = StableVec<AudioSample, Memory>;
+impl StorableAudioSample {
+    pub fn to_wav(&self) -> AudioSample {
+        AudioSample {
+            id: self.id,
+            sample: write_mono_wav_to_vec(&AUDIO_PARAMETERS, &self.sample)
+                .expect("Failed to convert samples to wav"),
+            sample_length_ms: self.sample_length_ms,
+            sample_length_samples: self.sample_length_samples,
+        }
+    }
+}
+
+pub type AudioSampleMemory = StableVec<StorableAudioSample, Memory>;
+
+#[derive(Debug, CandidType, Clone, Deserialize, Serialize)]
+pub struct AudioSample {
+    pub id: u64,
+    pub sample: Vec<u8>,
+    pub sample_length_ms: f64,
+    pub sample_length_samples: u32,
+}
 
 pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
 
