@@ -17,6 +17,9 @@
     );
     let sampleLoading = $state(false);
 
+    let from = $state(0);
+    let step = $state(0);
+
     function incrementManagementNode() {
         const currentId = $selectedManagementNode;
         const availableIds = $voiceNodes.map((node) => Number(node.id));
@@ -97,7 +100,11 @@
     });
 
     const handlePopulateAll = async () => {
-        const res = await backend.populate_with_demo_content();
+        console.log("populating all!");
+        const res = await backend.populate_with_demo_content(
+            BigInt(from),
+            BigInt(step),
+        );
         console.log(res);
     };
 </script>
@@ -164,6 +171,8 @@
             </div>
         {/if}
     </div>
+    <input type="number" bind:value={from} class="mb-2 text-black" />
+    <input type="number" bind:value={step} class="mb-2 text-black" />
     <Button onclick={handlePopulateAll}>Populate all</Button>
 </Dialog>
 

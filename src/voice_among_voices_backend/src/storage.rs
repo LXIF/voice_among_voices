@@ -55,7 +55,7 @@ pub static STREAMING_CALLBACK: Lazy<CallbackFunc> =
 
 pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     total_length_ms: 4 * 60 * 1000,
-    max_sample_length_ms: 10000,
+    max_sample_length_ms: 10_000,
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
     fade_ms: 30,
@@ -63,14 +63,14 @@ pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
 pub const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
     force_cutoff: 100.,
-    max_distance: 25.,
+    max_distance: 20.,
     force_strength: 3000.,
     linear_damping: 35.,
     logical_radius: 50.,
     n_collider_vertices: 90,
     friction: 0.7,
     density: 1.,
-    max_steps: 1_000,
+    max_steps: 500,
 };
 
 pub fn get_stored_audio_parameters() -> AudioParameters {
@@ -188,14 +188,14 @@ mod tests {
         let voice_node = VoiceNodeIngress {
             x: 0.,
             y: 40.,
-            sample: generate_test_wav(1000, 44100),
+            sample: generate_test_wav(1000, 44100, 1.),
             id: 1,
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: -45.,
             y: 0.,
-            sample: generate_test_wav(1000, 44100),
+            sample: generate_test_wav(1000, 44100, 1.),
             id: 2,
         };
 
@@ -226,14 +226,14 @@ mod tests {
         let voice_node = VoiceNodeIngress {
             x: -50.,
             y: -50.,
-            sample: generate_test_wav(1000, 44100),
+            sample: generate_test_wav(1000, 44100, 1.),
             id: 0,
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: 99.,
             y: 50.,
-            sample: generate_test_wav(10000, 44100),
+            sample: generate_test_wav(10000, 44100, 1.),
             id: 1,
         };
 
@@ -255,14 +255,14 @@ mod tests {
         let voice_node = VoiceNodeIngress {
             x: 50.,
             y: 50.,
-            sample: generate_test_wav(max_length + 10, 44100),
+            sample: generate_test_wav(max_length + 10, 44100, 1.),
             id: 0,
         };
 
         let another_voice_node = VoiceNodeIngress {
             x: 60.,
             y: 60.,
-            sample: generate_test_wav(max_length + 20, 44100),
+            sample: generate_test_wav(max_length + 20, 44100, 1.),
             id: 1,
         };
 

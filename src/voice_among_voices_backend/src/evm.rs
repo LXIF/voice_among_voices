@@ -1,3 +1,4 @@
+use std::process::id;
 use std::str::FromStr;
 
 use crate::structs::AuthorizationError;
@@ -105,7 +106,10 @@ async fn caller_is_owner_of(token_id: u64) -> Result<Address, AuthorizationError
 pub async fn check_auth_for_single_node_id(node_id: usize) -> Result<Address, AuthorizationError> {
     if dev_mode() {
         return Ok(Address::ZERO);
-    };
+    }
+    if caller() == ic_cdk::id() {
+        return Ok(Address::ZERO);
+    }
     caller_is_owner_of(node_id as u64).await
 }
 

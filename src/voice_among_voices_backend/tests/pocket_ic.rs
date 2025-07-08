@@ -727,9 +727,9 @@ fn pocket_ic_smoke_test_360_files_max_length_fuzzed() {
         let voice_node = VoiceNodeIngress {
             id: angle,
             x: (angle as f64).cos()
-                * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * random_scale))), // Vary x based on angle
+                * (SIMULATION_PARAMETERS.logical_radius * (0.5 - (0.01 * random_scale))), // Vary x based on angle
             y: (angle as f64).sin()
-                * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * random_scale))), // Vary y based on angle
+                * (SIMULATION_PARAMETERS.logical_radius * (0.5 - (0.01 * random_scale))), // Vary y based on angle
             sample: test_wav,
         };
 

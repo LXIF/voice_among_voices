@@ -32,6 +32,8 @@ use voice_nodes::get_stored_voice_nodes;
 
 use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress};
 
+use crate::storage::voice_nodes::update_stored_voice_node_without_simulation;
+
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
     initialize_storage(maybe_arg);
@@ -93,25 +95,45 @@ fn generate_file_for_angle(angle: u64) -> HttpStreamingResponse {
 }
 
 #[update]
-async fn populate_with_demo_content() -> Result<(), AuthorizationError> {
-    check_auth_for_single_node_id(0).await.and_then(|_address| {
-        for i in 1..=359 {
-            let node: VoiceNodeIngress = VoiceNodeIngress {
-                id: i,
-                x: (i as f64).cos()
-                    * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * i as f64))),
-                y: (i as f64).sin()
-                    * (SIMULATION_PARAMETERS.logical_radius * (0.99 - (0.01 * i as f64))),
-                sample: generate_test_wav(
-                    AUDIO_PARAMETERS.max_sample_length_ms,
-                    AUDIO_PARAMETERS.sample_rate,
-                ),
-            };
-            update_stored_voice_node(node, alloy::primitives::Address::ZERO, time())
+async fn populate_with_demo_content(from: u64, step: u64) -> Result<(), AuthorizationError> {
+    if from + step >= 359 {
+        return Ok(());
+    }
+    match check_auth_for_single_node_id(0).await {
+        Ok(_) => {
+            let sample = generate_test_wav(
+                AUDIO_PARAMETERS.max_sample_length_ms,
+                AUDIO_PARAMETERS.sample_rate,
+                0.05,
+            );
+
+            for i in from..from + step {
+                let node: VoiceNodeIngress = VoiceNodeIngress {
+                    id: i as usize,
+                    x: (i as f64).cos()
+                        * (SIMULATION_PARAMETERS.logical_radius * (0.5 - (0.001 * i as f64))),
+                    y: (i as f64).sin()
+                        * (SIMULATION_PARAMETERS.logical_radius * (0.5 - (0.001 * i as f64))),
+                    sample: sample.clone(),
+                };
+                update_stored_voice_node_without_simulation(
+                    node,
+                    alloy::primitives::Address::ZERO,
+                    time(),
+                )
                 .expect(&format!("Failed to add voice node {i}"));
+            }
+            let _ = ic_cdk::call::<(u64, u64), ()>(
+                ic_cdk::id(),
+                "populate_with_demo_content",
+                (from + step, step),
+            )
+            .await
+            .expect("Failed to call populate_with_demo_content");
+            Ok(())
         }
-        Ok(())
-    })
+        Err(e) => Err(e),
+    }
 }
 
 #[query]

@@ -4,7 +4,7 @@ use crate::{
 use hound::{WavSpec, WavWriter};
 use std::io::Cursor;
 
-pub fn generate_test_wav(duration_ms: u32, sample_rate: u32) -> Vec<u8> {
+pub fn generate_test_wav(duration_ms: u32, sample_rate: u32, normal_amplitude: f32) -> Vec<u8> {
     let spec = WavSpec {
         channels: 1,
         sample_rate,
@@ -16,7 +16,7 @@ pub fn generate_test_wav(duration_ms: u32, sample_rate: u32) -> Vec<u8> {
     let mut writer = WavWriter::new(Cursor::new(&mut buffer), spec).unwrap();
 
     let num_samples = (sample_rate * duration_ms / 1000) as usize;
-    let amplitude = i16::MAX as f32;
+    let amplitude = i16::MAX as f32 * normal_amplitude;
 
     for t in 0..num_samples {
         let sample = ((t as f32 / sample_rate as f32) * 440. * 2. * std::f32::consts::PI).sin();

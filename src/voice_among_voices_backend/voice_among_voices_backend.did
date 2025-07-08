@@ -144,6 +144,6 @@ service : (opt VoiceAmongVoicesInit) -> {
   http_request_streaming_callback : (StreamingCallbackToken) -> (
       StreamingCallbackHttpResponse,
     ) query;
-  populate_with_demo_content : () -> (Result_4);
+  populate_with_demo_content : (nat64, nat64) -> (Result_4);
   update_voice_node : (VoiceNodeIngress) -> (Result_5);
 }

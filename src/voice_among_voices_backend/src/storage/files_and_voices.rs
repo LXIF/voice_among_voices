@@ -6,6 +6,7 @@ use hound::{WavSpec, WavWriter};
 use crate::{
     generate_angle_file, performance_counter, set_timer, split_into_chunks,
     structs::{AudioSample, CensorshipError},
+    test_functions::generate_test_wav,
     ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
     StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_CACHE, AUDIO_PARAMETERS, SAMPLES_MEMORY,
     SIMULATION_PARAMETERS, STREAMING_CALLBACK, VOICE_NODES_MEMORY, ZERO_DEGREE_FILE_CACHE,
@@ -183,5 +184,7 @@ fn generate_censored_wav(duration_samples: u32, sample_rate: u32) -> Vec<u8> {
 
     writer.finalize().unwrap();
 
-    buffer
+    let duration_ms = duration_samples / sample_rate * 1000;
+
+    generate_test_wav(duration_ms, sample_rate, 0.1)
 }

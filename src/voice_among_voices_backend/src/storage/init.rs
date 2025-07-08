@@ -42,7 +42,7 @@ pub fn samples_init() {
     SAMPLES_MEMORY.with_borrow_mut(|samples| {
         let sample_length_ms = AUDIO_PARAMETERS.max_sample_length_ms;
         let sample_rate = AUDIO_PARAMETERS.sample_rate;
-        let start_sample = generate_test_wav(sample_length_ms, sample_rate);
+        let start_sample = generate_test_wav(sample_length_ms, sample_rate, 1.);
         for i in 0..360 {
             samples
                 .push(&AudioSample {
