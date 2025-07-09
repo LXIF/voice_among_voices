@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::{borrow::Cow, collections::HashMap};
 
-use crate::{audio::write_mono_wav_to_vec, storage::AUDIO_PARAMETERS};
+use crate::{
+    audio::{write_mono_wav_to_vec, SamplePosition},
+    storage::AUDIO_PARAMETERS,
+};
 
 // LIB ////////////////////
 
@@ -111,6 +114,7 @@ pub struct AudioSample {
 }
 
 pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
+pub type WipCache = HashMap<u32, WipAngleVectors>;
 
 #[derive(Debug, Clone, Copy, CandidType, Deserialize)]
 pub struct SimulationParameters {
@@ -133,6 +137,7 @@ pub struct AudioParameters {
     pub sample_rate: u32,
     pub chunk_size: usize,
     pub fade_ms: u32,
+    pub n_process_per_call: usize,
 }
 
 #[derive(CandidType, Debug)]
@@ -268,4 +273,11 @@ impl Storable for StorableConfig {
     }
 
     const BOUND: Bound = Bound::Unbounded;
+}
+
+pub struct WipAngleVectors {
+    pub left_samples: Vec<i16>,
+    pub right_samples: Vec<i16>,
+    pub sample_positions: Vec<SamplePosition>,
+    pub next_position: u64,
 }

@@ -1,15 +1,13 @@
-use std::io::Cursor;
-
 use alloy::primitives::Address;
-use hound::{WavSpec, WavWriter};
 
 use crate::{
     generate_angle_file, performance_counter, set_timer, split_into_chunks,
     structs::{AudioSample, CensorshipError, StorableAudioSample},
     test_functions::{generate_test_sample_vec, generate_test_wav},
     ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
-    StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_CACHE, AUDIO_PARAMETERS, SAMPLES_MEMORY,
-    SIMULATION_PARAMETERS, STREAMING_CALLBACK, VOICE_NODES_MEMORY, ZERO_DEGREE_FILE_CACHE,
+    StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_EGRESS_CACHE, AUDIO_PARAMETERS,
+    SAMPLES_MEMORY, SIMULATION_PARAMETERS, STREAMING_CALLBACK, VOICE_NODES_MEMORY,
+    ZERO_DEGREE_FILE_CACHE,
 };
 
 use super::{
@@ -38,13 +36,13 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
     // split into chunks
     let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
 
-    ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
+    ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| {
         cache.insert(angle as u32, chunks.clone());
     });
 
     set_timer(Duration::from_secs(180), move || {
         // invalidate after 180s for now
-        ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
+        ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| {
             cache.remove(&(angle as u32));
         });
     }); //invalidate after 60 seconds

@@ -25,6 +25,7 @@ pub mod voice_log;
 pub mod voice_nodes;
 
 thread_local! {
+    // STABLE STORAGE
     pub static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
     pub static VOICE_NODES_MEMORY: RefCell<VoiceNodeLocalMemory> = RefCell::new(
@@ -45,8 +46,10 @@ thread_local! {
     pub static VOICE_LOG: RefCell<StableVec<VoiceLog, Memory>> = RefCell::new(
         StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(5)))).expect("Failed to initialize log storage")
     );
+    // STATE
     pub static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
-    pub static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
+    pub static ANGLE_FILE_EGRESS_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
+    pub static ANGLE_FILE_WIP_CACHE: RefCell<WipCache> = RefCell::new(HashMap::new());
     pub static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
 }
 
@@ -59,6 +62,7 @@ pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
     fade_ms: 30,
+    n_process_per_call: 180,
 };
 pub const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,

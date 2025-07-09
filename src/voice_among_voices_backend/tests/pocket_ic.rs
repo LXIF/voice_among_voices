@@ -14,6 +14,7 @@ const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
     fade_ms: 30,
+    n_process_per_call: 360,
 };
 
 const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
@@ -1011,6 +1012,7 @@ struct AudioParameters {
     sample_rate: u32,
     chunk_size: usize,
     fade_ms: u32,
+    n_process_per_call: usize,
 }
 
 #[derive(Debug, Clone, Copy, CandidType, Deserialize)]

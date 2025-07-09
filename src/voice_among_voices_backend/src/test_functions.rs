@@ -66,6 +66,7 @@ pub fn generate_audio_params(sample_rate: u32) -> AudioParameters {
         total_length_ms: 1000, // 1 second
         fade_ms: 0,            // No fade
         chunk_size: 1024 * 1024,
+        n_process_per_call: 360,
     }
 }
 
