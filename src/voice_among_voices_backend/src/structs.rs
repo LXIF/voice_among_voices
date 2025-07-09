@@ -114,7 +114,7 @@ pub struct AudioSample {
 }
 
 pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
-pub type WipCache = HashMap<u32, WipAngleVectors>;
+pub type WipCache = HashMap<u64, WipAngleVectors>;
 
 #[derive(Debug, Clone, Copy, CandidType, Deserialize)]
 pub struct SimulationParameters {
@@ -280,4 +280,9 @@ pub struct WipAngleVectors {
     pub right_samples: Vec<i16>,
     pub sample_positions: Vec<SamplePosition>,
     pub last_processed: u64,
+}
+
+pub enum MulticallResponse {
+    HttpStreamingResponse(HttpStreamingResponse),
+    Continue,
 }

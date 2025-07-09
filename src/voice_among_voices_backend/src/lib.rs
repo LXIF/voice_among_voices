@@ -17,7 +17,7 @@ use ic_cdk_timers::set_timer;
 use ic_http_certification::{utils::skip_certification_certified_data, HttpRequest, HttpResponse};
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{time::Duration, u64};
+use std::{ops::Mul, time::Duration, u64};
 use storage::{
     files_and_voices::{get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk},
     init::*,
@@ -32,7 +32,10 @@ use voice_nodes::get_stored_voice_nodes;
 
 use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress};
 
-use crate::storage::voice_nodes::update_stored_voice_node_without_simulation;
+use crate::storage::{
+    files_and_voices::get_file_for_angle_multicall,
+    voice_nodes::update_stored_voice_node_without_simulation,
+};
 
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
@@ -92,6 +95,24 @@ fn generate_file_for_angle(angle: u64) -> HttpStreamingResponse {
         ic_cdk::trap("Unauthorized");
     }
     get_file_for_angle(angle)
+}
+
+#[update]
+async fn generate_file_for_angle_multicall(angle: u64) -> HttpStreamingResponse {
+    if caller() != ic_cdk::id() {
+        ic_cdk::trap("Unauthorized");
+    }
+
+    match get_file_for_angle_multicall(angle) {
+        MulticallResponse::HttpStreamingResponse(response) => response,
+        MulticallResponse::Continue => {
+            let (result,) =
+                ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
+                    .await
+                    .expect("Failed to generate file");
+            result
+        }
+    }
 }
 
 #[update]

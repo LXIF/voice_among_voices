@@ -1,8 +1,10 @@
 use alloy::primitives::Address;
 
 use crate::{
+    audio::{generate_or_add_angle_vectors, vectors_to_maybe_file},
     generate_angle_file, performance_counter, set_timer, split_into_chunks,
-    structs::{AudioSample, CensorshipError, StorableAudioSample},
+    storage::ANGLE_FILE_WIP_CACHE,
+    structs::{AudioSample, CensorshipError, MulticallResponse, StorableAudioSample},
     test_functions::{generate_test_sample_vec, generate_test_wav},
     ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
     StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_EGRESS_CACHE, AUDIO_PARAMETERS,
@@ -33,8 +35,25 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
         });
     });
 
-    // split into chunks
-    let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
+    let (token, first_chunk) = prepare_stream_file(result, angle);
+
+    let end_cost = performance_counter(0);
+
+    HttpStreamingResponse {
+        status_code: 200,
+        headers: vec![
+            ("content-type".to_string(), "audio/wav".to_string()),
+            ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
+            ("x-end-cost".to_string(), end_cost.to_string()),             // Profiling header
+        ],
+        body: ByteBuf::from(first_chunk),
+        upgrade: None,
+        streaming_strategy: create_strategy(token),
+    }
+}
+
+fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Vec<u8>) {
+    let chunks = split_into_chunks(file, &AUDIO_PARAMETERS);
 
     ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| {
         cache.insert(angle as u32, chunks.clone());
@@ -57,19 +76,41 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
         auth_token: None, // TODO: maybe implement this for security purposes
     };
 
-    let end_cost = performance_counter(0);
+    (token, first_chunk)
+}
 
-    HttpStreamingResponse {
-        status_code: 200,
-        headers: vec![
-            ("content-type".to_string(), "audio/wav".to_string()),
-            ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
-            ("x-end-cost".to_string(), end_cost.to_string()),             // Profiling header
-        ],
-        body: ByteBuf::from(first_chunk),
-        upgrade: None,
-        streaming_strategy: create_strategy(token),
-    }
+pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
+    ANGLE_FILE_WIP_CACHE.with_borrow_mut(|wip_cache| {
+        // check if wip exists
+        let wip = wip_cache.remove(&angle);
+        // do the thing
+        let new_wip =
+            generate_or_add_angle_vectors(angle, nodes, samples, audio_params, sim_params, wip);
+        // if finished, return file
+        match vectors_to_maybe_file(new_wip) {
+            Some(maybe_file_result) => {
+                let result = maybe_file_result.unwrap();
+
+                let (token, first_chunk) = prepare_stream_file(result, angle);
+
+                MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
+                    status_code: 200,
+                    headers: vec![
+                        ("content-type".to_string(), "audio/wav".to_string()),
+                        ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
+                        ("x-end-cost".to_string(), end_cost.to_string()), // Profiling header
+                    ],
+                    body: ByteBuf::from(first_chunk),
+                    upgrade: None,
+                    streaming_strategy: create_strategy(token),
+                })
+            }
+            None => {
+                wip_cache.insert(angle, new_wip);
+                MulticallResponse::Continue
+            }
+        }
+    })
 }
 
 pub fn get_file_for_zero_angle() -> HttpStreamingResponse {

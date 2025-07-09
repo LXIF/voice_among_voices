@@ -55,7 +55,7 @@ pub fn generate_angle_file(
 
 pub fn vectors_to_maybe_file(wip: WipAngleVectors) -> Option<Result<Vec<u8>, hound::Error>> {
     let is_finished = wip.last_processed == wip.sample_positions.last().unwrap().sample_id;
-    if (is_finished) {
+    if is_finished {
         returnSome(write_stereo_wav_to_vec(
             &AUDIO_PARAMETERS,
             &wip.left_samples,
@@ -68,7 +68,7 @@ pub fn vectors_to_maybe_file(wip: WipAngleVectors) -> Option<Result<Vec<u8>, hou
 // Here we only generate vectors so we can cache them and can spread out the bouncing over multiple calls.
 // If we pass a previous WIP, we add more samples to that wip.
 pub fn generate_or_add_angle_vectors(
-    angle: f64,
+    angle: u64,
     nodes: &VoiceNodeLocalMemory,
     samples: &AudioSampleMemory,
     audio_params: &AudioParameters,
@@ -80,7 +80,9 @@ pub fn generate_or_add_angle_vectors(
         .and_then(|wip| Some(wip.sample_positions.clone()))
         .or_else(|| {
             Some(generate_normalized_sample_positions(
-                nodes, sim_params, angle,
+                nodes,
+                sim_params,
+                angle as f64,
             ))
         })
         .unwrap();
