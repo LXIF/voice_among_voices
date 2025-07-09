@@ -8,7 +8,7 @@ use hound::{WavReader, WavWriter};
 use std::arch::wasm32::*;
 use std::io::Cursor;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct SamplePosition {
     pub sample_id: u64,
     pub begins_at: f64, // normalized position of beginning of audio node versus tangent of angle => position - radius
@@ -53,38 +53,41 @@ pub fn generate_angle_file(
     angle_file
 }
 
-// Here we only generate vectors so we can cache them and can spread out the bouncing over multiple calls
-// TODO
-pub fn generate_angle_vectors(
+// Here we only generate vectors so we can cache them and can spread out the bouncing over multiple calls.
+// If we pass a previous WIP, we add more samples to that wip.
+pub fn generate_or_add_angle_vectors(
     angle: f64,
     nodes: &VoiceNodeLocalMemory,
     samples: &AudioSampleMemory,
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
     previous_wip: Option<WipAngleVectors>,
-    n_process: u64,
 ) -> WipAngleVectors {
-    let sample_positions = match previous_wip {
-        Some(WipAngleVectors {
-            sample_positions, ..
-        }) => sample_positions,
-        None => generate_normalized_sample_positions(nodes, sim_params, angle),
-    };
+    let sample_positions = previous_wip
+        .as_ref()
+        .and_then(|wip| Some(wip.sample_positions.clone()))
+        .or_else(|| {
+            Some(generate_normalized_sample_positions(
+                nodes, sim_params, angle,
+            ))
+        })
+        .unwrap();
 
-    let start_position = match previous_wip {
-        Some(WipAngleVectors { next_position, .. }) => next_position,
-        None => 1,
-    };
+    let last_processed = previous_wip
+        .as_ref()
+        .and_then(|wip| Some(wip.last_processed))
+        .or(Some(1))
+        .unwrap();
 
     let n_process = AUDIO_PARAMETERS.n_process_per_call;
 
-    let (left_samples, right_samples) = unsafe {
+    let (left_samples, right_samples, last_processed) = unsafe {
         // generate_audio_vectors(&sample_positions, audio_params, samples);
         generate_partial_audio_vectors_optimized(
             &sample_positions,
             audio_params,
             samples,
-            start_position,
+            last_processed,
             n_process,
             previous_wip.and_then(|wip| Some((wip.left_samples, wip.right_samples))),
         )
@@ -94,7 +97,7 @@ pub fn generate_angle_vectors(
         left_samples,
         right_samples,
         sample_positions,
-        next_position: start_position + n_process as u64,
+        last_processed,
     }
 }
 
@@ -204,17 +207,25 @@ fn generate_audio_vectors_optimized(
     audio_params: &AudioParameters,
     samples: &AudioSampleMemory,
 ) -> (Vec<i16>, Vec<i16>) {
-    generate_partial_audio_vectors_optimized(sample_positions, audio_params, samples, 0, 360, None)
+    let (left, right, last_processed) = generate_partial_audio_vectors_optimized(
+        sample_positions,
+        audio_params,
+        samples,
+        0,
+        360,
+        None,
+    );
+    (left, right)
 }
 
 fn generate_partial_audio_vectors_optimized(
     sample_positions: &[SamplePosition],
     audio_params: &AudioParameters,
     samples: &AudioSampleMemory,
-    start_position: u64,
+    last_processed: u64,
     n_process: usize,
     previous_vectors: Option<(Vec<i16>, Vec<i16>)>,
-) -> (Vec<i16>, Vec<i16>) {
+) -> (Vec<i16>, Vec<i16>, u64) {
     // Convert fade duration from milliseconds to samples
     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
 
@@ -246,12 +257,13 @@ fn generate_partial_audio_vectors_optimized(
 
     let (fade_in, fade_out) = precompute_fade_curves(fade_samples);
 
-    let positions_to_process = sample_positions
+    let positions_to_process: Vec<&SamplePosition> = sample_positions
         .iter()
-        .filter(|sam_pos| sam_pos.sample_id >= start_position)
-        .take(n_process);
+        .filter(|sam_pos| sam_pos.sample_id > last_processed)
+        .take(n_process)
+        .collect();
 
-    for sample_pos in positions_to_process {
+    for sample_pos in positions_to_process.iter() {
         // find the exact sample where it begins
         let start_sample = (sample_pos.begins_at * total_length_samples as f64)
             .round()
@@ -339,7 +351,11 @@ fn generate_partial_audio_vectors_optimized(
         }
     }
 
-    (left_channel, right_channel)
+    (
+        left_channel,
+        right_channel,
+        positions_to_process.iter().rev().collect()[1],
+    )
 }
 
 // Fixed-point multiplication with scaling (Q1.15 format)

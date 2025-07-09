@@ -279,5 +279,5 @@ pub struct WipAngleVectors {
     pub left_samples: Vec<i16>,
     pub right_samples: Vec<i16>,
     pub sample_positions: Vec<SamplePosition>,
-    pub next_position: u64,
+    pub last_processed: u64,
 }
