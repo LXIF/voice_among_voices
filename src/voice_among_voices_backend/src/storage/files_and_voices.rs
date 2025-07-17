@@ -99,6 +99,7 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                         ("content-type".to_string(), "audio/wav".to_string()),
                         ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
                         ("x-end-cost".to_string(), end_cost.to_string()), // Profiling header
+                        ("x-n-calls".to_string(), new_wip.n_calls.to_string()), // Profiling header
                     ],
                     body: ByteBuf::from(first_chunk),
                     upgrade: None,

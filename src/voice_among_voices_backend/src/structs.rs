@@ -280,6 +280,7 @@ pub struct WipAngleVectors {
     pub right_samples: Vec<i16>,
     pub sample_positions: Vec<SamplePosition>,
     pub last_processed: u64,
+    pub n_calls: u64,
 }
 
 pub enum MulticallResponse {

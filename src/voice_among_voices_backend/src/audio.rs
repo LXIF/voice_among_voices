@@ -112,6 +112,7 @@ pub fn generate_or_add_angle_vectors(
         right_samples,
         sample_positions,
         last_processed,
+        n_calls: previous_wip.and_then(|wip| wip.n_calls + 1).or(1).unwrap(),
     }
 }
 
