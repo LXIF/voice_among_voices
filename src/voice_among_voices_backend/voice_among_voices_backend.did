@@ -11,6 +11,7 @@ type AudioParameters = record {
   fade_ms : nat32;
   sample_rate : nat32;
   max_sample_length_ms : nat32;
+  n_process_per_call : nat64;
   total_length_ms : nat32;
   chunk_size : nat64;
 };
@@ -126,7 +127,7 @@ service : (opt VoiceAmongVoicesInit) -> {
   censor : (nat64) -> (Result);
   generate_file_for_angle : (nat64) -> (HttpStreamingResponse);
   get_admin_id : () -> (nat64) query;
-  get_angle_file : (nat64) -> (HttpStreamingResponse);
+  get_angle_file : (nat64, bool) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;
   get_collider_coordinates : () -> (vec ColliderCoordinate) query;
   get_config : () -> (StorableConfig) query;

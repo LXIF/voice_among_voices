@@ -1,8 +1,9 @@
 use crate::{
-    create_circular_collider_coordinates, store_siwe_principal, store_token_address,
-    structs::StorableAudioSample, test_functions::generate_test_sample_vec, zero_cache_update,
-    VoiceAmongVoicesInit, VoiceNodeLocal, AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY,
-    SIMULATION_PARAMETERS, VOICE_NODES_MEMORY,
+    audio::precompute_fade_curves, create_circular_collider_coordinates, storage::FADES,
+    store_siwe_principal, store_token_address, structs::StorableAudioSample,
+    test_functions::generate_test_sample_vec, zero_cache_update, VoiceAmongVoicesInit,
+    VoiceNodeLocal, AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY, SIMULATION_PARAMETERS,
+    VOICE_NODES_MEMORY,
 };
 use alloy::primitives::Address;
 use std::str::FromStr;
@@ -18,6 +19,17 @@ pub fn collider_init() {
         );
 
         collider_coordinates.extend(fresh_vertices);
+    });
+}
+
+pub fn fades_init() {
+    FADES.with_borrow_mut(|fade| {
+        let fade_samples =
+            (AUDIO_PARAMETERS.fade_ms * AUDIO_PARAMETERS.sample_rate / 1000) as usize;
+        let fades_cache = precompute_fade_curves(fade_samples);
+
+        fade.fade_in = fades_cache.fade_in;
+        fade.fade_out = fades_cache.fade_out;
     });
 }
 
@@ -68,8 +80,9 @@ pub fn initialize_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
 }
 
 pub fn upgrade_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
-    zero_cache_init();
+    // zero_cache_init();
     collider_init();
+    fades_init();
 
     if let Some(args) = maybe_arg {
         if let Some(siwe_principal) = args.siwe_canister_principal {

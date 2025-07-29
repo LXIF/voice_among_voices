@@ -238,7 +238,78 @@ fn pocket_ic_sample_to_angle_file_single() {
         canister_id,
         Principal::anonymous(),
         "get_angle_file",
-        candid::encode_one(angle).unwrap(),
+        candid::encode_args((angle, false)).unwrap(),
+    );
+
+    match get_angle_file_result {
+        Ok(bytes) => {
+            // Decode the response as an HttpStreamingResponse
+            let decoded_response = Decode!(&bytes, HttpStreamingResponse);
+
+            match decoded_response {
+                Ok(response) => {
+                    println!("Headers: {:?}", response.headers);
+                    println!("Body size: {:?}", response.body.len());
+
+                    // Assert that the file was generated and headers exist
+                    assert!(response.body.len() > 0);
+                    assert!(response.headers.iter().any(|(k, _)| k == "content-type"));
+                }
+                Err(e) => {
+                    println!("Failed to decode response: {:?}", e);
+                    assert!(false);
+                }
+            }
+        }
+        Err(err) => {
+            println!("get_angle_file rejected: {:?}", err);
+            assert!(false);
+        }
+    }
+}
+
+#[test]
+fn pocket_ic_sample_to_angle_file_single_multicall() {
+    let pic = PocketIc::new();
+    let canister_id = pic_initialize_canister(&pic);
+
+    // Generate a test WAV audio file
+    let test_wav = generate_test_wav(AUDIO_PARAMETERS.max_sample_length_ms, 44100); // 1 second, 44100 Hz sample rate
+
+    // Create a sample voice node
+    let voice_node = VoiceNodeIngress {
+        id: 1,
+        x: 0.0,
+        y: 0.0,
+        sample: test_wav,
+    };
+
+    // Add the voice node to the canister
+    let add_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "update_voice_node",
+        candid::encode_one(voice_node).unwrap(),
+    );
+    pic.tick();
+
+    match add_result {
+        Ok(_) => {
+            println!("Voice node successfully added.");
+        }
+        Err(err) => {
+            println!("update_voice_node rejected: {:?}", err);
+            assert!(false);
+        }
+    }
+
+    // Generate an angle file by querying the canister
+    let angle = 1u64; // Using angle 0.0 for this test
+    let get_angle_file_result = pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "get_angle_file",
+        candid::encode_args((angle, true)).unwrap(),
     );
 
     match get_angle_file_result {

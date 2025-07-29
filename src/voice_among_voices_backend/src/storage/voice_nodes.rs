@@ -7,7 +7,7 @@ use crate::storage::{
 };
 use crate::structs::StorableAudioSample;
 use crate::{
-    get_sample_length, node_within_circle, AddVoiceNodeError, AudioSample, VoiceNodeEgressStore,
+    get_sample_length, node_within_circle, AddVoiceNodeError, VoiceNodeEgressStore,
     VoiceNodeIngress, VoiceNodeLocal,
 };
 

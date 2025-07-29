@@ -116,6 +116,12 @@ pub struct AudioSample {
 pub type FileCache = HashMap<u32, Vec<Vec<u8>>>;
 pub type WipCache = HashMap<u64, WipAngleVectors>;
 
+#[derive(Clone)]
+pub struct FadesCache {
+    pub fade_in: Vec<f64>,
+    pub fade_out: Vec<f64>,
+}
+
 #[derive(Debug, Clone, Copy, CandidType, Deserialize)]
 pub struct SimulationParameters {
     pub velocity_cutoff: f64,
@@ -275,6 +281,7 @@ impl Storable for StorableConfig {
     const BOUND: Bound = Bound::Unbounded;
 }
 
+#[derive(Debug, Clone)]
 pub struct WipAngleVectors {
     pub left_samples: Vec<i16>,
     pub right_samples: Vec<i16>,

@@ -1,5 +1,5 @@
-use crate::storage::AUDIO_PARAMETERS;
-use crate::structs::WipAngleVectors;
+use crate::storage::{get_fades, AUDIO_PARAMETERS};
+use crate::structs::{FadesCache, WipAngleVectors};
 use crate::{
     AddVoiceNodeError, AudioParameters, AudioSampleMemory, SimulationParameters,
     VoiceNodeLocalMemory,
@@ -53,10 +53,10 @@ pub fn generate_angle_file(
     angle_file
 }
 
-pub fn vectors_to_maybe_file(wip: WipAngleVectors) -> Option<Result<Vec<u8>, hound::Error>> {
+pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<u8>, hound::Error>> {
     let is_finished = wip.last_processed == wip.sample_positions.last().unwrap().sample_id;
     if is_finished {
-        returnSome(write_stereo_wav_to_vec(
+        return Some(write_stereo_wav_to_vec(
             &AUDIO_PARAMETERS,
             &wip.left_samples,
             &wip.right_samples,
@@ -94,6 +94,11 @@ pub fn generate_or_add_angle_vectors(
         .unwrap();
 
     let n_process = AUDIO_PARAMETERS.n_process_per_call;
+    let n_calls = previous_wip
+        .as_ref()
+        .and_then(|wip| Some(wip.n_calls + 1))
+        .or(Some(1))
+        .unwrap();
 
     let (left_samples, right_samples, last_processed) = unsafe {
         // generate_audio_vectors(&sample_positions, audio_params, samples);
@@ -112,7 +117,7 @@ pub fn generate_or_add_angle_vectors(
         right_samples,
         sample_positions,
         last_processed,
-        n_calls: previous_wip.and_then(|wip| wip.n_calls + 1).or(1).unwrap(),
+        n_calls,
     }
 }
 
@@ -248,29 +253,22 @@ fn generate_partial_audio_vectors_optimized(
     let total_length_samples: u64 =
         audio_params.total_length_ms as u64 * audio_params.sample_rate as u64 / 1000;
 
-    // let mut left_channel = vec![0i16; total_length_samples as usize];
-    // let mut right_channel = vec![0i16; total_length_samples as usize];
+    let (mut left_channel, mut right_channel) = previous_vectors
+        .or_else(|| {
+            Some((
+                vec![0i16; total_length_samples as usize],
+                vec![0i16; total_length_samples as usize],
+            ))
+        })
+        .unwrap();
 
-    let mut left_channel = match previous_vectors {
-        Some((left, _right)) => {
-            if left.len() != total_length_samples as usize {
-                panic!("Must use same length vectors on successive calls!")
-            }
-            left
-        }
-        None => vec![0i16; total_length_samples as usize],
-    };
-    let mut right_channel = match previous_vectors {
-        Some((_left, right)) => {
-            if right.len() != total_length_samples as usize {
-                panic!("Must use same length vectors on successive calls!")
-            }
-            right
-        }
-        None => vec![0i16; total_length_samples as usize],
-    };
+    if left_channel.len() != total_length_samples as usize
+        || right_channel.len() != total_length_samples as usize
+    {
+        panic!("Must use same length vectors on successive calls!")
+    }
 
-    let (fade_in, fade_out) = precompute_fade_curves(fade_samples);
+    let FadesCache { fade_in, fade_out } = get_fades();
 
     let positions_to_process: Vec<&SamplePosition> = sample_positions
         .iter()
@@ -415,14 +413,14 @@ fn fixed_point_multiply_scalar(a: i32, b: i32) -> i16 {
     }
 }
 
-fn precompute_fade_curves(fade_samples: usize) -> (Vec<f64>, Vec<f64>) {
+pub fn precompute_fade_curves(fade_samples: usize) -> FadesCache {
     let fade_in: Vec<f64> = (0..fade_samples)
         .map(|i| i as f64 / fade_samples as f64)
         .collect();
 
     let fade_out: Vec<f64> = fade_in.iter().rev().copied().collect();
 
-    (fade_in, fade_out)
+    FadesCache { fade_in, fade_out }
 }
 
 // Optimized gain calculation using precomputed fade curves

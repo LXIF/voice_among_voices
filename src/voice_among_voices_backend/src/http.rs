@@ -1,8 +1,6 @@
 use ic_cdk::api::data_certificate;
 use ic_http_certification::{
-    cel::create_cel_expr, utils::add_skip_certification_header, CelExpression, DefaultCelBuilder,
-    DefaultCelExpression, DefaultResponseCertification, HttpCertification, HttpCertificationPath,
-    HttpCertificationTree, HttpCertificationTreeEntry, HttpRequest, HttpResponse, StatusCode,
+    utils::add_skip_certification_header, DefaultCelBuilder, HttpRequest, HttpResponse, StatusCode,
 };
 use serde_bytes::ByteBuf;
 use serde_json::json;

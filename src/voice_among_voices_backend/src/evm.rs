@@ -1,4 +1,3 @@
-use std::process::id;
 use std::str::FromStr;
 
 use crate::structs::AuthorizationError;
@@ -11,7 +10,6 @@ use alloy::{
     transports::icp::{IcpConfig, IcpTransport, L2MainnetService, RpcService},
 };
 use candid::CandidType;
-use ic_cdk::api::call::CallResult;
 use ic_cdk::{api::caller, call};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde::Deserialize;

@@ -1,5 +1,6 @@
 use crate::audio::*;
 use crate::physics::*;
+use crate::storage::files_and_voices::get_file_for_angle_multicall;
 use crate::structs::*;
 use crate::utils::split_into_chunks;
 use crate::StorableAddress;
@@ -48,6 +49,7 @@ thread_local! {
     );
     // STATE
     pub static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
+    pub static FADES: RefCell<FadesCache> = RefCell::new(FadesCache { fade_in: vec![], fade_out: vec![] });
     pub static ANGLE_FILE_EGRESS_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
     pub static ANGLE_FILE_WIP_CACHE: RefCell<WipCache> = RefCell::new(HashMap::new());
     pub static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
@@ -101,6 +103,23 @@ pub fn zero_cache_update() {
     });
 }
 
+async fn zero_cache_update_multicall(angle: u64) -> HttpStreamingResponse {
+    if caller() != ic_cdk::id() {
+        ic_cdk::trap("Unauthorized");
+    }
+
+    match get_file_for_angle_multicall(angle) {
+        MulticallResponse::HttpStreamingResponse(response) => response,
+        MulticallResponse::Continue => {
+            let (result,) =
+                ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
+                    .await
+                    .expect("Failed to generate file");
+            result
+        }
+    }
+}
+
 pub fn store_siwe_principal(principal: Principal) -> Result<Principal, ValueError> {
     SIWE_PRINCIPAL.with_borrow_mut(|siwe_principal| siwe_principal.set(principal))
 }
@@ -123,6 +142,10 @@ pub fn store_voice_log(log: VoiceLog) -> Result<(), ic_stable_structures::GrowFa
 
 pub fn retrieve_voice_logs(skip: usize, take: usize) -> Vec<VoiceLog> {
     VOICE_LOG.with_borrow(|log_vec| log_vec.iter().skip(skip).take(take).collect())
+}
+
+pub fn get_fades() -> FadesCache {
+    FADES.with_borrow(|fades| fades.clone())
 }
 
 #[derive(CandidType, Serialize, Deserialize)]

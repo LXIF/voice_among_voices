@@ -81,36 +81,45 @@ fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Ve
 
 pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
     ANGLE_FILE_WIP_CACHE.with_borrow_mut(|wip_cache| {
-        // check if wip exists
-        let wip = wip_cache.remove(&angle);
-        // do the thing
-        let new_wip =
-            generate_or_add_angle_vectors(angle, nodes, samples, audio_params, sim_params, wip);
-        // if finished, return file
-        match vectors_to_maybe_file(new_wip) {
-            Some(maybe_file_result) => {
-                let result = maybe_file_result.unwrap();
+        VOICE_NODES_MEMORY.with_borrow(|nodes| {
+            SAMPLES_MEMORY.with_borrow(|samples| {
+                // check if wip exists
+                let wip = wip_cache.remove(&angle);
+                // do the thing
+                let new_wip = generate_or_add_angle_vectors(
+                    angle,
+                    nodes,
+                    samples,
+                    &AUDIO_PARAMETERS,
+                    &SIMULATION_PARAMETERS,
+                    wip,
+                );
 
-                let (token, first_chunk) = prepare_stream_file(result, angle);
+                // if finished, return file
+                match vectors_to_maybe_file(&new_wip) {
+                    Some(maybe_file_result) => {
+                        let result = maybe_file_result.unwrap();
 
-                MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
-                    status_code: 200,
-                    headers: vec![
-                        ("content-type".to_string(), "audio/wav".to_string()),
-                        ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
-                        ("x-end-cost".to_string(), end_cost.to_string()), // Profiling header
-                        ("x-n-calls".to_string(), new_wip.n_calls.to_string()), // Profiling header
-                    ],
-                    body: ByteBuf::from(first_chunk),
-                    upgrade: None,
-                    streaming_strategy: create_strategy(token),
-                })
-            }
-            None => {
-                wip_cache.insert(angle, new_wip);
-                MulticallResponse::Continue
-            }
-        }
+                        let (token, first_chunk) = prepare_stream_file(result, angle);
+
+                        MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
+                            status_code: 200,
+                            headers: vec![
+                                ("content-type".to_string(), "audio/wav".to_string()),
+                                ("x-n-calls".to_string(), new_wip.n_calls.to_string()), // Profiling header
+                            ],
+                            body: ByteBuf::from(first_chunk),
+                            upgrade: None,
+                            streaming_strategy: create_strategy(token),
+                        })
+                    }
+                    None => {
+                        wip_cache.insert(angle, new_wip);
+                        MulticallResponse::Continue
+                    }
+                }
+            })
+        })
     })
 }
 
@@ -144,7 +153,9 @@ pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHt
             chunks = ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| cache.clone());
         }
         _ => {
-            chunks = match ANGLE_FILE_CACHE.with_borrow(|cache| cache.get(&token.angle).cloned()) {
+            chunks = match ANGLE_FILE_EGRESS_CACHE
+                .with_borrow(|cache| cache.get(&token.angle).cloned())
+            {
                 Some(file_chunks) => file_chunks,
                 None => ic_cdk::trap("Cache out of date, connection too slow"),
             };

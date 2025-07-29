@@ -17,7 +17,7 @@ use ic_cdk_timers::set_timer;
 use ic_http_certification::{utils::skip_certification_certified_data, HttpRequest, HttpResponse};
 use physics::*;
 use serde_bytes::ByteBuf;
-use std::{ops::Mul, time::Duration, u64};
+use std::{time::Duration, u64};
 use storage::{
     files_and_voices::{get_file_for_angle, get_file_for_zero_angle, get_streaming_chunk},
     init::*,
@@ -74,17 +74,26 @@ fn get_voice_nodes() -> Result<VoiceNodeEgressStore, String> {
 }
 
 #[update]
-async fn get_angle_file(angle: u64) -> HttpStreamingResponse {
+async fn get_angle_file(angle: u64, multicall: bool) -> HttpStreamingResponse {
     if angle > 360 || angle < 1 {
         ic_cdk::trap("invalid angle")
     };
     match check_auth_for_single_node_id(angle as usize).await {
-        Ok(_address) => {
-            let (result,) = ic_cdk::call(ic_cdk::id(), "generate_file_for_angle", (angle,))
-                .await
-                .expect("Failed to generate file");
-            result
-        }
+        Ok(_address) => match multicall {
+            false => {
+                let (result,) = ic_cdk::call(ic_cdk::id(), "generate_file_for_angle", (angle,))
+                    .await
+                    .expect("Failed to generate file");
+                result
+            }
+            true => {
+                let (result,) =
+                    ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
+                        .await
+                        .expect("Failed to generate file");
+                result
+            }
+        },
         Err(err) => trap(&format!("{:?}", err)), //TODO: maybe use Result here
     }
 }
