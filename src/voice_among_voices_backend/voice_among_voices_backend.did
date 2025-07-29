@@ -126,6 +126,7 @@ type VoiceNodeIngress = record {
 service : (opt VoiceAmongVoicesInit) -> {
   censor : (nat64) -> (Result);
   generate_file_for_angle : (nat64) -> (HttpStreamingResponse);
+  generate_file_for_angle_multicall : (nat64) -> (HttpStreamingResponse);
   get_admin_id : () -> (nat64) query;
   get_angle_file : (nat64, bool) -> (HttpStreamingResponse);
   get_audio_parameters : () -> (AudioParameters) query;

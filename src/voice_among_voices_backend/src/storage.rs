@@ -64,7 +64,7 @@ pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
     fade_ms: 30,
-    n_process_per_call: 180,
+    n_process_per_call: 120,
 };
 pub const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
@@ -104,9 +104,7 @@ pub fn zero_cache_update() {
 }
 
 async fn zero_cache_update_multicall(angle: u64) -> HttpStreamingResponse {
-    if caller() != ic_cdk::id() {
-        ic_cdk::trap("Unauthorized");
-    }
+    // TODO: properly implement this
 
     match get_file_for_angle_multicall(angle) {
         MulticallResponse::HttpStreamingResponse(response) => response,

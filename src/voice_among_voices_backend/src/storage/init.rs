@@ -80,9 +80,9 @@ pub fn initialize_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
 }
 
 pub fn upgrade_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
-    // zero_cache_init();
     collider_init();
     fades_init();
+    zero_cache_init();
 
     if let Some(args) = maybe_arg {
         if let Some(siwe_principal) = args.siwe_canister_principal {
