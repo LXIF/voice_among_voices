@@ -80,19 +80,17 @@ async fn get_angle_file(angle: u64, multicall: bool) -> HttpStreamingResponse {
     };
     match check_auth_for_single_node_id(angle as usize).await {
         Ok(_address) => match multicall {
-            false => {
-                let (result,) = ic_cdk::call(ic_cdk::id(), "generate_file_for_angle", (angle,))
-                    .await
-                    .expect("Failed to generate file");
-                result
-            }
-            true => {
-                let (result,) =
-                    ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
-                        .await
-                        .expect("Failed to generate file");
-                result
-            }
+            false => get_file_for_angle(angle),
+            true => match get_file_for_angle_multicall(angle) {
+                MulticallResponse::HttpStreamingResponse(response) => response,
+                MulticallResponse::Continue => {
+                    let (result,) =
+                        ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
+                            .await
+                            .expect("Failed to generate file");
+                    result
+                }
+            },
         },
         Err(err) => trap(&format!("{:?}", err)), //TODO: maybe use Result here
     }
