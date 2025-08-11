@@ -87,7 +87,7 @@ async fn get_angle_file(angle: u64, multicall: bool) -> HttpStreamingResponse {
                     let (result,) =
                         ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
                             .await
-                            .expect("Failed to generate file");
+                            .expect("Failed to generate file in get angle file multicall");
                     result
                 }
                 MulticallResponse::ZeroFinished => {
@@ -119,7 +119,7 @@ async fn generate_file_for_angle_multicall(angle: u64) -> HttpStreamingResponse 
             let (result,) =
                 ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
                     .await
-                    .expect("Failed to generate file");
+                    .expect("Failed to generate file in generate file for angle multicall get file for angle multicall multicall response continue");
             result
         }
         MulticallResponse::ZeroFinished => HttpStreamingResponse {

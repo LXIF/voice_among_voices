@@ -54,7 +54,17 @@ pub fn generate_angle_file(
 }
 
 pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<u8>, hound::Error>> {
-    let is_finished = wip.last_processed == wip.sample_positions.last().unwrap().sample_id;
+    let is_finished = wip.last_processed
+        == wip
+            .sample_positions
+            .last()
+            .unwrap_or(&SamplePosition {
+                sample_id: 0,
+                begins_at: 0.,
+                pan_position: 0.,
+                sample_length_samples: 0,
+            })
+            .sample_id;
     if is_finished {
         return Some(write_stereo_wav_to_vec(
             &AUDIO_PARAMETERS,
@@ -367,7 +377,15 @@ fn generate_partial_audio_vectors_optimized(
     (
         left_channel,
         right_channel,
-        positions_to_process.last().unwrap().sample_id,
+        positions_to_process
+            .last()
+            .unwrap_or(&&SamplePosition {
+                sample_id: 0,
+                begins_at: 0.,
+                pan_position: 0.,
+                sample_length_samples: 0,
+            })
+            .sample_id,
     )
 }
 

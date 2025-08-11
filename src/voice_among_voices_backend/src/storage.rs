@@ -18,6 +18,7 @@ use ic_stable_structures::{
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde::Serialize;
+use std::time::Duration;
 use std::{cell::RefCell, collections::HashMap};
 
 pub mod files_and_voices;
@@ -112,14 +113,17 @@ async fn zero_cache_update_multicall() {
             ic_cdk::println!("zerowargle");
             // Banger! We're done here UwU (Finished without outcall)
         }
-        MulticallResponse::HttpStreamingResponse(response) => {
+        MulticallResponse::HttpStreamingResponse(_response) => {
             // This shouldn't happen
             ic_cdk::println!("Received wrong response for zero angle update!");
         }
         MulticallResponse::Continue => {
-            let (result,) = ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (0,))
-                .await
-                .expect("Failed to generate file");
+            let (result,) =
+                ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (0u64,))
+                    .await
+                    .expect(
+                        "Failed to generate file in zero cache update multicall response continue",
+                    );
 
             match result {
                 HttpStreamingResponse { headers, .. } => {
