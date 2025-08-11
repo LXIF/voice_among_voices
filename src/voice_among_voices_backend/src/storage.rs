@@ -84,36 +84,58 @@ pub fn get_stored_audio_parameters() -> AudioParameters {
 }
 
 pub fn zero_cache_update() {
-    ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
-        SAMPLES_MEMORY.with_borrow(|samples| {
-            VOICE_NODES_MEMORY.with_borrow(|nodes| {
-                let new_file = generate_angle_file(
-                    0 as f64,
-                    nodes,
-                    samples,
-                    &AUDIO_PARAMETERS,
-                    &SIMULATION_PARAMETERS,
-                )
-                .expect("failed to init zero cache");
-                let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
-                cache.clear();
-                cache.extend(chunks.clone());
-            })
-        });
+    // ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
+    //     SAMPLES_MEMORY.with_borrow(|samples| {
+    //         VOICE_NODES_MEMORY.with_borrow(|nodes| {
+    //             let new_file = generate_angle_file(
+    //                 0 as f64,
+    //                 nodes,
+    //                 samples,
+    //                 &AUDIO_PARAMETERS,
+    //                 &SIMULATION_PARAMETERS,
+    //             )
+    //             .expect("failed to init zero cache");
+    //             let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
+    //             cache.clear();
+    //             cache.extend(chunks.clone());
+    //         })
+    //     });
+    // });
+    let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), || {
+        ic_cdk::spawn(zero_cache_update_multicall());
     });
 }
 
-async fn zero_cache_update_multicall(angle: u64) -> HttpStreamingResponse {
-    // TODO: properly implement this
-
-    match get_file_for_angle_multicall(angle) {
-        MulticallResponse::HttpStreamingResponse(response) => response,
+async fn zero_cache_update_multicall() {
+    match get_file_for_angle_multicall(0) {
+        MulticallResponse::ZeroFinished => {
+            ic_cdk::println!("zerowargle");
+            // Banger! We're done here UwU (Finished without outcall)
+        }
+        MulticallResponse::HttpStreamingResponse(response) => {
+            // This shouldn't happen
+            ic_cdk::println!("Received wrong response for zero angle update!");
+        }
         MulticallResponse::Continue => {
-            let (result,) =
-                ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
-                    .await
-                    .expect("Failed to generate file");
-            result
+            let (result,) = ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (0,))
+                .await
+                .expect("Failed to generate file");
+
+            match result {
+                HttpStreamingResponse { headers, .. } => {
+                    // Check if it has the ZeroFinished header
+                    let is_zero_finished = headers
+                        .iter()
+                        .any(|header| header.0 == "ZeroFinished" && header.1 == "true");
+
+                    if is_zero_finished {
+                        // Great! We are finished.
+                        ic_cdk::println!("zerobargle");
+                    } else {
+                        ic_cdk::println!("Got invalid zero cache update multicall response!");
+                    }
+                }
+            }
         }
     }
 }

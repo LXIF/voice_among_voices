@@ -79,6 +79,18 @@ fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Ve
     (token, first_chunk)
 }
 
+fn set_zero_file(new_file: Vec<u8>) {
+    ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
+        SAMPLES_MEMORY.with_borrow(|samples| {
+            VOICE_NODES_MEMORY.with_borrow(|nodes| {
+                let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
+                cache.clear();
+                cache.extend(chunks.clone());
+            })
+        });
+    });
+}
+
 pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
     ANGLE_FILE_WIP_CACHE.with_borrow_mut(|wip_cache| {
         VOICE_NODES_MEMORY.with_borrow(|nodes| {
@@ -99,6 +111,11 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                 match vectors_to_maybe_file(&new_wip) {
                     Some(maybe_file_result) => {
                         let result = maybe_file_result.unwrap();
+
+                        if angle == 0 {
+                            set_zero_file(result);
+                            return MulticallResponse::ZeroFinished;
+                        }
 
                         let (token, first_chunk) = prepare_stream_file(result, angle);
 

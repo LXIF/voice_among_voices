@@ -293,4 +293,5 @@ pub struct WipAngleVectors {
 pub enum MulticallResponse {
     HttpStreamingResponse(HttpStreamingResponse),
     Continue,
+    ZeroFinished,
 }

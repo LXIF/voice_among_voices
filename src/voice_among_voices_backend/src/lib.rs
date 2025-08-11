@@ -61,7 +61,7 @@ async fn update_voice_node(
     match check_auth_for_single_node_id(node.id).await {
         Ok(address) => {
             let res = update_stored_voice_node(node, address, time());
-            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
+            zero_cache_update();
             res
         }
         Err(err) => Err(err.into()),
@@ -89,6 +89,9 @@ async fn get_angle_file(angle: u64, multicall: bool) -> HttpStreamingResponse {
                             .await
                             .expect("Failed to generate file");
                     result
+                }
+                MulticallResponse::ZeroFinished => {
+                    panic!("This should not happen.");
                 }
             },
         },
@@ -119,6 +122,13 @@ async fn generate_file_for_angle_multicall(angle: u64) -> HttpStreamingResponse 
                     .expect("Failed to generate file");
             result
         }
+        MulticallResponse::ZeroFinished => HttpStreamingResponse {
+            status_code: 200,
+            headers: vec![("ZeroFinished".to_string(), "true".to_string())],
+            body: ByteBuf::new(),
+            upgrade: None,
+            streaming_strategy: None,
+        },
     }
 }
 
@@ -235,7 +245,7 @@ async fn censor(node_id: u64) -> Result<(), CensorshipError> {
     match check_auth_for_single_node_id(admin_id() as usize).await {
         Ok(address) => {
             let res = files_and_voices::censor_voice(node_id, address, time());
-            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
+            zero_cache_update();
             res
         }
         Err(err) => Err(err.into()),
