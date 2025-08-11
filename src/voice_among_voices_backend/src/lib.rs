@@ -32,7 +32,10 @@ use voice_nodes::get_stored_voice_nodes;
 
 use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress};
 
-use crate::storage::voice_nodes::update_stored_voice_node_without_simulation;
+use crate::storage::{
+    files_and_voices::get_file_for_angle_multicall,
+    voice_nodes::update_stored_voice_node_without_simulation,
+};
 
 #[init]
 fn init(maybe_arg: Option<VoiceAmongVoicesInit>) {
@@ -58,7 +61,7 @@ async fn update_voice_node(
     match check_auth_for_single_node_id(node.id).await {
         Ok(address) => {
             let res = update_stored_voice_node(node, address, time());
-            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
+            zero_cache_update();
             res
         }
         Err(err) => Err(err.into()),
@@ -71,17 +74,27 @@ fn get_voice_nodes() -> Result<VoiceNodeEgressStore, String> {
 }
 
 #[update]
-async fn get_angle_file(angle: u64) -> HttpStreamingResponse {
+async fn get_angle_file(angle: u64, multicall: bool) -> HttpStreamingResponse {
     if angle > 360 || angle < 1 {
         ic_cdk::trap("invalid angle")
     };
     match check_auth_for_single_node_id(angle as usize).await {
-        Ok(_address) => {
-            let (result,) = ic_cdk::call(ic_cdk::id(), "generate_file_for_angle", (angle,))
-                .await
-                .expect("Failed to generate file");
-            result
-        }
+        Ok(_address) => match multicall {
+            false => get_file_for_angle(angle),
+            true => match get_file_for_angle_multicall(angle) {
+                MulticallResponse::HttpStreamingResponse(response) => response,
+                MulticallResponse::Continue => {
+                    let (result,) =
+                        ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
+                            .await
+                            .expect("Failed to generate file in get angle file multicall");
+                    result
+                }
+                MulticallResponse::ZeroFinished => {
+                    panic!("This should not happen.");
+                }
+            },
+        },
         Err(err) => trap(&format!("{:?}", err)), //TODO: maybe use Result here
     }
 }
@@ -92,6 +105,31 @@ fn generate_file_for_angle(angle: u64) -> HttpStreamingResponse {
         ic_cdk::trap("Unauthorized");
     }
     get_file_for_angle(angle)
+}
+
+#[update]
+async fn generate_file_for_angle_multicall(angle: u64) -> HttpStreamingResponse {
+    if caller() != ic_cdk::id() {
+        ic_cdk::trap("Unauthorized");
+    }
+
+    match get_file_for_angle_multicall(angle) {
+        MulticallResponse::HttpStreamingResponse(response) => response,
+        MulticallResponse::Continue => {
+            let (result,) =
+                ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (angle,))
+                    .await
+                    .expect("Failed to generate file in generate file for angle multicall get file for angle multicall multicall response continue");
+            result
+        }
+        MulticallResponse::ZeroFinished => HttpStreamingResponse {
+            status_code: 200,
+            headers: vec![("ZeroFinished".to_string(), "true".to_string())],
+            body: ByteBuf::new(),
+            upgrade: None,
+            streaming_strategy: None,
+        },
+    }
 }
 
 #[update]
@@ -207,7 +245,7 @@ async fn censor(node_id: u64) -> Result<(), CensorshipError> {
     match check_auth_for_single_node_id(admin_id() as usize).await {
         Ok(address) => {
             let res = files_and_voices::censor_voice(node_id, address, time());
-            let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), zero_cache_update);
+            zero_cache_update();
             res
         }
         Err(err) => Err(err.into()),

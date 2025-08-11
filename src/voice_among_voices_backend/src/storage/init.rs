@@ -1,7 +1,8 @@
 use crate::{
-    create_circular_collider_coordinates, generate_test_wav, store_siwe_principal,
-    store_token_address, zero_cache_update, AudioSample, VoiceAmongVoicesInit, VoiceNodeLocal,
-    AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY, SIMULATION_PARAMETERS,
+    audio::precompute_fade_curves, create_circular_collider_coordinates, storage::FADES,
+    store_siwe_principal, store_token_address, structs::StorableAudioSample,
+    test_functions::generate_test_sample_vec, zero_cache_update, VoiceAmongVoicesInit,
+    VoiceNodeLocal, AUDIO_PARAMETERS, COLLIDER_COORDINATES, SAMPLES_MEMORY, SIMULATION_PARAMETERS,
     VOICE_NODES_MEMORY,
 };
 use alloy::primitives::Address;
@@ -18,6 +19,17 @@ pub fn collider_init() {
         );
 
         collider_coordinates.extend(fresh_vertices);
+    });
+}
+
+pub fn fades_init() {
+    FADES.with_borrow_mut(|fade| {
+        let fade_samples =
+            (AUDIO_PARAMETERS.fade_ms * AUDIO_PARAMETERS.sample_rate / 1000) as usize;
+        let fades_cache = precompute_fade_curves(fade_samples);
+
+        fade.fade_in = fades_cache.fade_in;
+        fade.fade_out = fades_cache.fade_out;
     });
 }
 
@@ -42,10 +54,10 @@ pub fn samples_init() {
     SAMPLES_MEMORY.with_borrow_mut(|samples| {
         let sample_length_ms = AUDIO_PARAMETERS.max_sample_length_ms;
         let sample_rate = AUDIO_PARAMETERS.sample_rate;
-        let start_sample = generate_test_wav(sample_length_ms, sample_rate, 1.);
+        let start_sample = generate_test_sample_vec(sample_length_ms, sample_rate, 1.);
         for i in 0..360 {
             samples
-                .push(&AudioSample {
+                .push(&StorableAudioSample {
                     id: i,
                     sample: start_sample.clone(),
                     sample_length_ms: sample_length_ms as f64,
@@ -68,8 +80,9 @@ pub fn initialize_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
 }
 
 pub fn upgrade_storage(maybe_arg: Option<VoiceAmongVoicesInit>) {
-    zero_cache_init();
     collider_init();
+    fades_init();
+    zero_cache_init();
 
     if let Some(args) = maybe_arg {
         if let Some(siwe_principal) = args.siwe_canister_principal {
