@@ -162,9 +162,36 @@
             $simulationParameters &&
             colliderCoordinates.length > 0
         ) {
-            untrack(() => resetPhysics());
+            // Check if Rapier is loaded before calling resetPhysics
+            if (typeof RAPIER !== "undefined" && RAPIER) {
+                untrack(() => resetPhysics());
+            } else {
+                console.warn(
+                    "Rapier not yet loaded, physics will initialize when ready",
+                );
+                // Optionally wait for Rapier to load
+                waitForRapier().then(() => {
+                    untrack(() => resetPhysics());
+                });
+            }
         }
     });
+
+    // Helper function to wait for Rapier to be available
+    async function waitForRapier() {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds with 100ms intervals
+
+        while (attempts < maxAttempts) {
+            if (typeof RAPIER !== "undefined" && RAPIER) {
+                return RAPIER;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            attempts++;
+        }
+
+        throw new Error("Rapier failed to load within timeout");
+    }
 
     $effect(() => {
         if (localNodes.length === 0 && nodes.length > 0) {
