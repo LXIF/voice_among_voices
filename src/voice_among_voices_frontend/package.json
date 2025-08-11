@@ -22,8 +22,6 @@
         "@dfinity/identity": "^2.4.0",
         "@dfinity/principal": "^2.4.0",
         "@dfinity/utils": "^2.13.0",
-        "@dimforge/rapier2d": "^0.14.0",
-        "@dimforge/rapier2d-compat": "^0.14.0",
         "@dimforge/rapier2d-deterministic-compat": "^0.16.2",
         "@reown/appkit": "^1.7.3",
         "@reown/appkit-adapter-wagmi": "^1.7.3",

@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onMount, untrack } from "svelte";
 
-    // import RAPIER from "@dimforge/rapier2d-compat";
     import RAPIER from "@dimforge/rapier2d-deterministic-compat";
 
     import { browser } from "$app/environment";
