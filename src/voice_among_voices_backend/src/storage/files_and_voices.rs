@@ -1,15 +1,15 @@
-use std::io::Cursor;
-
 use alloy::primitives::Address;
-use hound::{WavSpec, WavWriter};
 
 use crate::{
+    audio::{generate_or_add_angle_vectors, vectors_to_maybe_file},
     generate_angle_file, performance_counter, set_timer, split_into_chunks,
-    structs::{AudioSample, CensorshipError},
-    test_functions::generate_test_wav,
+    storage::ANGLE_FILE_WIP_CACHE,
+    structs::{AudioSample, CensorshipError, MulticallResponse, StorableAudioSample},
+    test_functions::{generate_test_sample_vec, generate_test_wav},
     ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
-    StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_CACHE, AUDIO_PARAMETERS, SAMPLES_MEMORY,
-    SIMULATION_PARAMETERS, STREAMING_CALLBACK, VOICE_NODES_MEMORY, ZERO_DEGREE_FILE_CACHE,
+    StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_EGRESS_CACHE, AUDIO_PARAMETERS,
+    SAMPLES_MEMORY, SIMULATION_PARAMETERS, STREAMING_CALLBACK, VOICE_NODES_MEMORY,
+    ZERO_DEGREE_FILE_CACHE,
 };
 
 use super::{
@@ -35,29 +35,7 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
         });
     });
 
-    // split into chunks
-    let chunks = split_into_chunks(result, &AUDIO_PARAMETERS);
-
-    ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
-        cache.insert(angle as u32, chunks.clone());
-    });
-
-    set_timer(Duration::from_secs(180), move || {
-        // invalidate after 180s for now
-        ANGLE_FILE_CACHE.with_borrow_mut(|cache| {
-            cache.remove(&(angle as u32));
-        });
-    }); //invalidate after 60 seconds
-
-    let total_chunks = chunks.len() as u32;
-
-    let first_chunk = chunks.get(0).cloned().unwrap_or_default();
-    let token = StreamingCallbackToken {
-        angle: angle as u32,
-        chunk_index: 0,
-        chunks: total_chunks,
-        auth_token: None, // TODO: maybe implement this for security purposes
-    };
+    let (token, first_chunk) = prepare_stream_file(result, angle);
 
     let end_cost = performance_counter(0);
 
@@ -72,6 +50,94 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
         upgrade: None,
         streaming_strategy: create_strategy(token),
     }
+}
+
+fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Vec<u8>) {
+    let chunks = split_into_chunks(file, &AUDIO_PARAMETERS);
+
+    ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| {
+        cache.insert(angle as u32, chunks.clone());
+    });
+
+    set_timer(Duration::from_secs(180), move || {
+        // invalidate after 180s for now
+        ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| {
+            cache.remove(&(angle as u32));
+        });
+    }); //invalidate after 60 seconds
+
+    let total_chunks = chunks.len() as u32;
+
+    let first_chunk = chunks.get(0).cloned().unwrap_or_default();
+    let token = StreamingCallbackToken {
+        angle: angle as u32,
+        chunk_index: 0,
+        chunks: total_chunks,
+        auth_token: None, // TODO: maybe implement this for security purposes
+    };
+
+    (token, first_chunk)
+}
+
+fn set_zero_file(new_file: Vec<u8>) {
+    ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
+        SAMPLES_MEMORY.with_borrow(|samples| {
+            VOICE_NODES_MEMORY.with_borrow(|nodes| {
+                let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
+                cache.clear();
+                cache.extend(chunks.clone());
+            })
+        });
+    });
+}
+
+pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
+    ANGLE_FILE_WIP_CACHE.with_borrow_mut(|wip_cache| {
+        VOICE_NODES_MEMORY.with_borrow(|nodes| {
+            SAMPLES_MEMORY.with_borrow(|samples| {
+                // check if wip exists
+                let wip = wip_cache.remove(&angle);
+                // do the thing
+                let new_wip = generate_or_add_angle_vectors(
+                    angle,
+                    nodes,
+                    samples,
+                    &AUDIO_PARAMETERS,
+                    &SIMULATION_PARAMETERS,
+                    wip,
+                );
+
+                // if finished, return file
+                match vectors_to_maybe_file(&new_wip) {
+                    Some(maybe_file_result) => {
+                        let result = maybe_file_result.unwrap();
+
+                        if angle == 0 {
+                            set_zero_file(result);
+                            return MulticallResponse::ZeroFinished;
+                        }
+
+                        let (token, first_chunk) = prepare_stream_file(result, angle);
+
+                        MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
+                            status_code: 200,
+                            headers: vec![
+                                ("content-type".to_string(), "audio/wav".to_string()),
+                                ("x-n-calls".to_string(), new_wip.n_calls.to_string()), // Profiling header
+                            ],
+                            body: ByteBuf::from(first_chunk),
+                            upgrade: None,
+                            streaming_strategy: create_strategy(token),
+                        })
+                    }
+                    None => {
+                        wip_cache.insert(angle, new_wip);
+                        MulticallResponse::Continue
+                    }
+                }
+            })
+        })
+    })
 }
 
 pub fn get_file_for_zero_angle() -> HttpStreamingResponse {
@@ -104,7 +170,9 @@ pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHt
             chunks = ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| cache.clone());
         }
         _ => {
-            chunks = match ANGLE_FILE_CACHE.with_borrow(|cache| cache.get(&token.angle).cloned()) {
+            chunks = match ANGLE_FILE_EGRESS_CACHE
+                .with_borrow(|cache| cache.get(&token.angle).cloned())
+            {
                 Some(file_chunks) => file_chunks,
                 None => ic_cdk::trap("Cache out of date, connection too slow"),
             };
@@ -131,18 +199,22 @@ pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHt
 }
 
 pub fn get_voice(node_id: u64) -> Option<AudioSample> {
-    SAMPLES_MEMORY.with_borrow(|samples| samples.get(node_id))
+    SAMPLES_MEMORY
+        .with_borrow(|samples| samples.get(node_id))
+        .and_then(|sample| Some(sample.to_wav()))
 }
 
 pub fn censor_voice(node_id: u64, address: Address, timestamp: u64) -> Result<(), CensorshipError> {
     SAMPLES_MEMORY.with_borrow_mut(|samples| {
         let sample = samples.get(node_id).unwrap(); // TODO improve
         let length_samples = sample.sample_length_samples;
-        let censored_sample =
-            generate_censored_wav(length_samples, crate::storage::AUDIO_PARAMETERS.sample_rate);
+        let censored_sample = generate_censored_sample_vec(
+            length_samples,
+            crate::storage::AUDIO_PARAMETERS.sample_rate,
+        );
         samples.set(
             node_id,
-            &AudioSample {
+            &StorableAudioSample {
                 sample: censored_sample,
                 ..sample
             },
@@ -165,26 +237,13 @@ fn create_strategy(token: StreamingCallbackToken) -> Option<StreamingStrategy> {
 }
 
 fn generate_censored_wav(duration_samples: u32, sample_rate: u32) -> Vec<u8> {
-    let spec = WavSpec {
-        channels: 1,
-        sample_rate,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int,
-    };
-
-    let mut buffer = Vec::new();
-    let mut writer = WavWriter::new(Cursor::new(&mut buffer), spec).unwrap();
-
-    let amplitude = i16::MAX as f32;
-
-    for t in 0..duration_samples {
-        let sample = ((t as f32 / sample_rate as f32) * 440. * 2. * std::f32::consts::PI).sin();
-        writer.write_sample((sample * amplitude) as i16).unwrap();
-    }
-
-    writer.finalize().unwrap();
-
     let duration_ms = duration_samples / sample_rate * 1000;
 
     generate_test_wav(duration_ms, sample_rate, 0.1)
+}
+
+fn generate_censored_sample_vec(duration_samples: u32, sample_rate: u32) -> Vec<i16> {
+    let duration_ms = duration_samples / sample_rate * 1000;
+
+    generate_test_sample_vec(duration_ms, sample_rate, 0.1)
 }

@@ -1,5 +1,6 @@
 use crate::audio::*;
 use crate::physics::*;
+use crate::storage::files_and_voices::get_file_for_angle_multicall;
 use crate::structs::*;
 use crate::utils::split_into_chunks;
 use crate::StorableAddress;
@@ -17,6 +18,7 @@ use ic_stable_structures::{
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 use serde::Serialize;
+use std::time::Duration;
 use std::{cell::RefCell, collections::HashMap};
 
 pub mod files_and_voices;
@@ -25,6 +27,7 @@ pub mod voice_log;
 pub mod voice_nodes;
 
 thread_local! {
+    // STABLE STORAGE
     pub static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
     pub static VOICE_NODES_MEMORY: RefCell<VoiceNodeLocalMemory> = RefCell::new(
@@ -45,8 +48,11 @@ thread_local! {
     pub static VOICE_LOG: RefCell<StableVec<VoiceLog, Memory>> = RefCell::new(
         StableVec::init(MEMORY_MANAGER.with_borrow(|m| m.get(MemoryId::new(5)))).expect("Failed to initialize log storage")
     );
+    // STATE
     pub static COLLIDER_COORDINATES: RefCell<Vec<ColliderCoordinate>> = RefCell::new(vec![]);
-    pub static ANGLE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
+    pub static FADES: RefCell<FadesCache> = RefCell::new(FadesCache { fade_in: vec![], fade_out: vec![] });
+    pub static ANGLE_FILE_EGRESS_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
+    pub static ANGLE_FILE_WIP_CACHE: RefCell<WipCache> = RefCell::new(HashMap::new());
     pub static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
 }
 
@@ -59,6 +65,7 @@ pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     sample_rate: 44100,
     chunk_size: 1024 * 1024,
     fade_ms: 30,
+    n_process_per_call: 180,
 };
 pub const SIMULATION_PARAMETERS: SimulationParameters = SimulationParameters {
     velocity_cutoff: 0.2,
@@ -78,23 +85,63 @@ pub fn get_stored_audio_parameters() -> AudioParameters {
 }
 
 pub fn zero_cache_update() {
-    ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
-        SAMPLES_MEMORY.with_borrow(|samples| {
-            VOICE_NODES_MEMORY.with_borrow(|nodes| {
-                let new_file = generate_angle_file(
-                    0 as f64,
-                    nodes,
-                    samples,
-                    &AUDIO_PARAMETERS,
-                    &SIMULATION_PARAMETERS,
-                )
-                .expect("failed to init zero cache");
-                let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
-                cache.clear();
-                cache.extend(chunks.clone());
-            })
-        });
+    // ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
+    //     SAMPLES_MEMORY.with_borrow(|samples| {
+    //         VOICE_NODES_MEMORY.with_borrow(|nodes| {
+    //             let new_file = generate_angle_file(
+    //                 0 as f64,
+    //                 nodes,
+    //                 samples,
+    //                 &AUDIO_PARAMETERS,
+    //                 &SIMULATION_PARAMETERS,
+    //             )
+    //             .expect("failed to init zero cache");
+    //             let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
+    //             cache.clear();
+    //             cache.extend(chunks.clone());
+    //         })
+    //     });
+    // });
+    let _ = ic_cdk_timers::set_timer(Duration::from_nanos(1), || {
+        ic_cdk::spawn(zero_cache_update_multicall());
     });
+}
+
+async fn zero_cache_update_multicall() {
+    match get_file_for_angle_multicall(0) {
+        MulticallResponse::ZeroFinished => {
+            ic_cdk::println!("zerowargle");
+            // Banger! We're done here UwU (Finished without outcall)
+        }
+        MulticallResponse::HttpStreamingResponse(_response) => {
+            // This shouldn't happen
+            ic_cdk::println!("Received wrong response for zero angle update!");
+        }
+        MulticallResponse::Continue => {
+            let (result,) =
+                ic_cdk::call(ic_cdk::id(), "generate_file_for_angle_multicall", (0u64,))
+                    .await
+                    .expect(
+                        "Failed to generate file in zero cache update multicall response continue",
+                    );
+
+            match result {
+                HttpStreamingResponse { headers, .. } => {
+                    // Check if it has the ZeroFinished header
+                    let is_zero_finished = headers
+                        .iter()
+                        .any(|header| header.0 == "ZeroFinished" && header.1 == "true");
+
+                    if is_zero_finished {
+                        // Great! We are finished.
+                        ic_cdk::println!("zerobargle");
+                    } else {
+                        ic_cdk::println!("Got invalid zero cache update multicall response!");
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn store_siwe_principal(principal: Principal) -> Result<Principal, ValueError> {
@@ -119,6 +166,10 @@ pub fn store_voice_log(log: VoiceLog) -> Result<(), ic_stable_structures::GrowFa
 
 pub fn retrieve_voice_logs(skip: usize, take: usize) -> Vec<VoiceLog> {
     VOICE_LOG.with_borrow(|log_vec| log_vec.iter().skip(skip).take(take).collect())
+}
+
+pub fn get_fades() -> FadesCache {
+    FADES.with_borrow(|fades| fades.clone())
 }
 
 #[derive(CandidType, Serialize, Deserialize)]

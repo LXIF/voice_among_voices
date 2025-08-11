@@ -1,3 +1,5 @@
+use crate::storage::{get_fades, AUDIO_PARAMETERS};
+use crate::structs::{FadesCache, WipAngleVectors};
 use crate::{
     AddVoiceNodeError, AudioParameters, AudioSampleMemory, SimulationParameters,
     VoiceNodeLocalMemory,
@@ -6,7 +8,7 @@ use hound::{WavReader, WavWriter};
 use std::arch::wasm32::*;
 use std::io::Cursor;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct SamplePosition {
     pub sample_id: u64,
     pub begins_at: f64, // normalized position of beginning of audio node versus tangent of angle => position - radius
@@ -49,6 +51,84 @@ pub fn generate_angle_file(
     let angle_file = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples);
 
     angle_file
+}
+
+pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<u8>, hound::Error>> {
+    let is_finished = wip.last_processed
+        == wip
+            .sample_positions
+            .last()
+            .unwrap_or(&SamplePosition {
+                sample_id: 0,
+                begins_at: 0.,
+                pan_position: 0.,
+                sample_length_samples: 0,
+            })
+            .sample_id;
+    if is_finished {
+        return Some(write_stereo_wav_to_vec(
+            &AUDIO_PARAMETERS,
+            &wip.left_samples,
+            &wip.right_samples,
+        ));
+    }
+    None
+}
+
+// Here we only generate vectors so we can cache them and can spread out the bouncing over multiple calls.
+// If we pass a previous WIP, we add more samples to that wip.
+pub fn generate_or_add_angle_vectors(
+    angle: u64,
+    nodes: &VoiceNodeLocalMemory,
+    samples: &AudioSampleMemory,
+    audio_params: &AudioParameters,
+    sim_params: &SimulationParameters,
+    previous_wip: Option<WipAngleVectors>,
+) -> WipAngleVectors {
+    let sample_positions = previous_wip
+        .as_ref()
+        .and_then(|wip| Some(wip.sample_positions.clone()))
+        .or_else(|| {
+            Some(generate_normalized_sample_positions(
+                nodes,
+                sim_params,
+                angle as f64,
+            ))
+        })
+        .unwrap();
+
+    let last_processed = previous_wip
+        .as_ref()
+        .and_then(|wip| Some(wip.last_processed))
+        .or(Some(1))
+        .unwrap();
+
+    let n_process = AUDIO_PARAMETERS.n_process_per_call;
+    let n_calls = previous_wip
+        .as_ref()
+        .and_then(|wip| Some(wip.n_calls + 1))
+        .or(Some(1))
+        .unwrap();
+
+    let (left_samples, right_samples, last_processed) = unsafe {
+        // generate_audio_vectors(&sample_positions, audio_params, samples);
+        generate_partial_audio_vectors_optimized(
+            &sample_positions,
+            audio_params,
+            samples,
+            last_processed,
+            n_process,
+            previous_wip.and_then(|wip| Some((wip.left_samples, wip.right_samples))),
+        )
+    };
+
+    WipAngleVectors {
+        left_samples,
+        right_samples,
+        sample_positions,
+        last_processed,
+        n_calls,
+    }
 }
 
 fn generate_normalized_sample_positions(
@@ -110,7 +190,7 @@ fn generate_audio_vectors(
         let end_sample = (start_sample + sample_pos.sample_length_samples as usize - 1)
             .min(total_length_samples as usize - 1);
         // use reader to read sample
-        let input_samples = read_wav(&samples.get(sample_pos.sample_id as u64).unwrap().sample);
+        let input_samples: &Vec<i16> = &samples.get(sample_pos.sample_id as u64).unwrap().sample;
 
         // figure out the panning multipliers
         let pan = sample_pos.pan_position;
@@ -152,12 +232,30 @@ fn generate_audio_vectors(
     (left_channel, right_channel)
 }
 
-#[target_feature(enable = "simd128")]
 fn generate_audio_vectors_optimized(
     sample_positions: &[SamplePosition],
     audio_params: &AudioParameters,
     samples: &AudioSampleMemory,
 ) -> (Vec<i16>, Vec<i16>) {
+    let (left, right, last_processed) = generate_partial_audio_vectors_optimized(
+        sample_positions,
+        audio_params,
+        samples,
+        0,
+        360,
+        None,
+    );
+    (left, right)
+}
+
+fn generate_partial_audio_vectors_optimized(
+    sample_positions: &[SamplePosition],
+    audio_params: &AudioParameters,
+    samples: &AudioSampleMemory,
+    last_processed: u64,
+    n_process: usize,
+    previous_vectors: Option<(Vec<i16>, Vec<i16>)>,
+) -> (Vec<i16>, Vec<i16>, u64) {
     // Convert fade duration from milliseconds to samples
     let fade_samples = (audio_params.fade_ms * audio_params.sample_rate / 1000) as usize;
 
@@ -165,12 +263,30 @@ fn generate_audio_vectors_optimized(
     let total_length_samples: u64 =
         audio_params.total_length_ms as u64 * audio_params.sample_rate as u64 / 1000;
 
-    let mut left_channel = vec![0i16; total_length_samples as usize];
-    let mut right_channel = vec![0i16; total_length_samples as usize];
+    let (mut left_channel, mut right_channel) = previous_vectors
+        .or_else(|| {
+            Some((
+                vec![0i16; total_length_samples as usize],
+                vec![0i16; total_length_samples as usize],
+            ))
+        })
+        .unwrap();
 
-    let (fade_in, fade_out) = precompute_fade_curves(fade_samples);
+    if left_channel.len() != total_length_samples as usize
+        || right_channel.len() != total_length_samples as usize
+    {
+        panic!("Must use same length vectors on successive calls!")
+    }
 
-    for sample_pos in sample_positions {
+    let FadesCache { fade_in, fade_out } = get_fades();
+
+    let positions_to_process: Vec<&SamplePosition> = sample_positions
+        .iter()
+        .filter(|sam_pos| sam_pos.sample_id > last_processed)
+        .take(n_process)
+        .collect();
+
+    for sample_pos in positions_to_process.iter() {
         // find the exact sample where it begins
         let start_sample = (sample_pos.begins_at * total_length_samples as f64)
             .round()
@@ -179,7 +295,7 @@ fn generate_audio_vectors_optimized(
         let end_sample = (start_sample + sample_pos.sample_length_samples as usize - 1)
             .min(total_length_samples as usize - 1);
         // use reader to read sample
-        let input_samples = read_wav(&samples.get(sample_pos.sample_id as u64).unwrap().sample);
+        let input_samples: Vec<i16> = samples.get(sample_pos.sample_id as u64).unwrap().sample;
 
         // Precompute fixed-point gains and fade factors
         // Precompute fixed-point gains (Q1.15 format)
@@ -258,7 +374,19 @@ fn generate_audio_vectors_optimized(
         }
     }
 
-    (left_channel, right_channel)
+    (
+        left_channel,
+        right_channel,
+        positions_to_process
+            .last()
+            .unwrap_or(&&SamplePosition {
+                sample_id: 0,
+                begins_at: 0.,
+                pan_position: 0.,
+                sample_length_samples: 0,
+            })
+            .sample_id,
+    )
 }
 
 // Fixed-point multiplication with scaling (Q1.15 format)
@@ -303,14 +431,14 @@ fn fixed_point_multiply_scalar(a: i32, b: i32) -> i16 {
     }
 }
 
-fn precompute_fade_curves(fade_samples: usize) -> (Vec<f64>, Vec<f64>) {
+pub fn precompute_fade_curves(fade_samples: usize) -> FadesCache {
     let fade_in: Vec<f64> = (0..fade_samples)
         .map(|i| i as f64 / fade_samples as f64)
         .collect();
 
     let fade_out: Vec<f64> = fade_in.iter().rev().copied().collect();
 
-    (fade_in, fade_out)
+    FadesCache { fade_in, fade_out }
 }
 
 // Optimized gain calculation using precomputed fade curves
@@ -383,7 +511,7 @@ fn precompute_gains(
     (left_gain_vec, right_gain_vec)
 }
 
-fn read_wav(audio_data: &Vec<u8>) -> Vec<i16> {
+pub fn read_wav(audio_data: &Vec<u8>) -> Vec<i16> {
     let cursor = Cursor::new(audio_data);
     let mut reader = WavReader::new(cursor).unwrap();
 
@@ -419,6 +547,37 @@ fn write_stereo_wav_to_vec(
         unsafe {
             sample_writer.write_sample_unchecked(left_sample);
             sample_writer.write_sample_unchecked(right_sample);
+        }
+    }
+
+    sample_writer.flush()?;
+    writer.finalize()?;
+
+    let wav_data = buffer.into_inner();
+
+    Ok(wav_data)
+}
+
+pub fn write_mono_wav_to_vec(
+    audio_params: &AudioParameters,
+    samples: &Vec<i16>,
+) -> Result<Vec<u8>, hound::Error> {
+    let sample_rate = audio_params.sample_rate;
+
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let mut buffer = Cursor::new(Vec::new());
+    let mut writer = WavWriter::new(&mut buffer, spec)?;
+    let mut sample_writer = writer.get_i16_writer((samples.len()) as u32);
+
+    for &sample in samples.iter() {
+        unsafe {
+            sample_writer.write_sample_unchecked(sample);
         }
     }
 
@@ -810,9 +969,10 @@ mod tests {
                 total_length_ms: 1000, // 1 second total length
                 max_sample_length_ms: 60000,
                 chunk_size: 1024 * 1024,
+                n_process_per_call: 360,
             };
-            let sample = generate_static_test_sample(1000.0, 44100, 0);
-            let sample_positions = generate_test_sample_positions(&sample);
+            let sample = generate_static_test_sample_storable(1000.0, 44100, 0);
+            let sample_positions = generate_test_sample_positions_storable(&sample);
             samples_memory.push(&sample).unwrap();
 
             let (left_channel, right_channel) =
@@ -838,6 +998,7 @@ mod tests {
             total_length_ms: 100, // 0.1 second total length
             max_sample_length_ms: 10,
             chunk_size: 1024 * 1024,
+            n_process_per_call: 360,
         };
 
         SAMPLES_MEMORY.with_borrow_mut(|samples_memory| {
@@ -848,7 +1009,7 @@ mod tests {
                 }
                 for i in 0..3 {
                     samples_memory
-                        .push(&generate_static_test_sample(10., 441, i))
+                        .push(&generate_static_test_sample_storable(10., 441, i))
                         .unwrap();
                 }
 
@@ -927,8 +1088,9 @@ mod tests {
                 total_length_ms: 1000, // 1 second total length
                 max_sample_length_ms: 1000,
                 chunk_size: 1024 * 1024,
+                n_process_per_call: 360,
             };
-            map.push(&generate_static_test_sample(1000., 44100, 1))
+            map.push(&generate_static_test_sample_storable(1000., 44100, 1))
                 .unwrap();
 
             let sample_positions = vec![SamplePosition {
@@ -979,6 +1141,7 @@ mod tests {
                 total_length_ms: 1000, // 1 second total length
                 max_sample_length_ms: 60000,
                 chunk_size: 1024 * 1024,
+                n_process_per_call: 360,
             };
             let sample_positions: Vec<SamplePosition> = vec![]; // No samples
 
@@ -1000,12 +1163,14 @@ mod tests {
                 total_length_ms: 1000, // 1 second total length
                 max_sample_length_ms: 60000,
                 chunk_size: 1024 * 1024,
+                n_process_per_call: 360,
             };
             // map.insert(0 as u128, generate_static_test_sample(1000.0, 44100, 1));
             samples
-                .push(&generate_extreme_test_sample(1000., 44100, 0))
+                .push(&generate_extreme_test_sample_storable(1000., 44100, 0))
                 .unwrap();
-            let sample_positions = generate_test_sample_positions(&samples.get(0 as u64).unwrap());
+            let sample_positions =
+                generate_test_sample_positions_storable(&samples.get(0 as u64).unwrap());
 
             let (left_channel, right_channel) =
                 generate_audio_vectors(&sample_positions, &audio_params, samples);
@@ -1027,11 +1192,12 @@ mod tests {
                 total_length_ms: 1000, // 1 second total length
                 max_sample_length_ms: 60000,
                 chunk_size: 1024 * 1024,
+                n_process_per_call: 360,
             };
 
             for i in 0..3 {
                 samples
-                    .push(&generate_static_test_sample(1000.0, 44100, i))
+                    .push(&generate_static_test_sample_storable(1000.0, 44100, i))
                     .unwrap();
             }
 
@@ -1095,11 +1261,12 @@ mod tests {
                 total_length_ms: 1000, // 1 second total length
                 max_sample_length_ms: 60000,
                 chunk_size: 1024 * 1024,
+                n_process_per_call: 360,
             };
 
             for i in 0..3 {
                 samples
-                    .push(&generate_static_test_sample(1000.0, 44100, i))
+                    .push(&generate_static_test_sample_storable(1000.0, 44100, i))
                     .unwrap();
             }
 

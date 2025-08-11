@@ -1,5 +1,6 @@
 use crate::{
-    audio::SamplePosition, AudioParameters, AudioSample, VoiceNodeLocal, VoiceNodeLocalStore,
+    audio::SamplePosition, structs::StorableAudioSample, AudioParameters, AudioSample,
+    VoiceNodeLocal, VoiceNodeLocalStore,
 };
 use hound::{WavSpec, WavWriter};
 use std::io::Cursor;
@@ -28,6 +29,24 @@ pub fn generate_test_wav(duration_ms: u32, sample_rate: u32, normal_amplitude: f
     buffer
 }
 
+pub fn generate_test_sample_vec(
+    duration_ms: u32,
+    sample_rate: u32,
+    normal_amplitude: f32,
+) -> Vec<i16> {
+    let num_samples = (sample_rate * duration_ms / 1000) as usize;
+    let amplitude = i16::MAX as f32 * normal_amplitude;
+
+    let mut buffer = Vec::with_capacity(num_samples);
+
+    for i in 0..num_samples {
+        let sample = ((i as f32 / sample_rate as f32) * 440. * 2. * std::f32::consts::PI).sin();
+        buffer.push((sample * amplitude) as i16);
+    }
+
+    buffer
+}
+
 // needed because floats and trigo aren't perfect lol
 pub fn approximately_equal(a: f64, b: f64, epsilon: f64) -> bool {
     (a - b).abs() < epsilon
@@ -47,6 +66,7 @@ pub fn generate_audio_params(sample_rate: u32) -> AudioParameters {
         total_length_ms: 1000, // 1 second
         fade_ms: 0,            // No fade
         chunk_size: 1024 * 1024,
+        n_process_per_call: 360,
     }
 }
 
@@ -119,6 +139,29 @@ pub fn generate_static_test_sample(
     }
 }
 
+pub fn generate_static_test_sample_storable(
+    sample_length_ms: f64,
+    sample_length_samples: u32,
+    id: usize,
+) -> StorableAudioSample {
+    // Create a buffer to hold the WAV data
+    let mut buffer = Vec::new();
+
+    // Generate a simple sine wave or arbitrary sample data
+
+    for _ in 0..sample_length_samples {
+        let sample = i16::MAX / 2;
+        buffer.push(sample)
+    }
+
+    StorableAudioSample {
+        id: id as u64,
+        sample: buffer, // Use the buffer that contains the valid WAV data
+        sample_length_ms,
+        sample_length_samples,
+    }
+}
+
 pub fn generate_extreme_test_sample(
     sample_length_ms: f64,
     sample_length_samples: u32,
@@ -152,7 +195,47 @@ pub fn generate_extreme_test_sample(
     }
 }
 
+pub fn generate_extreme_test_sample_storable(
+    sample_length_ms: f64,
+    sample_length_samples: u32,
+    id: usize,
+) -> StorableAudioSample {
+    // Define the WAV format (mono, 16-bit, 44.1kHz)
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: 44100,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    // Create a buffer to hold the WAV data
+    let mut buffer = Vec::new();
+
+    for _ in 0..sample_length_samples {
+        let sample = i16::MAX;
+        buffer.push(sample);
+    }
+
+    StorableAudioSample {
+        id: id as u64,
+        sample: buffer, // Use the buffer that contains the valid WAV data
+        sample_length_ms,
+        sample_length_samples,
+    }
+}
+
 pub fn generate_test_sample_positions(sample: &AudioSample) -> Vec<SamplePosition> {
+    vec![SamplePosition {
+        // Start at the beginning of the vector
+        begins_at: 0.0,    // Also begin at the very start
+        pan_position: 0.0, // Center panning
+        sample_id: sample.id,
+        sample_length_samples: sample.sample_length_samples,
+    }]
+}
+pub fn generate_test_sample_positions_storable(
+    sample: &StorableAudioSample,
+) -> Vec<SamplePosition> {
     vec![SamplePosition {
         // Start at the beginning of the vector
         begins_at: 0.0,    // Also begin at the very start

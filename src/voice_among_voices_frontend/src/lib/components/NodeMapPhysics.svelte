@@ -231,7 +231,7 @@
                     let perFrameForceScale =
                         (Number($simulationParameters?.max_steps) - frame) /
                         Number($simulationParameters?.max_steps);
-                    physicsBodies.forEach((body, i) => {
+                    physicsBodies.forEach((body, _i) => {
                         // Create array of all bodies within reach
                         const cutoffPosition = body.rigidBody.translation();
                         const cutoffRotation = body.rigidBody.rotation();

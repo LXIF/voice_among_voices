@@ -45,7 +45,7 @@ export const getZeroFile = async () => {
 
 export const getAngleFile = async (angle: number) => {
     try {
-        let response = await backend.get_angle_file(BigInt(angle));
+        let response = await backend.get_angle_file(BigInt(angle), true);
 
         return response;
     } catch (error) {
