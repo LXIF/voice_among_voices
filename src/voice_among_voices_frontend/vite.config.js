@@ -15,18 +15,18 @@ export default defineConfig({
         minify: true,
         sourcemap: true,
         rollupOptions: {
-            output: {
-                manualChunks(id) {
-                    // Ensure core runtime chunks are loaded first
-                    if (id.includes("node_modules")) {
-                        return "vendor";
-                    }
-                    // Group related app code
-                    if (id.includes("src/lib")) {
-                        return "lib";
-                    }
-                },
-            },
+            // output: {
+            //     manualChunks(id) {
+            //         // Ensure core runtime chunks are loaded first
+            //         if (id.includes("node_modules")) {
+            //             return "vendor";
+            //         }
+            //         // Group related app code
+            //         if (id.includes("src/lib")) {
+            //             return "lib";
+            //         }
+            //     },
+            // },
         },
     },
     optimizeDeps: {
