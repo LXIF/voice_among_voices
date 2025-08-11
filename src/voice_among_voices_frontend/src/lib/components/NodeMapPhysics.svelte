@@ -702,7 +702,7 @@
                 <circle
                     cx={node.x}
                     cy={node.y}
-                    r={node.radius}
+                    r={node.radius - bodyLineWidth / 2}
                     stroke="hsl({node.id}, 100%, 50%)"
                     stroke-width={bodyLineWidth}
                     fill={Number(node.id) === $selectedAngle
@@ -777,10 +777,11 @@
                     <circle
                         cx={node.x}
                         cy={node.y}
-                        r={node.radius + 0.5}
+                        r={node.radius - bodyLineWidth / 2}
                         stroke-width={bodyLineWidth}
                         fill="none"
                         class="stroke-slate-950 dark:stroke-white"
+                        opacity="0.5"
                     />
                 {/each}
             {/if}
