@@ -98,15 +98,6 @@
             }
         };
     });
-
-    const handlePopulateAll = async () => {
-        console.log("populating all!");
-        const res = await backend.populate_with_demo_content(
-            BigInt(from),
-            BigInt(step),
-        );
-        console.log(res);
-    };
 </script>
 
 <Dialog
@@ -171,9 +162,6 @@
             </div>
         {/if}
     </div>
-    <input type="number" bind:value={from} class="mb-2 text-black" />
-    <input type="number" bind:value={step} class="mb-2 text-black" />
-    <Button onclick={handlePopulateAll}>Populate all</Button>
 </Dialog>
 
 <audio
