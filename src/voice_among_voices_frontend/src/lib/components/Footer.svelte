@@ -3,6 +3,7 @@
         myTokens,
         showInfoModal,
         showCensorModal,
+        showParticipationOverlay,
         fetchAdminTokenId,
         adminTokenId,
         isAdmin,
@@ -16,7 +17,13 @@
 </script>
 
 <footer class="absolute bottom-0 flex w-full justify-between px-4 pb-4">
-    <h1 class="flex-1 select-none text-left text-xl font-bold">Beschrieb</h1>
+    <div class="flex flex-1 items-start justify-start">
+        <Button
+            onclick={() =>
+                ($showParticipationOverlay = !$showParticipationOverlay)}
+            class="origin-center text-right text-xl">How to participate?</Button
+        >
+    </div>
     {#if $isAdmin}
         <Button
             onclick={() => ($showCensorModal = !$showCensorModal)}

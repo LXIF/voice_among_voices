@@ -49,8 +49,8 @@ const initializeStores = () => {
                     projectId,
                     features: {
                         analytics: true,
-                        email: true,
-                        socials: ["google"],
+                        email: false,
+                        socials: [],
                     },
                 });
                 set(modal);

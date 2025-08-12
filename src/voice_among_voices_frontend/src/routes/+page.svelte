@@ -3,9 +3,14 @@
     import Footer from "$lib/components/Footer.svelte";
     import NodeMapContainer from "$lib/components/NodeMapContainer.svelte";
     import AudioContainer from "$lib/components/AudioContainer.svelte";
-    import { showCensorModal, showInfoModal } from "$lib/state/uxState";
+    import {
+        showCensorModal,
+        showInfoModal,
+        showParticipationOverlay,
+    } from "$lib/state/uxState";
     import InfoModal from "$lib/components/InfoModal.svelte";
     import CensorModal from "$lib/components/CensorModal.svelte";
+    import ParticipationOverlay from "$lib/components/ParticipationOverlay.svelte";
 
     let nodeMapCont: NodeMapContainer | undefined = $state();
 
@@ -41,5 +46,8 @@
 {/if}
 {#if $showCensorModal}
     <CensorModal />
+{/if}
+{#if $showParticipationOverlay}
+    <ParticipationOverlay />
 {/if}
 <Footer />

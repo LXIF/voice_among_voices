@@ -32,6 +32,13 @@
         onClose?.();
     };
 
+    // Add this function to handle outside clicks
+    function handleOutsideClick(e: MouseEvent) {
+        if (closeOnOutsideClick && e.target === dialogRef) {
+            onClose?.();
+        }
+    }
+
     const transitionFn = $derived(
         window.innerWidth < 480
             ? (node: Element) => fly(node, { duration: 200, y: "100%" })
@@ -97,7 +104,7 @@
 <dialog
     bind:this={dialogRef}
     oncancel={onCancel}
-    closedby={closeOnOutsideClick ? "any" : "none"}
+    onclick={handleOutsideClick}
     class={[
         // Layout base/dialog/bottomsheet
         "fixed flex max-w-full flex-col overflow-hidden bg-transparent",
