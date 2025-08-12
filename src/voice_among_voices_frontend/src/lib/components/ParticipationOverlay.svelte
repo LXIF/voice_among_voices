@@ -2,8 +2,9 @@
     import { showParticipationOverlay } from "$lib/state/uxState";
     import { fade, scale } from "svelte/transition";
     import { quintOut } from "svelte/easing";
-    import { walletAddress, myTokens } from "$lib/state/uxState";
+    import { myTokens } from "$lib/state/uxState";
     import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
+    import { identityAgent } from "$lib/canisters";
 
     function closeOverlay() {
         $showParticipationOverlay = false;
@@ -32,7 +33,7 @@
     >
         <!-- Instructional Text -->
         <div class="mb-8 text-center text-2xl leading-relaxed">
-            {#if $walletAddress.length > 0 && $myTokens.length > 0}
+            {#if $identityAgent && $myTokens.length > 0}
                 <p class="mb-4">
                     At this very moment, something may catch your eye, a sound
                     may make your eardrums vibrate, a thought may linger.

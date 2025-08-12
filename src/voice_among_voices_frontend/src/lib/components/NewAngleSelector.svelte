@@ -39,7 +39,7 @@
     $effect(() => {
         if ($identityAgent && $myTokens.length > 0) {
             untrack(() => {
-                rotateToClosest([...$myTokens, 0]);
+                rotateToClosest([...$myTokens.filter((token) => token !== 0)]);
             });
         }
     });

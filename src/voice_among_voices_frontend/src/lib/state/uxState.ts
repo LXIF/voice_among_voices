@@ -33,6 +33,7 @@ export const myTokens = writable<number[]>([]);
 export const adminTokenId = writable<number>(0);
 
 export const isAdmin = derived([myTokens, adminTokenId], () => {
+    if (get(myTokens).length === 0) return false;
     return get(myTokens).includes(get(adminTokenId));
 });
 export const selectedManagementNode = writable<number>(1);
