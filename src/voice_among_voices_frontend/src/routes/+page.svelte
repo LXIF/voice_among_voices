@@ -35,12 +35,19 @@
     };
 </script>
 
-<Header />
-<NodeMapContainer bind:this={nodeMapCont} />
-<AudioContainer
-    onDropNodeWithRadius={handleDropNodeWithRadius}
-    onFinishRecord={handleFinishRecord}
-/>
+<div class="flex min-h-screen flex-col">
+    <Header />
+    <div class="flex flex-1 items-center justify-center">
+        <div class="flex flex-col items-center gap-4">
+            <NodeMapContainer bind:this={nodeMapCont} />
+            <AudioContainer
+                onDropNodeWithRadius={handleDropNodeWithRadius}
+                onFinishRecord={handleFinishRecord}
+            />
+        </div>
+    </div>
+    <Footer />
+</div>
 {#if $showInfoModal}
     <InfoModal />
 {/if}
@@ -50,4 +57,3 @@
 {#if $showParticipationOverlay}
     <ParticipationOverlay />
 {/if}
-<Footer />

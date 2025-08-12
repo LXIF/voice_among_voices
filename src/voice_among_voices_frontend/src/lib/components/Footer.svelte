@@ -21,7 +21,7 @@
         <Button
             onclick={() =>
                 ($showParticipationOverlay = !$showParticipationOverlay)}
-            class="origin-center text-right text-xl">How to participate?</Button
+            class="origin-center text-left text-xl">How to participate?</Button
         >
     </div>
     {#if $isAdmin}
