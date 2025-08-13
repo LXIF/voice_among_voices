@@ -11,6 +11,7 @@ use crate::{
     audio::{write_mono_wav_to_vec, SamplePosition},
     storage::AUDIO_PARAMETERS,
 };
+use ic_cdk_timers::TimerId;
 
 // LIB ////////////////////
 
@@ -114,7 +115,7 @@ pub struct AudioSample {
 }
 
 pub type FileCache = HashMap<u32, Vec<u8>>;
-pub type ChunksCache = HashMap<u32, Vec<Vec<u8>>>;
+pub type ChunksCache = HashMap<u32, (Vec<Vec<u8>>, TimerId)>;
 pub type WipCache = HashMap<u64, WipAngleVectors>;
 
 #[derive(Clone)]
