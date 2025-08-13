@@ -17,21 +17,28 @@
 
     function toggleSection(label: string) {
         openSections[label] = !openSections[label];
-        // Scroll to bottom if section is opened
-        if (openSections[label]) {
+        // Scroll to bottom only if it's the last section and it's being opened
+        if (
+            openSections[label] &&
+            label === sections[sections.length - 1].label
+        ) {
             setTimeout(() => {
                 const accordion = document.querySelector(".accordion");
                 if (accordion) {
                     accordion.scrollTop = accordion.scrollHeight;
                 }
-            }, 100); // Small delay to ensure content is rendered
+            }, 100);
         }
     }
     function toggleChild(parentLabel: string, idx: number) {
         openSections[`${parentLabel}-${idx}`] =
             !openSections[`${parentLabel}-${idx}`];
-        // Scroll to bottom if child is opened
-        if (openSections[`${parentLabel}-${idx}`]) {
+        // Scroll to bottom only if it's the last child of the last section and it's being opened
+        if (
+            openSections[`${parentLabel}-${idx}`] &&
+            parentLabel === sections[sections.length - 1].label &&
+            idx === sections[sections.length - 1].children.length - 1
+        ) {
             setTimeout(() => {
                 const accordion = document.querySelector(".accordion");
                 if (accordion) {
@@ -64,10 +71,28 @@
             openSections[`${sectionLabel}-${childIndex}`] = true;
         }
 
+        // Use scrollIntoView after content is rendered
         setTimeout(() => {
-            const accordion = document.querySelector(".accordion");
-            if (accordion) {
-                accordion.scrollTop = 0;
+            let targetElement: HTMLElement | null = null;
+
+            if (childIndex !== undefined) {
+                // Find the specific child element
+                targetElement = document.querySelector(
+                    `[data-section="${sectionLabel}"][data-child="${childIndex}"]`,
+                );
+            } else {
+                // Find the section element
+                targetElement = document.querySelector(
+                    `[data-section="${sectionLabel}"]`,
+                );
+            }
+
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                    inline: "nearest",
+                });
             }
         }, 150);
     }
@@ -118,7 +143,10 @@
                 onscroll={handleScroll}
             >
                 {#each sections as section, i}
-                    <div class="border-t border-slate-400">
+                    <div
+                        class="border-t border-slate-400"
+                        data-section={section.label}
+                    >
                         <div
                             class="flex cursor-pointer items-center gap-2 py-2 text-lg font-bold"
                             onclick={() => toggleSection(section.label)}
@@ -135,6 +163,8 @@
                                     {#each section.children as child, j}
                                         <div
                                             class="border-t border-slate-300 pl-8"
+                                            data-section={section.label}
+                                            data-child={j}
                                         >
                                             <div
                                                 class="flex cursor-pointer items-center py-2 font-semibold"
