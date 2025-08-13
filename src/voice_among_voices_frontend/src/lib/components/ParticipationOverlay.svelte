@@ -49,22 +49,21 @@
                 <p>Make your voice heard among voices.</p>
             {:else}
                 <p class="mb-4">
-                    Voice among Voices is a participative sound artwork.
-                </p>
-                <p class="mb-4">
-                    You can listen to the zero angle by clicking Load, then Play
-                    once it's loaded.
-                </p>
-                <p class="mb-4">
-                    To add your voice to the voices, you need an EVM wallet and
-                    a <a
+                    <span class="font-italic font-bold">Voice among Voices</span
+                    >
+                    is a participatory sound artwork that invites you to become
+                    part of a collective voice and listening experience. To
+                    contribute your voice to the artwork, purchase one of the
+                    360 <span class="font-italic">VaV</span> NFTs available on
+                    <a
                         href={PUBLIC_OPENSEA_URL}
                         target="_blank"
-                        class="text-blue-400 underline transition-colors hover:text-blue-300"
-                        >VaV NFT.</a
+                        class="font-italic">OpenSea</a
                     >
+                    You'll need an EVM-compatible wallet. To listen to the
+                    public audio at angle 0, click <span class="font-italic">Load</span>
+                    and then <span class="font-italic">Play</span>.
                 </p>
-            {/if}
         </div>
 
         <!-- Close Button -->
