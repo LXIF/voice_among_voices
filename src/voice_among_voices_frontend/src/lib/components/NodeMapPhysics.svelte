@@ -807,7 +807,6 @@
                         stroke-width={bodyLineWidth}
                         fill="none"
                         class="stroke-slate-950 dark:stroke-white"
-                        opacity="0.5"
                     />
                 {/each}
             {/if}
