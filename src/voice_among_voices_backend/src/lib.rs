@@ -61,6 +61,7 @@ async fn update_voice_node(
     match check_auth_for_single_node_id(node.id).await {
         Ok(address) => {
             let res = update_stored_voice_node(node, address, time());
+            invalidate_angle_file_cache();
             zero_cache_update();
             res
         }
