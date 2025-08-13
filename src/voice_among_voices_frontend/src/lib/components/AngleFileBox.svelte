@@ -256,8 +256,8 @@
         <p class="error">{error}</p>
     {/if}
 
-    <div class="min-h-7">
-        {#if audioURL}
+    {#if audioURL}
+        <div>
             <!-- Hidden audio element (no controls) -->
             <audio
                 bind:this={audioElement}
@@ -275,8 +275,8 @@
                     Download
                 </a>
             </Button>
-        {/if}
-    </div>
+        </div>
+    {/if}
 </div>
 
 <style>
