@@ -17,34 +17,40 @@
 
     function toggleSection(label: string) {
         openSections[label] = !openSections[label];
-        // Scroll to bottom only if it's the last section and it's being opened
-        if (
-            openSections[label] &&
-            label === sections[sections.length - 1].label
-        ) {
+        // Scroll the opened section to the top of the view
+        if (openSections[label]) {
             setTimeout(() => {
-                const accordion = document.querySelector(".accordion");
-                if (accordion) {
-                    accordion.scrollTop = accordion.scrollHeight;
+                const sectionElement = document.querySelector(
+                    `[data-section="${label}"]`,
+                );
+                if (sectionElement) {
+                    sectionElement.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                        inline: "nearest",
+                    });
                 }
-            }, 100);
+            }, 200);
         }
     }
+
     function toggleChild(parentLabel: string, idx: number) {
         openSections[`${parentLabel}-${idx}`] =
             !openSections[`${parentLabel}-${idx}`];
-        // Scroll to bottom only if it's the last child of the last section and it's being opened
-        if (
-            openSections[`${parentLabel}-${idx}`] &&
-            parentLabel === sections[sections.length - 1].label &&
-            idx === sections[sections.length - 1].children.length - 1
-        ) {
+        // Scroll the opened child to the top of the view
+        if (openSections[`${parentLabel}-${idx}`]) {
             setTimeout(() => {
-                const accordion = document.querySelector(".accordion");
-                if (accordion) {
-                    accordion.scrollTop = accordion.scrollHeight;
+                const childElement = document.querySelector(
+                    `[data-section="${parentLabel}"][data-child="${idx}"]`,
+                );
+                if (childElement) {
+                    childElement.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                        inline: "nearest",
+                    });
                 }
-            }, 100);
+            }, 200);
         }
     }
     function handleClick(newSelected: SelectedState) {
@@ -158,7 +164,7 @@
                             </span>
                         </div>
                         {#if openSections[section.label]}
-                            <div transition:slide>
+                            <div transition:slide={{ duration: 200 }}>
                                 {#if section.children.length > 0}
                                     {#each section.children as child, j}
                                         <div
