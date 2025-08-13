@@ -17,10 +17,28 @@
 
     function toggleSection(label: string) {
         openSections[label] = !openSections[label];
+        // Scroll to bottom if section is opened
+        if (openSections[label]) {
+            setTimeout(() => {
+                const accordion = document.querySelector(".accordion");
+                if (accordion) {
+                    accordion.scrollTop = accordion.scrollHeight;
+                }
+            }, 100); // Small delay to ensure content is rendered
+        }
     }
     function toggleChild(parentLabel: string, idx: number) {
         openSections[`${parentLabel}-${idx}`] =
             !openSections[`${parentLabel}-${idx}`];
+        // Scroll to bottom if child is opened
+        if (openSections[`${parentLabel}-${idx}`]) {
+            setTimeout(() => {
+                const accordion = document.querySelector(".accordion");
+                if (accordion) {
+                    accordion.scrollTop = accordion.scrollHeight;
+                }
+            }, 100);
+        }
     }
     function handleClick(newSelected: SelectedState) {
         selected = newSelected;
@@ -31,6 +49,34 @@
             hasScrolled = true;
         }
     }
+
+    function scrollToSection(sectionLabel: string, childIndex?: number) {
+        // Open the section if it's closed
+        if (!openSections[sectionLabel]) {
+            openSections[sectionLabel] = true;
+        }
+
+        // Open the child if specified and it's closed
+        if (
+            childIndex !== undefined &&
+            !openSections[`${sectionLabel}-${childIndex}`]
+        ) {
+            openSections[`${sectionLabel}-${childIndex}`] = true;
+        }
+
+        setTimeout(() => {
+            const accordion = document.querySelector(".accordion");
+            if (accordion) {
+                accordion.scrollTop = 0;
+            }
+        }, 150);
+    }
+
+    $effect(() => {
+        if (typeof window !== "undefined") {
+            (window as any).scrollToSection = scrollToSection;
+        }
+    });
 </script>
 
 <Dialog
@@ -69,13 +115,13 @@
 
             <div
                 class="accordion h-[calc(50vh-4rem)] overflow-y-auto"
-                on:scroll={handleScroll}
+                onscroll={handleScroll}
             >
                 {#each sections as section, i}
                     <div class="border-t border-slate-400">
                         <div
                             class="flex cursor-pointer items-center gap-2 py-2 text-lg font-bold"
-                            on:click={() => toggleSection(section.label)}
+                            onclick={() => toggleSection(section.label)}
                         >
                             <span class="w-6">{section.label}</span>
                             <span class="flex-1">{section.title}</span>
@@ -92,7 +138,7 @@
                                         >
                                             <div
                                                 class="flex cursor-pointer items-center py-2 font-semibold"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     toggleChild(
                                                         section.label,
                                                         j,
