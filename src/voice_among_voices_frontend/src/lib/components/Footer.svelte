@@ -16,7 +16,7 @@
     });
 </script>
 
-<footer class="flex w-full justify-between px-4 pb-4">
+<footer class="absolute bottom-0 flex w-full justify-between px-4 pb-4">
     <div class="flex flex-1 items-start justify-start">
         <Button
             onclick={() =>

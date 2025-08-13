@@ -51,19 +51,22 @@
                 <p class="mb-4">
                     <span class="font-italic font-bold">Voice among Voices</span
                     >
-                    is a participatory sound artwork that invites you to become
-                    part of a collective voice and listening experience. To
-                    contribute your voice to the artwork, purchase one of the
-                    360 <span class="font-italic">VaV</span> NFTs available on
+                    is a participatory sound artwork that invites you to become part
+                    of a collective voice and listening experience. To contribute
+                    your voice to the artwork, purchase one of the 360
+                    <span class="font-italic">VaV</span>
+                    NFTs available on
                     <a
                         href={PUBLIC_OPENSEA_URL}
                         target="_blank"
                         class="font-italic">OpenSea</a
                     >
-                    You'll need an EVM-compatible wallet. To listen to the
-                    public audio at angle 0, click <span class="font-italic">Load</span>
+                    You'll need an EVM-compatible wallet. To listen to the public
+                    audio at angle 0, click
+                    <span class="font-italic">Load</span>
                     and then <span class="font-italic">Play</span>.
                 </p>
+            {/if}
         </div>
 
         <!-- Close Button -->

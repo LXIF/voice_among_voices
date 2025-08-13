@@ -35,8 +35,8 @@
     };
 </script>
 
+<Header />
 <div class="flex min-h-screen flex-col">
-    <Header />
     <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-4">
             <NodeMapContainer bind:this={nodeMapCont} />
@@ -46,8 +46,8 @@
             />
         </div>
     </div>
-    <Footer />
 </div>
+<Footer />
 {#if $showInfoModal}
     <InfoModal />
 {/if}
