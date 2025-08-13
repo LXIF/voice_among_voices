@@ -3,7 +3,7 @@ use alloy::primitives::Address;
 use crate::{
     audio::{generate_or_add_angle_vectors, vectors_to_maybe_file},
     generate_angle_file, performance_counter, set_timer, split_into_chunks,
-    storage::ANGLE_FILE_WIP_CACHE,
+    storage::{cache_angle_file, get_maybe_cached_angle_file, ANGLE_FILE_WIP_CACHE},
     structs::{AudioSample, CensorshipError, MulticallResponse, StorableAudioSample},
     test_functions::{generate_test_sample_vec, generate_test_wav},
     ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
@@ -20,19 +20,21 @@ use super::{
 pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
     let beginning_cost = performance_counter(0);
 
-    let mut result: Vec<u8> = vec![];
-
-    VOICE_NODES_MEMORY.with_borrow(|nodes| {
-        SAMPLES_MEMORY.with_borrow(|samples_map| {
-            result = generate_angle_file(
-                angle as f64,
-                nodes,
-                samples_map,
-                &AUDIO_PARAMETERS,
-                &SIMULATION_PARAMETERS,
-            )
-            .unwrap(); // TODO: error handling
-        });
+    let result: Vec<u8> = get_maybe_cached_angle_file(angle).unwrap_or_else(|| {
+        VOICE_NODES_MEMORY.with_borrow(|nodes| {
+            SAMPLES_MEMORY.with_borrow(|samples_map| {
+                let file = generate_angle_file(
+                    angle as f64,
+                    nodes,
+                    samples_map,
+                    &AUDIO_PARAMETERS,
+                    &SIMULATION_PARAMETERS,
+                )
+                .unwrap(); // TODO: error handling
+                cache_angle_file(angle, file.clone());
+                file
+            })
+        })
     });
 
     let (token, first_chunk) = prepare_stream_file(result, angle);
