@@ -166,7 +166,7 @@ pub fn store_voice_log(log: VoiceLog) -> Result<(), ic_stable_structures::GrowFa
 }
 
 pub fn retrieve_voice_logs(skip: usize, take: usize) -> Vec<VoiceLog> {
-    VOICE_LOG.with_borrow(|log_vec| log_vec.iter().skip(skip).take(take).collect())
+    VOICE_LOG.with_borrow(|log_vec| log_vec.iter().rev().skip(skip).take(take).collect())
 }
 
 pub fn get_fades() -> FadesCache {
