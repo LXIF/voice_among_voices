@@ -48,19 +48,39 @@
 
     let generating = $state(false);
     let crossfadeDuration = 0.1; // 100ms crossfade
+    let totalExpectedLength = 0; // Store total expected samples
 
     // Start streaming playback with first chunk
     async function startStreamingPlayback(firstChunk: Uint8Array) {
         try {
             streamingAudioContext = new AudioContext();
 
-            // Create initial buffer from first chunk
-            audioBuffer = await streamingAudioContext.decodeAudioData(
-                firstChunk.buffer.slice(
-                    firstChunk.byteOffset,
-                    firstChunk.byteOffset + firstChunk.byteLength,
-                ) as ArrayBuffer,
+            // Create initial buffer from first chunk to get format info
+            const firstChunkBuffer =
+                await streamingAudioContext.decodeAudioData(
+                    firstChunk.buffer.slice(
+                        firstChunk.byteOffset,
+                        firstChunk.byteOffset + firstChunk.byteLength,
+                    ) as ArrayBuffer,
+                );
+
+            // Create full-size buffer filled with silence
+            totalExpectedLength = firstChunkBuffer.length * nTokens; // Estimate total length
+            audioBuffer = streamingAudioContext.createBuffer(
+                firstChunkBuffer.numberOfChannels,
+                totalExpectedLength,
+                firstChunkBuffer.sampleRate,
             );
+
+            // Fill with silence (0s)
+            for (
+                let channel = 0;
+                channel < audioBuffer.numberOfChannels;
+                channel++
+            ) {
+                const channelData = audioBuffer.getChannelData(channel);
+                channelData.fill(0);
+            }
 
             // Start playback
             startBufferPlayback();
@@ -91,8 +111,8 @@
         };
     }
 
-    // Add new chunk to existing buffer
-    async function addChunkToBuffer(newChunk: Uint8Array) {
+    // Add new chunk to existing buffer at specific position
+    async function addChunkToBuffer(newChunk: Uint8Array, chunkIndex: number) {
         if (!streamingAudioContext || !audioBuffer) return;
 
         try {
@@ -104,47 +124,26 @@
                 ) as ArrayBuffer,
             );
 
-            // Store current buffer length before potentially modifying it
-            const currentBufferLength = audioBuffer.length;
+            // Calculate position in the full buffer
+            const chunkSize = newChunkBuffer.length;
+            const startPosition = chunkIndex * chunkSize;
 
-            // Create combined buffer
-            const combinedLength = currentBufferLength + newChunkBuffer.length;
-            const combinedBuffer = streamingAudioContext.createBuffer(
-                audioBuffer.numberOfChannels,
-                combinedLength,
-                audioBuffer.sampleRate,
-            );
-
-            // Copy existing audio data
+            // Copy chunk data to the correct position in the full buffer
             for (
                 let channel = 0;
                 channel < audioBuffer.numberOfChannels;
                 channel++
             ) {
-                const existingData = audioBuffer.getChannelData(channel);
                 const newData = newChunkBuffer.getChannelData(channel);
-                const combinedData = combinedBuffer.getChannelData(channel);
-
-                existingData.forEach((sample, index) => {
-                    combinedData[index] = sample;
-                });
+                const fullBufferData = audioBuffer.getChannelData(channel);
 
                 newData.forEach((sample, index) => {
-                    combinedData[currentBufferLength + index] = sample;
+                    fullBufferData[startPosition + index] = sample;
                 });
             }
 
-            // Update buffer and restart playback seamlessly
-            const wasPlaying = isPlaying;
-            if (wasPlaying) {
-                streamingSource?.stop();
-            }
-
-            audioBuffer = combinedBuffer;
-
-            if (wasPlaying) {
-                startBufferPlayback();
-            }
+            // No need to restart playback - buffer is already playing
+            // The audio will automatically include the new data
         } catch (e) {
             console.error("Failed to add chunk to buffer:", e);
         }
@@ -267,12 +266,12 @@
                             currentlyDownloaded += 1 / nTokens;
                             loadingProgress.target = currentlyDownloaded;
 
-                            // Add chunk to buffer as it arrives
+                            // Add chunk to buffer at specific position
                             const chunk =
                                 result.body instanceof Uint8Array
                                     ? result.body
                                     : new Uint8Array(result.body);
-                            await addChunkToBuffer(chunk);
+                            await addChunkToBuffer(chunk, i + 1); // +1 because first chunk is already loaded
 
                             return result;
                         }),
