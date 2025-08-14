@@ -43,6 +43,8 @@
     let downloadLink: HTMLAnchorElement | undefined = $state();
     let streamingAudioContext: AudioContext | undefined = $state();
     let streamingSource: AudioBufferSourceNode | undefined = $state();
+    let audioBuffer: AudioBuffer | undefined = $state();
+    let isBufferComplete = $state(false);
 
     let generating = $state(false);
     let crossfadeDuration = 0.1; // 100ms crossfade
@@ -50,38 +52,101 @@
     // Start streaming playback with first chunk
     async function startStreamingPlayback(firstChunk: Uint8Array) {
         try {
-            // Create audio context for streaming
             streamingAudioContext = new AudioContext();
 
-            // Decode the first chunk
-            const audioBuffer = await streamingAudioContext.decodeAudioData(
+            // Create initial buffer from first chunk
+            audioBuffer = await streamingAudioContext.decodeAudioData(
                 firstChunk.buffer.slice(
                     firstChunk.byteOffset,
                     firstChunk.byteOffset + firstChunk.byteLength,
                 ) as ArrayBuffer,
             );
 
-            // Create and start playback
-            streamingSource = streamingAudioContext.createBufferSource();
-            streamingSource.buffer = audioBuffer;
-            streamingSource.connect(streamingAudioContext.destination);
-            streamingSource.start(0);
-
-            isStreaming = true;
-            isPlaying = true;
-            $applicationState = applicationStates.playingFile;
-
-            // Set up ended event
-            streamingSource.onended = () => {
-                if (isStreaming) {
-                    // If still streaming, we need to continue with next chunks
-                    // This will be handled when full file arrives
-                }
-            };
+            // Start playback
+            startBufferPlayback();
         } catch (e) {
             console.error("Failed to start streaming playback:", e);
-            // Fall back to waiting for full file
             isStreaming = false;
+        }
+    }
+
+    // Start or restart buffer playback
+    function startBufferPlayback() {
+        if (!streamingAudioContext || !audioBuffer) return;
+
+        streamingSource = streamingAudioContext.createBufferSource();
+        streamingSource.buffer = audioBuffer;
+        streamingSource.connect(streamingAudioContext.destination);
+        streamingSource.start(0);
+
+        isStreaming = true;
+        isPlaying = true;
+        $applicationState = applicationStates.playingFile;
+
+        streamingSource.onended = () => {
+            if (isStreaming && !isBufferComplete) {
+                // Restart playback if buffer is still growing
+                startBufferPlayback();
+            }
+        };
+    }
+
+    // Add new chunk to existing buffer
+    async function addChunkToBuffer(newChunk: Uint8Array) {
+        if (!streamingAudioContext || !audioBuffer) return;
+
+        try {
+            // Decode new chunk
+            const newChunkBuffer = await streamingAudioContext.decodeAudioData(
+                newChunk.buffer.slice(
+                    newChunk.byteOffset,
+                    newChunk.byteOffset + newChunk.byteLength,
+                ) as ArrayBuffer,
+            );
+
+            // Store current buffer length before potentially modifying it
+            const currentBufferLength = audioBuffer.length;
+
+            // Create combined buffer
+            const combinedLength = currentBufferLength + newChunkBuffer.length;
+            const combinedBuffer = streamingAudioContext.createBuffer(
+                audioBuffer.numberOfChannels,
+                combinedLength,
+                audioBuffer.sampleRate,
+            );
+
+            // Copy existing audio data
+            for (
+                let channel = 0;
+                channel < audioBuffer.numberOfChannels;
+                channel++
+            ) {
+                const existingData = audioBuffer.getChannelData(channel);
+                const newData = newChunkBuffer.getChannelData(channel);
+                const combinedData = combinedBuffer.getChannelData(channel);
+
+                existingData.forEach((sample, index) => {
+                    combinedData[index] = sample;
+                });
+
+                newData.forEach((sample, index) => {
+                    combinedData[currentBufferLength + index] = sample;
+                });
+            }
+
+            // Update buffer and restart playback seamlessly
+            const wasPlaying = isPlaying;
+            if (wasPlaying) {
+                streamingSource?.stop();
+            }
+
+            audioBuffer = combinedBuffer;
+
+            if (wasPlaying) {
+                startBufferPlayback();
+            }
+        } catch (e) {
+            console.error("Failed to add chunk to buffer:", e);
         }
     }
 
@@ -197,25 +262,30 @@
                 chunkPromises.push(
                     backend
                         .http_request_streaming_callback(chunkToken)
-                        .then((result) => {
+                        .then(async (result) => {
                             // Update progress after each chunk loads
                             currentlyDownloaded += 1 / nTokens;
                             loadingProgress.target = currentlyDownloaded;
+
+                            // Add chunk to buffer as it arrives
+                            const chunk =
+                                result.body instanceof Uint8Array
+                                    ? result.body
+                                    : new Uint8Array(result.body);
+                            await addChunkToBuffer(chunk);
+
                             return result;
                         }),
                 );
             }
 
-            // Wait for all chunks and sort them by index
-            const chunkResults = await Promise.all(chunkPromises);
-            chunkResults.sort(
-                (a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!,
-            );
+            // Wait for all chunks to complete
+            await Promise.all(chunkPromises);
 
-            // Add sorted chunks to the chunks array
-            chunks.push(...chunkResults.map((result) => result.body));
+            // Mark buffer as complete
+            isBufferComplete = true;
 
-            // Stop streaming playback and switch to full file
+            // Stop streaming and switch to full file
             stopStreamingPlayback();
 
             // Small delay to allow crossfade to complete
