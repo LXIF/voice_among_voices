@@ -37,11 +37,92 @@
     let audioURL: string = $state("");
     let error: string = $state("");
     let isPlaying = $state(false); // To track play/pause state
+    let isStreaming = $state(false); // Track if we're in streaming mode
 
     let audioElement: HTMLAudioElement | undefined = $state();
     let downloadLink: HTMLAnchorElement | undefined = $state();
+    let streamingAudioContext: AudioContext | undefined = $state();
+    let streamingSource: AudioBufferSourceNode | undefined = $state();
 
     let generating = $state(false);
+    let crossfadeDuration = 0.1; // 100ms crossfade
+
+    // Start streaming playback with first chunk
+    async function startStreamingPlayback(firstChunk: Uint8Array) {
+        try {
+            // Create audio context for streaming
+            streamingAudioContext = new AudioContext();
+
+            // Decode the first chunk
+            const audioBuffer = await streamingAudioContext.decodeAudioData(
+                firstChunk.buffer.slice(
+                    firstChunk.byteOffset,
+                    firstChunk.byteOffset + firstChunk.byteLength,
+                ) as ArrayBuffer,
+            );
+
+            // Create and start playback
+            streamingSource = streamingAudioContext.createBufferSource();
+            streamingSource.buffer = audioBuffer;
+            streamingSource.connect(streamingAudioContext.destination);
+            streamingSource.start(0);
+
+            isStreaming = true;
+            isPlaying = true;
+            $applicationState = applicationStates.playingFile;
+
+            // Set up ended event
+            streamingSource.onended = () => {
+                if (isStreaming) {
+                    // If still streaming, we need to continue with next chunks
+                    // This will be handled when full file arrives
+                }
+            };
+        } catch (e) {
+            console.error("Failed to start streaming playback:", e);
+            // Fall back to waiting for full file
+            isStreaming = false;
+        }
+    }
+
+    // Stop streaming playback and switch to full file
+    async function stopStreamingPlayback() {
+        if (streamingSource && streamingAudioContext) {
+            try {
+                // Create a crossfade instead of immediate stop
+                const gainNode = streamingAudioContext.createGain();
+                streamingSource.disconnect();
+                streamingSource.connect(gainNode);
+                gainNode.connect(streamingAudioContext.destination);
+
+                // Fade out over crossfade duration
+                gainNode.gain.setValueAtTime(
+                    1,
+                    streamingAudioContext.currentTime,
+                );
+                gainNode.gain.linearRampToValueAtTime(
+                    0,
+                    streamingAudioContext.currentTime + crossfadeDuration,
+                );
+
+                // Stop after crossfade
+                setTimeout(() => {
+                    if (streamingSource) {
+                        streamingSource.stop();
+                        streamingSource.disconnect();
+                    }
+                    if (streamingAudioContext) {
+                        streamingAudioContext.close();
+                    }
+                }, crossfadeDuration * 1000);
+            } catch (e) {
+                console.error("Error stopping streaming playback:", e);
+            }
+        }
+        isStreaming = false;
+        streamingSource = undefined;
+        streamingAudioContext = undefined;
+    }
 
     // Fetch audio file based on angle
     async function fetchAudioFileOrPlayPause() {
@@ -69,7 +150,7 @@
             });
             $applicationState = applicationStates.loadingFile;
             error = "";
-            // audioURL = '';
+
             const response: HttpStreamingResponse | null =
                 $selectedAngle === 0
                     ? await getZeroFile()
@@ -83,6 +164,7 @@
                 generating = false;
                 throw new Error("No streaming strategy provided.");
             }
+
             generating = false;
             const chunks = [response.body];
 
@@ -95,6 +177,13 @@
             let currentlyDownloaded = 1 / nTokens;
             // First chunk is already loaded
             loadingProgress.target = currentlyDownloaded;
+
+            // Start streaming playback immediately with first chunk
+            const firstChunk =
+                response.body instanceof Uint8Array
+                    ? response.body
+                    : new Uint8Array(response.body);
+            await startStreamingPlayback(firstChunk);
 
             // Fetch all remaining chunks in parallel
             const chunkPromises = [];
@@ -126,6 +215,14 @@
             // Add sorted chunks to the chunks array
             chunks.push(...chunkResults.map((result) => result.body));
 
+            // Stop streaming playback and switch to full file
+            stopStreamingPlayback();
+
+            // Small delay to allow crossfade to complete
+            await new Promise((resolve) =>
+                setTimeout(resolve, crossfadeDuration * 1000 + 50),
+            );
+
             const audioData = new Uint8Array(
                 chunks.reduce((acc, chunk) => acc + chunk.length, 0),
             );
@@ -140,12 +237,9 @@
             await tick();
             downloadLink!.href = audioURL;
             downloadLink!.download = `voice_among_voices_${$selectedAngle}°_${Date.now()}.wav`;
-            // setTimeout(() => {
-            //     $applicationState = applicationStates.playingFile;
-            // }, 750);
+
             onFileAngle($selectedAngle);
             onFileLoaded(true);
-            // togglePlayPause();
             $applicationState = applicationStates.loggedInIdle;
         } catch (e) {
             generating = false;
@@ -158,22 +252,39 @@
     // Toggle play/pause
     async function togglePlayPause() {
         if (isPlaying) {
-            audioElement!.pause();
+            if (isStreaming) {
+                // Pause streaming playback
+                if (streamingAudioContext) {
+                    streamingAudioContext.suspend();
+                }
+            } else {
+                // Pause regular audio element
+                audioElement!.pause();
+            }
             isPlaying = false;
             $applicationState = applicationStates.loggedInIdle;
         } else {
             try {
-                const playPromise = audioElement!.play();
-                if (playPromise !== undefined) {
-                    await playPromise;
+                if (isStreaming) {
+                    // Resume streaming playback
+                    if (streamingAudioContext) {
+                        streamingAudioContext.resume();
+                    }
                     isPlaying = true;
                     $applicationState = applicationStates.playingFile;
                 } else {
-                    throw "empty audio element play promise!";
+                    // Resume regular audio element
+                    const playPromise = audioElement!.play();
+                    if (playPromise !== undefined) {
+                        await playPromise;
+                        isPlaying = true;
+                        $applicationState = applicationStates.playingFile;
+                    } else {
+                        throw "empty audio element play promise!";
+                    }
                 }
             } catch (error) {
                 console.error("Playback failed:", error);
-                // If autoplay fails, we'll let the user manually trigger play
                 isPlaying = false;
                 $applicationState = applicationStates.loggedInIdle;
             }
@@ -229,7 +340,7 @@
         <h1 class="w-min text-center text-2xl font-bold">Generating...</h1>
     {:else if $applicationState.showLoadingAnimation || $applicationState.showFileLoadingLine}
         <h1 class="w-min text-center text-2xl font-bold">Loading...</h1>
-    {:else if audioURL && !isPlaying}
+    {:else if (audioURL || isStreaming) && !isPlaying}
         <Button
             class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
             onclick={togglePlayPause}>Play</Button
