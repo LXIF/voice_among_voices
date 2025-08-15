@@ -228,4 +228,8 @@
     .accordion {
         font-family: inherit;
     }
+
+    .accordion a {
+        text-decoration: underline;
+    }
 </style>
