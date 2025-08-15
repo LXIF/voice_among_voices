@@ -171,9 +171,9 @@
             </div>
         {/if}
     </div>
-    <input type="number" bind:value={from} class="mb-2 text-black" />
+    <!-- <input type="number" bind:value={from} class="mb-2 text-black" />
     <input type="number" bind:value={step} class="mb-2 text-black" />
-    <Button onclick={handlePopulateAll}>Populate all</Button>
+    <Button onclick={handlePopulateAll}>Populate all</Button> -->
 </Dialog>
 
 <audio

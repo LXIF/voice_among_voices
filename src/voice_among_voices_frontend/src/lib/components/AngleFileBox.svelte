@@ -226,7 +226,9 @@
 
 <div class="flex w-full flex-col items-center gap-4">
     {#if generating}
-        <h1 class="w-min text-center text-2xl font-bold">Generating...</h1>
+        <h1 class="w-min text-center text-lg font-bold lg:text-2xl">
+            Generating...
+        </h1>
     {:else if $applicationState.showLoadingAnimation || $applicationState.showFileLoadingLine}
         <h1 class="w-min text-center text-2xl font-bold">Loading...</h1>
     {:else if audioURL && !isPlaying}

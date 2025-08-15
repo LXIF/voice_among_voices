@@ -114,8 +114,9 @@ pub struct AudioSample {
     pub sample_length_samples: u32,
 }
 
-pub type FileCache = HashMap<u32, Vec<u8>>;
-pub type ChunksCache = HashMap<u32, (Vec<Vec<u8>>, TimerId)>;
+pub type FileCache = HashMap<u64, (Vec<u8>, u64)>;
+pub type ChunksCache = HashMap<u64, Vec<Vec<u8>>>;
+pub type CacheTimers = HashMap<u64, TimerId>;
 pub type WipCache = HashMap<u64, WipAngleVectors>;
 
 #[derive(Clone)]

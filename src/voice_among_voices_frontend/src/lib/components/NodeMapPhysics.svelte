@@ -271,14 +271,22 @@
                             cutoffRotation,
                             cutoffShape,
                             (collider: any) => {
-                                const localBody = collider.parent();
-                                if (!localBody) return true;
-                                const localBodyUserData =
-                                    localBody?.userData as VoiceNodeEgress;
-                                if (localBodyUserData.id === body.voiceNode.id)
+                                try {
+                                    const localBody = collider.parent();
+                                    if (!localBody) return true;
+                                    const localBodyUserData =
+                                        localBody?.userData as VoiceNodeEgress;
+                                    if (
+                                        localBodyUserData.id ===
+                                        body.voiceNode.id
+                                    )
+                                        return true;
+                                    bodiesWithinReach.push(localBody);
+                                } catch (e) {
+                                    console.log(e);
+                                } finally {
                                     return true;
-                                bodiesWithinReach.push(localBody);
-                                return true;
+                                }
                             },
                             undefined,
                             undefined,

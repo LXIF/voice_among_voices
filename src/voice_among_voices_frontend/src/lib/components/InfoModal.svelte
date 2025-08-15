@@ -5,12 +5,19 @@
     import LogsDisplay from "./LogsDisplay.svelte";
     import { slide } from "svelte/transition";
     import { sections } from "$lib/content/abecedaire";
+    import { onMount } from "svelte";
 
     type SelectedState = "info" | "log";
     let selected = $state<SelectedState>("info");
 
     // Track open sections by index
     let openSections = $state<Record<string, boolean>>({});
+
+    onMount(() => {
+        sections.forEach((section) => {
+            openSections[section.label] = true;
+        });
+    });
 
     // Track scroll state for indicator
     let hasScrolled = $state(false);
