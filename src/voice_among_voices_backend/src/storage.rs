@@ -53,6 +53,7 @@ thread_local! {
     pub static FADES: RefCell<FadesCache> = RefCell::new(FadesCache { fade_in: vec![], fade_out: vec![] });
     pub static ANGLE_FILE_FILE_CACHE: RefCell<FileCache> = RefCell::new(HashMap::new());
     pub static ANGLE_FILE_EGRESS_CACHE: RefCell<ChunksCache> = RefCell::new(HashMap::new());
+    pub static ANGLE_FILE_EGRESS_TIMERS: RefCell<CacheTimers> = RefCell::new(HashMap::new());
     pub static ANGLE_FILE_WIP_CACHE: RefCell<WipCache> = RefCell::new(HashMap::new());
     pub static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
 }
@@ -226,17 +227,31 @@ pub fn config() -> StorableConfig {
     CONFIG.with_borrow(|config| config.get().clone())
 }
 
+pub fn get_maybe_cached_angle_file_epoch(angle: u64) -> Option<u64> {
+    ANGLE_FILE_FILE_CACHE.with_borrow(|cache| {
+        cache
+            .get(&angle.try_into().expect("unexpected overflow"))
+            .and_then(|(_cache, epoch)| Some(epoch).copied())
+    })
+}
+
 pub fn get_maybe_cached_angle_file(angle: u64) -> Option<Vec<u8>> {
     ANGLE_FILE_FILE_CACHE.with_borrow(|cache| {
         cache
             .get(&angle.try_into().expect("unexpected overflow"))
             .cloned()
+            .and_then(|(cache, _epoch)| Some(cache))
     })
 }
 
 pub fn cache_angle_file(angle: u64, file: Vec<u8>) {
-    ANGLE_FILE_FILE_CACHE.with_borrow_mut(|cache| {
-        cache.insert(angle.try_into().expect("unexpected overflow"), file)
+    VOICE_LOG.with_borrow(|log| {
+        ANGLE_FILE_FILE_CACHE.with_borrow_mut(|cache| {
+            cache.insert(
+                angle.try_into().expect("unexpected overflow"),
+                (file, log.len()),
+            )
+        });
     });
 }
 

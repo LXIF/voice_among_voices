@@ -4,7 +4,10 @@ use ic_cdk_timers::{clear_timer, TimerId};
 use crate::{
     audio::{generate_or_add_angle_vectors, vectors_to_maybe_file},
     generate_angle_file, performance_counter, set_timer, split_into_chunks,
-    storage::{cache_angle_file, get_maybe_cached_angle_file, ANGLE_FILE_WIP_CACHE},
+    storage::{
+        cache_angle_file, get_maybe_cached_angle_file, get_maybe_cached_angle_file_epoch,
+        ANGLE_FILE_EGRESS_TIMERS, ANGLE_FILE_WIP_CACHE, VOICE_LOG,
+    },
     structs::{AudioSample, CensorshipError, MulticallResponse, StorableAudioSample},
     test_functions::{generate_test_sample_vec, generate_test_wav},
     ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
@@ -17,6 +20,8 @@ use super::{
     store_voice_log,
     voice_log::{VoiceAction, VoiceLog},
 };
+
+const CHUNK_CACHE_TIMEOUT_SECONDS: u64 = 60;
 
 pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
     let beginning_cost = performance_counter(0);
@@ -59,21 +64,30 @@ fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Ve
     let chunks = split_into_chunks(file, &AUDIO_PARAMETERS);
 
     // Clear old timers if still around
-    ANGLE_FILE_EGRESS_CACHE.with_borrow(|cache| {
-        if let Some((_, old_timer_id)) = cache.get(&(angle as u32)) {
+    with_egress_timers(|timers| {
+        if let Some(old_timer_id) = timers.get(&angle) {
             clear_timer(*old_timer_id);
         }
     });
 
-    let timer_id = set_timer(Duration::from_secs(360), move || {
-        // invalidate after 360s for now
-        ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| {
-            cache.remove(&(angle as u32));
-        });
-    });
+    let timer_id = set_timer(
+        Duration::from_secs(CHUNK_CACHE_TIMEOUT_SECONDS),
+        move || {
+            // invalidate after 360s for now
+            with_egress_cache_mut(|cache| {
+                with_egress_timers_mut(|timers| {
+                    cache.remove(&angle);
+                    timers.remove(&angle);
+                });
+            });
+        },
+    );
 
-    ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| {
-        cache.insert(angle as u32, (chunks.clone(), timer_id));
+    with_egress_cache_mut(|cache| {
+        with_egress_timers_mut(|timers| {
+            cache.insert(angle, chunks.clone());
+            timers.insert(angle, timer_id);
+        });
     });
 
     let total_chunks = chunks.len() as u32;
@@ -89,30 +103,92 @@ fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Ve
     (token, first_chunk)
 }
 
+fn try_get_chunk_response_and_refresh_timers(
+    angle: u64,
+) -> Option<(StreamingCallbackToken, Vec<u8>)> {
+    with_egress_cache_mut(|cache| {
+        if let Some(chunks) = cache.get(&angle) {
+            // Refresh timer
+            with_egress_timers_mut(|timers| {
+                let old_timer_id = timers
+                    .get(&angle)
+                    .expect("attempting to refresh nonexistent timer");
+                clear_timer(*old_timer_id);
+                let fresh_timer_id = set_timer(Duration::from_secs(60 * 60 * 24 * 3), move || {
+                    with_egress_cache_mut(|cache| {
+                        with_egress_timers_mut(|timers| {
+                            timers.remove(&angle);
+                            cache.remove(&angle);
+                        });
+                    });
+                });
+                timers.insert(angle, fresh_timer_id);
+            });
+            let total_chunks = chunks.len() as u32;
+
+            let first_chunk = chunks.get(0).cloned().unwrap_or_default();
+            let token = StreamingCallbackToken {
+                angle: angle as u32,
+                chunk_index: 0,
+                chunks: total_chunks,
+                auth_token: None, // TODO: maybe implement this for security purposes
+            };
+
+            Some((token, first_chunk))
+        } else {
+            None
+        }
+    })
+}
+
 fn set_zero_file(new_file: Vec<u8>) {
     ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
-        SAMPLES_MEMORY.with_borrow(|samples| {
-            VOICE_NODES_MEMORY.with_borrow(|nodes| {
-                let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
-                cache.clear();
-                cache.extend(chunks.clone());
-            })
-        });
-    });
+        let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
+        cache.clear();
+        cache.extend(chunks.clone());
+    })
 }
 
 pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
-    if let Some(file) = get_maybe_cached_angle_file(angle) {
-        let (token, first_chunk) = prepare_stream_file(file, angle);
+    // FIRST WE CHECK WHETHER WE HAVE A VALID CHUNK CACHE
+    let current_epoch = VOICE_LOG.with_borrow(|log| log.len());
+    let maybe_cached_epoch = get_maybe_cached_angle_file_epoch(angle);
+    if let Some(cached_epoch) = maybe_cached_epoch {
+        // IF THE CURRENT EPOCH EQUALS THAT OF THE CACHED ANGLE FILE, ANY CHUNK CACHES ARE OF THAT AS WELL
+        if current_epoch == cached_epoch {
+            // IF WE HAVE A CACHED CHUNK RESPONSE WE RETURN THAT
+            if let Some((token, first_chunk)) = try_get_chunk_response_and_refresh_timers(angle) {
+                return MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
+                    status_code: 200,
+                    headers: vec![
+                        ("content-type".to_string(), "audio/wav".to_string()),
+                        ("x-from".to_string(), "cached".to_string()),
+                    ],
+                    body: ByteBuf::from(first_chunk),
+                    upgrade: None,
+                    streaming_strategy: create_strategy(token),
+                });
+            } else {
+                // OTHERWISE WE REPOPULATE THE CHUNK CACHE
+                if let Some(file) = get_maybe_cached_angle_file(angle) {
+                    let (token, first_chunk) = prepare_stream_file(file, angle);
 
-        return MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
-            status_code: 200,
-            headers: vec![("content-type".to_string(), "audio/wav".to_string())],
-            body: ByteBuf::from(first_chunk),
-            upgrade: None,
-            streaming_strategy: create_strategy(token),
-        });
+                    return MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
+                        status_code: 200,
+                        headers: vec![
+                            ("content-type".to_string(), "audio/wav".to_string()),
+                            ("x-from".to_string(), "repopulated".to_string()),
+                        ],
+                        body: ByteBuf::from(first_chunk),
+                        upgrade: None,
+                        streaming_strategy: create_strategy(token),
+                    });
+                }
+            }
+        }
     }
+
+    // IF THERE IS NO CACHED EPOCH, WE GENERATE
 
     ANGLE_FILE_WIP_CACHE.with_borrow_mut(|wip_cache| {
         VOICE_NODES_MEMORY.with_borrow(|nodes| {
@@ -148,6 +224,7 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                             headers: vec![
                                 ("content-type".to_string(), "audio/wav".to_string()),
                                 ("x-n-calls".to_string(), new_wip.n_calls.to_string()), // Profiling header
+                                ("x-from".to_string(), "fresh".to_string()),
                             ],
                             body: ByteBuf::from(first_chunk),
                             upgrade: None,
@@ -188,17 +265,15 @@ pub fn get_file_for_zero_angle() -> HttpStreamingResponse {
 
 pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
     let chunks: Vec<Vec<u8>>;
-    let angle = token.angle;
+    let angle = token.angle as u64;
 
     match token.angle {
         0 => {
             chunks = ZERO_DEGREE_FILE_CACHE.with_borrow(|cache| cache.clone());
         }
         _ => {
-            chunks = match ANGLE_FILE_EGRESS_CACHE
-                .with_borrow(|cache| cache.get(&token.angle).cloned())
-            {
-                Some((file_chunks, _)) => file_chunks,
+            chunks = match with_egress_cache(|cache| cache.get(&angle).cloned()) {
+                Some(file_chunks) => file_chunks,
                 None => ic_cdk::trap("Cache out of date, connection too slow"),
             };
         }
@@ -215,7 +290,7 @@ pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHt
             ic_cdk::trap("Chunk not found");
         }
     } else {
-        ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(|cache| cache.remove(&angle));
+        with_egress_cache_mut(|cache| cache.remove(&angle));
         StreamingCallbackHttpResponse {
             headers: vec![],
             body: ByteBuf::new(),
@@ -272,4 +347,32 @@ fn generate_censored_sample_vec(duration_samples: u32, sample_rate: u32) -> Vec<
     let duration_ms = duration_samples / sample_rate * 1000;
 
     generate_test_sample_vec(duration_ms, sample_rate, 0.1)
+}
+
+fn with_egress_cache<F, R>(f: F) -> R
+where
+    F: FnOnce(&std::collections::HashMap<u64, Vec<Vec<u8>>>) -> R,
+{
+    ANGLE_FILE_EGRESS_CACHE.with_borrow(f)
+}
+
+fn with_egress_cache_mut<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut std::collections::HashMap<u64, Vec<Vec<u8>>>) -> R,
+{
+    ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(f)
+}
+
+fn with_egress_timers<F, R>(f: F) -> R
+where
+    F: FnOnce(&std::collections::HashMap<u64, TimerId>) -> R,
+{
+    ANGLE_FILE_EGRESS_TIMERS.with_borrow(f)
+}
+
+fn with_egress_timers_mut<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut std::collections::HashMap<u64, TimerId>) -> R,
+{
+    ANGLE_FILE_EGRESS_TIMERS.with_borrow_mut(f)
 }
