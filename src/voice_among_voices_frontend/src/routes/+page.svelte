@@ -36,7 +36,7 @@
 </script>
 
 <Header />
-<div class="flex min-h-screen flex-col">
+<div class="flex max-h-screen flex-col pt-[10vh] lg:min-h-screen lg:pt-0">
     <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-4">
             <NodeMapContainer bind:this={nodeMapCont} />
