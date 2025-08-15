@@ -19,7 +19,7 @@ export const sections = [
             {
                 title: "Authors",
                 content:
-                    "<b>Dalia Donadio</b> (Co-leader and creative co-director) is a vocalist, composer, and performer whose work centers on the voice and language as universal, connecting instruments. In her solo and collaborative practices, she is exploring themes such as origin, intimacy, anatomy, and poetry, her practice spans etymology, dialects, and vocal resonance. She also integrates her roles as organizer and singing teacher into her broader artistic and research practice.<br><a href='https://www.daliadonadio.com' target='_blank'>daliadonadio.com</a><br><br><b>Tobias Meier</b> (Co-leader and creative co-director) is an artist and musician whose works span solo performances, installations, writings, collaborations, and compositions. His collage-like pieces employ various media, while as a saxophonist he explores improvised music across different settings. Recently, he has focused on collaborative formats and group processes within creative practice, drawing from his background as a process-oriented facilitator to develop deeply democratic approaches to music-making.<br><a href='https://www.tobias-meier.ch' target='_blank'>tobias-meier.ch</a><br><br><b>i.AM Lab, Renato Schneeberger</b> (UX/UI Design and general advice)<br><br><b>Andri Schatz / LIFEBOD</b> (Techno-artistic consulting and translation, software engineering) is an artist, musician, designer and software engineer. On a practical level, their work is primarily focused on tying pre-lingual intuition and presence to high-tech tooling, generating deeply magickal experiences.<br><a href='https://instagram.com/lifebod.uwu' target='_blank'>Andri Schatz Instagram</a><br><br>The first recordings to <i>VaV</i> were contributed by the following artists: tba",
+                    "<b>Dalia Donadio</b> (Co-leader and creative co-director) is a vocalist, composer, and performer whose work centers on the voice and language as universal, connecting instruments. In her solo and collaborative practices, she is exploring themes such as origin, intimacy, anatomy, and poetry, her practice spans etymology, dialects, and vocal resonance. She also integrates her roles as organizer and singing teacher into her broader artistic and research practice.<br><a class='underline' href='https://www.daliadonadio.com' target='_blank'>daliadonadio.com</a><br><br><b>Tobias Meier</b> (Co-leader and creative co-director) is an artist and musician whose works span solo performances, installations, writings, collaborations, and compositions. His collage-like pieces employ various media, while as a saxophonist he explores improvised music across different settings. Recently, he has focused on collaborative formats and group processes within creative practice, drawing from his background as a process-oriented facilitator to develop deeply democratic approaches to music-making.<br><a class='underline' href='https://www.tobias-meier.ch' target='_blank'>tobias-meier.ch</a><br><br><b>i.AM Lab, Renato Schneeberger</b> (UX/UI Design and general advice)<br><br><b>Andri Schatz / LIFEBOD</b> (Techno-artistic consulting and translation, software engineering) is an artist, musician, designer and software engineer. On a practical level, their work is primarily focused on tying pre-lingual intuition and presence to high-tech tooling, generating deeply magickal experiences.<br><a class='underline' href='https://instagram.com/lifebod.uwu' target='_blank'>Andri Schatz Instagram</a><br><br>The first recordings to <i>VaV</i> were contributed by the following artists: tba",
             },
         ],
     },
@@ -40,7 +40,7 @@ export const sections = [
             },
             {
                 title: "Buy",
-                content: `<i>VaV</i>-NFTs can be bought through our website or directly on <a href='${PUBLIC_OPENSEA_URL}' target='_blank'>OpenSea</a> with Ethereum. To purchase Ethereum, use your favorite trusted crypto trading platform.`,
+                content: `<i>VaV</i>-NFTs can be bought through our website or directly on <a class='underline' href='${PUBLIC_OPENSEA_URL}' target='_blank'>OpenSea</a> with Ethereum. To purchase Ethereum, use your favorite trusted crypto trading platform.`,
             },
         ],
     },
@@ -61,12 +61,12 @@ export const sections = [
             {
                 title: "Community",
                 content:
-                    "Join our <i>VaV</i>-Community on <a href='https://oc.app' target='_blank'>OpenChat</a> and share your experiences, thoughts, and questions.",
+                    "Join our <i>VaV</i>-Community on <a class='underline' href='https://oc.app' target='_blank'>OpenChat</a> and share your experiences, thoughts, and questions.",
             },
             {
                 title: "Copyright & Privacy",
                 content:
-                    "As the holder of an NFT, you retain general copyright over your individual recording. The complete work — comprised of all 360 angles (359 + 1) – is openly licensed via <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/' target='_blank'>CC BY-NC-ND 4.0</a> (© 2025).<br><br>While your own recording can be heard publicly, it cannot be downloaded individually and is accessible only to you. You may overwrite or transfer your NFT at any time. When selling, you may choose to transfer the recording or overwrite it beforehand. Once sold, you relinquish your rights to the recording, and the new owner gains control over how it is used.",
+                    "As the holder of an NFT, you retain general copyright over your individual recording. The complete work — comprised of all 360 angles (359 + 1) – is openly licensed via <a class='underline' href='https://creativecommons.org/licenses/by-nc-nd/4.0/' target='_blank'>CC BY-NC-ND 4.0</a> (© 2025).<br><br>While your own recording can be heard publicly, it cannot be downloaded individually and is accessible only to you. You may overwrite or transfer your NFT at any time. When selling, you may choose to transfer the recording or overwrite it beforehand. Once sold, you relinquish your rights to the recording, and the new owner gains control over how it is used.",
             },
             {
                 title: "Cross-Chain",
@@ -117,7 +117,7 @@ export const sections = [
             {
                 title: "Internet Computer Protocol",
                 content:
-                    "The Internet Computer Protocol is a next-generation Blockchain Protocol enabling full-stack decentralization. This means that the audio and physics calculations on the backend of <i>VaV</i> run fully decentralized. You can find more info under <a href='https://internetcomputer.org' target='_blank'>internetcomputer.org</a>.",
+                    "The Internet Computer Protocol is a next-generation Blockchain Protocol enabling full-stack decentralization. This means that the audio and physics calculations on the backend of <i>VaV</i> run fully decentralized. You can find more info under <a class='underline' href='https://internetcomputer.org' target='_blank'>internetcomputer.org</a>.",
             },
         ],
     },
@@ -165,7 +165,7 @@ export const sections = [
             {
                 title: "Open Source",
                 content:
-                    "The <i>VaV</i> code is open source and available <a href='https://github.com/LXIF/voice_among_voices' target='_blank'>on github</a>.",
+                    "The <i>VaV</i> code is open source and available <a class='underline' href='https://github.com/LXIF/voice_among_voices' target='_blank'>on github</a>.",
             },
         ],
     },
@@ -194,7 +194,7 @@ export const sections = [
             {
                 title: "Questions",
                 content:
-                    "Please let us know your questions via <a href='mailto:hello@voiceamongvoices.com'>email</a> or OpenChat. Here are some of our questions:<br><br>Will there be a sense of togetherness? How much space does one voice need? How does one voice alter the perception of another? How does my voice change in the presence of others? Where do individual voices end and collective voice begin?",
+                    "Please let us know your questions via <a class='underline' href='mailto:hello@voiceamongvoices.com'>email</a> or OpenChat. Here are some of our questions:<br><br>Will there be a sense of togetherness? How much space does one voice need? How does one voice alter the perception of another? How does my voice change in the presence of others? Where do individual voices end and collective voice begin?",
             },
         ],
     },
@@ -223,7 +223,7 @@ export const sections = [
             {
                 title: "Terms & Conditions",
                 content:
-                    "While <i>VaV</i> aims to be open, inclusive, and deeply democratic for everyone, there is also a more uncomfortable secondary aspect: In supporting our vision of togetherness—of being in contact while remaining different—we (the artists) curate and oversee contributions to <i>VaV</i>, removing entries that contradict this philosophy. Racist, sexist, nationalist voices, or other forms of discrimination have no place on <i>VaV</i>. While the NFTs themselves remain untouched, the corresponding recordings will be censored. For details on copyright and privacy matters, refer to <a href='#' onclick='event.preventDefault(); window.scrollToSection(\"C\", 3)'>Copyright & Privacy</a>.",
+                    "While <i>VaV</i> aims to be open, inclusive, and deeply democratic for everyone, there is also a more uncomfortable secondary aspect: In supporting our vision of togetherness—of being in contact while remaining different—we (the artists) curate and oversee contributions to <i>VaV</i>, removing entries that contradict this philosophy. Racist, sexist, nationalist voices, or other forms of discrimination have no place on <i>VaV</i>. While the NFTs themselves remain untouched, the corresponding recordings will be censored. For details on copyright and privacy matters, refer to <a class='underline' href='#' onclick='event.preventDefault(); window.scrollToSection(\"C\", 3)'>Copyright & Privacy</a>.",
             },
         ],
     },

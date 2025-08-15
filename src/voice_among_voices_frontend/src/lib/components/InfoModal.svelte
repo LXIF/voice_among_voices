@@ -140,7 +140,7 @@
             <!-- Scroll indicator -->
             {#if !hasScrolled}
                 <div
-                    class="absolute bottom-0 flex w-full items-center justify-center"
+                    class="pointer-events-none absolute bottom-0 flex w-full select-none items-center justify-center"
                 >
                     <div
                         class="bottom-2 z-10 rounded-full bg-slate-200/80 px-2 py-1 text-xs text-slate-600 dark:bg-slate-700/80 dark:text-slate-300"
@@ -227,9 +227,5 @@
 <style>
     .accordion {
         font-family: inherit;
-    }
-
-    .accordion a {
-        text-decoration: underline;
     }
 </style>
