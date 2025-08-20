@@ -1,0 +1,6 @@
+[submodule "vav_evm/lib/forge-std"]
+	path = vav_evm/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "vav_evm/lib/ERC721A"]
+	path = vav_evm/lib/ERC721A
+	url = https://github.com/chiru-labs/ERC721A
