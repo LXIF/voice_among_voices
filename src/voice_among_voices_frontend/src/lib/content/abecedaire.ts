@@ -1,7 +1,7 @@
 import { tokenBuyLink } from "$lib/state/uxState";
 import {get} from "svelte/store";
 
-export const sections = [
+export const getSections = () => [
     {
         label: "A",
         title: "",
