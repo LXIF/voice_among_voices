@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "../lib/ERC721A";
+import "ERC721A/ERC721A.sol";
 
 contract VoiceAmongVoices is ERC721A {
     constructor() ERC721A("VoiceAmongVoices", "VAV") {}

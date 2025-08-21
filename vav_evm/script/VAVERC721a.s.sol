@@ -2,7 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "forge-std/Script.sol";
-import "../contracts/VAVERC721a.sol";
+import "../src/VAVERC721a.sol";
 import "forge-std/console.sol";
 
 contract DisburseNFTsScript is Script {
@@ -23,7 +23,7 @@ contract DisburseNFTsScript is Script {
             block.timestamp, 
             block.prevrandao, 
             msg.sender
-        ));
+        )));
         disbursementWallet = vm.addr(disbursementPrivateKey);
         
         console.log("Generated disbursement wallet:");
@@ -34,6 +34,15 @@ contract DisburseNFTsScript is Script {
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        disbursementWallet = vm.addr(deployerPrivateKey);
+        disbursementPrivateKey = deployerPrivateKey;
+        
+        // Add a pause for manual ETH transfer
+        console.log("=== PAUSE FOR MANUAL ETH TRANSFER ===");
+        console.log("Please transfer ETH to your deployment wallet then rerun:");
+        console.log("Address:", vm.addr(deployerPrivateKey));
+        console.log("Network: Base Mainnet");
+        console.log("Estimated needed: 0.0001 ETH");
         
         vm.startBroadcast(deployerPrivateKey);
         
@@ -46,11 +55,6 @@ contract DisburseNFTsScript is Script {
         console.log("Minting 360 tokens to disbursement wallet...");
         nftContract.mint{value: 0}(360);
         console.log("Minting complete!");
-        
-        vm.stopBroadcast();
-        
-        // Step 3: Switch to disbursement wallet for transfers
-        vm.startBroadcast(disbursementPrivateKey);
         
         console.log("Starting token disbursement...");
         Disbursement[] memory disbursements = readDisbursementCSV();
@@ -139,19 +143,20 @@ contract DisburseNFTsScript is Script {
             require(actualOwner == disp.recipient, 
                 string.concat("Verification failed: Token ", vm.toString(disp.tokenId)));
             
-            console.log("✓ Token", disp.tokenId, "verified to", disp.recipient, "(", disp.name, ")");
+            // Fix: Use string concatenation instead of multiple arguments
+            console.log(string.concat("OK Token ", vm.toString(disp.tokenId), " verified to ", vm.toString(disp.recipient), " (", disp.name, ")"));
             verifiedCount++;
         }
         
         console.log("");
         console.log("=== VERIFICATION SUMMARY ===");
-        console.log("Total tokens verified:", verifiedCount);
-        console.log("Expected tokens:", disbursements.length);
+        console.log("Total tokens verified:", vm.toString(verifiedCount));
+        console.log("Expected tokens:", vm.toString(disbursements.length));
         
         require(verifiedCount == disbursements.length, "Verification count mismatch");
         require(verifiedCount == 360, "Total token count mismatch");
         
-        console.log("✓ All", verifiedCount, "tokens verified successfully!");
-        console.log("✓ Total supply matches expected 360 tokens");
+        console.log(string.concat("OK All ", vm.toString(verifiedCount), " tokens verified successfully!"));
+        console.log("OK Total supply matches expected 360 tokens");
     }
 }
