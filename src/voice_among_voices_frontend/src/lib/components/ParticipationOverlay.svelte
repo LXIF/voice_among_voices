@@ -2,8 +2,7 @@
     import { showParticipationOverlay } from "$lib/state/uxState";
     import { fade, scale } from "svelte/transition";
     import { quintOut } from "svelte/easing";
-    import { myTokens } from "$lib/state/uxState";
-    import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
+    import { myTokens, tokenBuyLink } from "$lib/state/uxState";
     import { identityAgent } from "$lib/canisters";
 
     function closeOverlay() {
@@ -57,10 +56,8 @@
                     the 360
                     <span class="font-italic">VaV</span>
                     NFTs available on
-                    <a
-                        href={PUBLIC_OPENSEA_URL}
-                        target="_blank"
-                        class="font-italic">OpenSea</a
+                    <a href={$tokenBuyLink} target="_blank" class="font-italic"
+                        >OpenSea</a
                     >.<br /><br />
                     To listen to the public audio at angle 0, click
                     <span class="font-italic">Load</span>

@@ -1,4 +1,5 @@
-import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
+import { tokenBuyLink } from "$lib/state/uxState";
+import {get} from "svelte/store";
 
 export const sections = [
     {
@@ -40,7 +41,7 @@ export const sections = [
             },
             {
                 title: "Buy",
-                content: `<i>VaV</i>-NFTs can be bought through our website or directly on <a class='underline' href='${PUBLIC_OPENSEA_URL}' target='_blank'>OpenSea</a> with Ethereum. To purchase Ethereum, use your favorite trusted crypto trading platform.`,
+                content: `<i>VaV</i>-NFTs can be bought through our website or directly on <a class='underline' href='${get(tokenBuyLink)}' target='_blank'>OpenSea</a> with Ethereum. To purchase Ethereum, use your favorite trusted crypto trading platform.`,
             },
         ],
     },

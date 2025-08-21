@@ -10,25 +10,24 @@
         applicationState,
         applicationStates,
         toastMessage,
-        myTokens,
+        tokenBuyLink,
         hasNoTokens,
     } from "$lib/state/uxState";
     import { siwe } from "$lib/siwe/siwe";
     import Dialog from "./Dialog.svelte";
     import { getWalletClient, type Config } from "@wagmi/core";
     import { scale } from "svelte/transition";
-    import { elasticIn, elasticInOut, elasticOut } from "svelte/easing";
+    import { elasticOut } from "svelte/easing";
 
     let walletConnected = $state(false);
     let isLoggingIn = $state(false);
     let isLoggingOut = $state(false);
-    let tokenBuyLink = $state("");
     let showCopied = $state(false);
     let showCopiedNoTokensModal = $state(false);
 
     onMount(async () => {
         if (!$appkitModal) throw "Appkit Modal not initialized!";
-        tokenBuyLink = await backend.get_token_buy_link();
+        $tokenBuyLink = await backend.get_token_buy_link();
         setAddress();
     });
 
@@ -166,7 +165,7 @@
             your voice, please acquire one <a
                 target="_blank"
                 class="origin-center underline outline-none transition-transform hover:scale-110"
-                href={tokenBuyLink}>here</a
+                href={$tokenBuyLink}>here</a
             >
             and send it to your wallet:
             <Button

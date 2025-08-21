@@ -28,21 +28,15 @@
         mapRotation,
         applicationState,
         applicationStates,
-        voiceNodes,
         toastMessage,
-        isAdmin,
         selectedManagementNode,
         showCensorModal,
     } from "$lib/state/uxState";
-    import { isDarkMode } from "$lib/utils/uxUtils";
     import {
         getColliderCoordinates,
         getSimulationParameters,
-        getVoiceNodes,
     } from "$lib/icInteractions";
     import { clamp, mapRange } from "$lib/utils/mathUtils";
-    import { identityAgent } from "$lib/canisters";
-    import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
     import { AFFINITY_MODE } from "$lib/state/featureFlags";
 
     let {

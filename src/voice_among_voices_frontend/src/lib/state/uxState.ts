@@ -25,6 +25,7 @@ export const audioParameters = writable<AudioParameters | null>(null);
 export const myAddress = writable<string>("");
 export const myTokens = writable<number[]>([]);
 export const adminTokenId = writable<number>(0);
+export const tokenBuyLink = writable<string>("");
 
 export const isAdmin = derived([myTokens, adminTokenId], () => {
     if (get(myTokens).length === 0) return false;

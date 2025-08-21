@@ -9,13 +9,13 @@
         myTokens,
         applicationState,
         buyTag,
+        tokenBuyLink,
     } from "$lib/state/uxState";
     import { identityAgent } from "$lib/canisters";
     import { blur } from "svelte/transition";
     import { isDarkMode } from "$lib/utils/uxUtils";
     import { untrack } from "svelte";
     import { isTouch } from "$lib/state/isMobile";
-    import { PUBLIC_OPENSEA_URL } from "$lib/config/public";
 
     let {
         class: classes = "",
@@ -376,13 +376,13 @@
 
     function openBuyPage(angle: number) {
         if (angle === 0) {
-            const url = PUBLIC_OPENSEA_URL;
+            const url = $tokenBuyLink;
             //this is for touch
             window.open(url, "_blank", "noopener,noreferrer");
             return;
         }
 
-        const url = `${PUBLIC_OPENSEA_URL}/${angle}`;
+        const url = `${$tokenBuyLink}/${angle}`;
         window.open(url, "_blank", "noopener,noreferrer");
     }
 
