@@ -113,7 +113,7 @@
                 } else if (
                     "NotWithinCircleError" in backend_simulation_result.Err
                 ) {
-                    console.log("Not within circle error");
+                    console.log("Not within circle");
                 }
             }
         } catch (e) {
