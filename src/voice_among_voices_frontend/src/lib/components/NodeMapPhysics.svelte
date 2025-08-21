@@ -209,7 +209,6 @@
     });
 
     export function resetNodes() {
-        console.log("Resetting nodes...");
         localNodes = [...nodes];
         backendNodes = [];
     }
@@ -567,7 +566,6 @@
     }
 
     function resetPhysics() {
-        console.log("Resetting physics...");
         steps = 0;
         setTimeout(() => {
             //let last frame play out

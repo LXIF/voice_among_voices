@@ -10,10 +10,6 @@ import { browser } from "$app/environment";
 import { getVoiceNodes } from "$lib/icInteractions";
 import { backend } from "$lib/canisters";
 
-if (browser) {
-    console.log("[Debug] uxState.svelte.ts module initialization");
-}
-
 export const selectedAngle = writable<number>(0);
 export const hoveredAngle = writable<number | null>(null);
 export const currentVoiceBlob = writable<Blob | null>(null);
@@ -222,8 +218,6 @@ const createApplicationState = () => {
         if (value.state === "recordingVoice") {
             backendSimulationResult.set([]);
         }
-
-        console.log("[Debug] applicationState changed", value.state);
     };
 
     return {

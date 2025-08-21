@@ -60,7 +60,6 @@
         if (localStream) {
             localStream.getTracks().forEach((track) => track.stop());
         }
-        console.log("cleaning up");
         $applicationState = applicationStates.loggedInIdle;
     }
 
