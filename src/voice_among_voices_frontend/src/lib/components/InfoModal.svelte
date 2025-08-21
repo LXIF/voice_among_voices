@@ -4,19 +4,26 @@
     import Dialog from "./Dialog.svelte";
     import LogsDisplay from "./LogsDisplay.svelte";
     import { slide } from "svelte/transition";
-    import { sections } from "$lib/content/abecedaire";
     import { onMount } from "svelte";
 
     type SelectedState = "info" | "log";
+    type Section = {
+        label: string;
+        title: string;
+        content: string;
+        children: { title: string; content: string }[];
+    };
     let selected = $state<SelectedState>("info");
 
     // Track open sections by index
     let openSections = $state<Record<string, boolean>>({});
 
-    onMount(() => {
-        sections.forEach((section) => {
-            openSections[section.label] = true;
-        });
+    let sections = $state<Section[]>([]);
+
+    onMount(async () => {
+        // Dynamic import - loads the module at runtime
+        const module = await import("$lib/content/abecedaire");
+        sections = module.sections;
     });
 
     // Track scroll state for indicator
