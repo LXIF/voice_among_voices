@@ -5,9 +5,7 @@ import type {
 } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
 import { derived, get, writable } from "svelte/store";
 import { Tween, Spring } from "svelte/motion";
-import { elasticOut, cubicOut, cubicInOut, sineInOut } from "svelte/easing";
-import { browser } from "$app/environment";
-import { getVoiceNodes } from "$lib/icInteractions";
+import { cubicInOut, sineInOut } from "svelte/easing";
 import { backend } from "$lib/canisters";
 
 export const selectedAngle = writable<number>(0);

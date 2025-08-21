@@ -141,6 +141,7 @@ export const getTokenAddress = async () => {
 
 export const updateVoiceNode = async (voiceNode: VoiceNodeIngress) => {
     try {
+        console.log("Hnnnngh... @w@");
         const response = backend.update_voice_node(voiceNode);
         return response;
     } catch (error) {
