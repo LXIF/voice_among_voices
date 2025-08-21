@@ -182,7 +182,7 @@ export const sections = [
             {
                 title: "Price",
                 content:
-                    "The price is calculated as follows: y = 1 / (x * (x/50 + 0.98)), where y represents the price and x represents angles 1-360.<br>Angle 0 is not for sale and remains free to access for everyone.<br>Angle 1 is the most expensive, with prices decreasing logarithmically. This structure enables both collectibility and accessibility simultaneously.",
+                    "The price is calculated as follows: y = 1 / (x * (x/25 + 0.96)), where y represents the price and x represents angles 1-360.<br>Angle 0 is not for sale and remains free to access for everyone.<br>Angle 1 is the most expensive, with prices decreasing logarithmically. This structure enables both collectibility and accessibility simultaneously.",
             },
         ],
     },

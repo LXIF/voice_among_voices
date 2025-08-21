@@ -17,10 +17,10 @@ dfx canister create --all --ic --identity LXIF-private
 dfx deploy voice_among_voices_backend --ic --identity LXIF-private --argument $'(
     opt record {
         siwe_canister_principal = opt principal "'$(dfx canister id ic_siwe_provider --ic)'";
-        token_address = opt "0xfB5dA9f3657337E1d9B3eb3C5a052AD652e24B56";
+        token_address = opt "0x62B3B5Baaa2500c54BC0B26746d12B4852F5E318";
         dev_mode = opt false;
         admin_token_id = opt 0;
-        token_buy_link = opt "https://basescan.org/address/0xB6AeC30a1252C71De5b14bB40C5339Bd0B80fc13#writeContract#F2";
+        token_buy_link = opt "https://opensea.io/item/base/0x62b3b5baaa2500c54bc0b26746d12b4852f5e318/";
     }
 )'
 

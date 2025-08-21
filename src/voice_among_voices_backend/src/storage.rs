@@ -112,7 +112,7 @@ pub fn zero_cache_update() {
 async fn zero_cache_update_multicall() {
     match get_file_for_angle_multicall(0) {
         MulticallResponse::ZeroFinished => {
-            ic_cdk::println!("zerowargle");
+            ic_cdk::println!("Finished regenerating Zero file!");
             // Banger! We're done here UwU (Finished without outcall)
         }
         MulticallResponse::HttpStreamingResponse(_response) => {
@@ -136,7 +136,7 @@ async fn zero_cache_update_multicall() {
 
                     if is_zero_finished {
                         // Great! We are finished.
-                        ic_cdk::println!("zerobargle");
+                        ic_cdk::println!("Finished regenerating zero file!");
                     } else {
                         ic_cdk::println!("Got invalid zero cache update multicall response!");
                     }
