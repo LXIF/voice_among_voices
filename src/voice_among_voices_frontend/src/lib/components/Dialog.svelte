@@ -152,7 +152,7 @@
                 size="lg"
                 iconOnly
                 type="button"
-                class="z-2 absolute right-2 top-2 !rounded-full"
+                class="z-2 absolute right-3.5 top-2 !rounded-full"
                 onclick={onClose}
             >
                 ✕
