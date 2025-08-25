@@ -18,12 +18,12 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
     let direct_re_deprecated =
         regex::Regex::new(r"^/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
     let direct_re =
-        regex::Regex::new(r"^/nft/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
+        regex::Regex::new(r"^/nft/([1-9]|[0-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
     let nft_images_deprecated_re =
-        regex::Regex::new(r"^/nft_images/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$")
+        regex::Regex::new(r"^/nft_images/([0-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$")
             .unwrap();
     let nft_images_re =
-        regex::Regex::new(r"^/nft_img/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
+        regex::Regex::new(r"^/nft_img/([0-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
 
     if let Some(caps) = direct_re.captures(path) {
         let nft_id: usize = caps[1].parse().unwrap();
@@ -45,7 +45,8 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         let mut response = create_json_response(StatusCode::from_u16(200).unwrap(), json_body);
         add_skip_certification_header(data_certificate().unwrap(), &mut response);
         response
-    } else if let Some(_caps) = direct_re_deprecated.captures(path) {
+    } else if let Some(caps) = direct_re_deprecated.captures(path) {
+        let nft_id: usize = caps[1].parse().unwrap();
         let json_data = json!({
             "id": nft_id,
             "name": format!("DEPRECATED"),
@@ -63,12 +64,7 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         response
     } else if let Some(caps) = nft_images_deprecated_re.captures(path) {
         let json_data = json!({
-            "id": nft_id,
-            "name": format!("DEPRECATED"),
-            "image": format!("DEPRECATED"),
-            "external_url": "DEPRECATED",
-            "description": "DEPRECATED",
-            "background_color": "DEPRECATED"
+            "deprecated": "DEPRECATED"
         });
 
         // Convert to string and then to bytes
