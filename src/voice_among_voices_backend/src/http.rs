@@ -16,9 +16,9 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
 
     // Match paths like "/123"
     let direct_re_deprecated =
-        regex::Regex::new(r"^/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
+        regex::Regex::new(r"^/([0-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
     let direct_re =
-        regex::Regex::new(r"^/nft/([1-9]|[0-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
+        regex::Regex::new(r"^/nft/([0-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
     let nft_images_deprecated_re =
         regex::Regex::new(r"^/nft_images/([0-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$")
             .unwrap();
