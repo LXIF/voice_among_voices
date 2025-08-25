@@ -6,10 +6,10 @@
     import {
         loadingProgress,
         applicationState,
-        backendSimulationResult,
         voiceNodes,
         applicationStates,
         toastMessage,
+        audioParameters,
     } from "$lib/state/uxState";
     import {
         selectedAngle,
@@ -42,6 +42,47 @@
     let downloadLink: HTMLAnchorElement | undefined = $state();
 
     let generating = $state(false);
+
+    async function newFetchAudioAndPlay() {
+        if (!$audioParameters) throw "No audio parameters";
+        const ctx = new AudioContext();
+        const totalLength =
+            ($audioParameters.total_length_ms / 1000) *
+            $audioParameters.sample_rate;
+        const buffer = ctx.createBuffer(
+            2,
+            length,
+            $audioParameters.sample_rate,
+        );
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        // TODO: fetch first chunk of raw PCM data
+
+        addToBuffer(left, right, buffer);
+
+        source.start(0, 0); // second parameter is where in the piece we play
+
+        // TODO: fetch subsequent chunks and add them to buffer with offset
+    }
+
+    function addToBuffer(
+        left: Int16Array,
+        right: Int16Array,
+        buffer: AudioBuffer,
+        offset = 0,
+    ) {
+        const leftArray = new Float32Array(left.length);
+        const rightArray = new Float32Array(right.length);
+
+        for (let i = 0; i < left.length; i++) {
+            leftArray[i] = left[i] / 32768.0;
+            rightArray[i] = right[i] / 32768.0;
+        }
+
+        buffer.copyToChannel(leftArray, 0, offset);
+        buffer.copyToChannel(rightArray, 1, offset);
+    }
 
     // Fetch audio file based on angle
     async function fetchAudioFileOrPlayPause() {

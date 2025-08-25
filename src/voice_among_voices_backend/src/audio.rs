@@ -38,13 +38,8 @@ pub fn generate_angle_file(
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
 ) -> Result<Vec<u8>, hound::Error> {
-    // generate sample positions
-    let sample_positions = generate_normalized_sample_positions(nodes, sim_params, angle);
-    // generate stereo sample vectors
-    let (left_samples, right_samples) = unsafe {
-        // generate_audio_vectors(&sample_positions, audio_params, samples);
-        generate_audio_vectors_optimized(&sample_positions, audio_params, samples)
-    };
+    let (left_samples, right_samples) =
+        generate_angle_vecs(angle, nodes, samples, audio_params, sim_params);
 
     // generate resulting file
 
@@ -53,7 +48,23 @@ pub fn generate_angle_file(
     angle_file
 }
 
-pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<u8>, hound::Error>> {
+pub fn generate_angle_vecs(
+    angle: f64,
+    nodes: &VoiceNodeLocalMemory,
+    samples: &AudioSampleMemory,
+    audio_params: &AudioParameters,
+    sim_params: &SimulationParameters,
+) -> (Vec<i16>, Vec<i16>) {
+    // generate sample positions
+    let sample_positions = generate_normalized_sample_positions(nodes, sim_params, angle);
+    // generate stereo sample vectors
+    unsafe {
+        // generate_audio_vectors(&sample_positions, audio_params, samples);
+        generate_audio_vectors_optimized(&sample_positions, audio_params, samples)
+    }
+}
+
+pub fn vectors_to_maybe_channels(wip: &WipAngleVectors) -> Option<Channels> {
     let is_finished = wip.last_processed
         == wip
             .sample_positions
@@ -66,11 +77,10 @@ pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<u8>, ho
             })
             .sample_id;
     if is_finished {
-        return Some(write_stereo_wav_to_vec(
-            &AUDIO_PARAMETERS,
-            &wip.left_samples,
-            &wip.right_samples,
-        ));
+        return Some(Channels {
+            left_channel: wip.left_samples,
+            right_channel: wip.right_samples,
+        });
     }
     None
 }

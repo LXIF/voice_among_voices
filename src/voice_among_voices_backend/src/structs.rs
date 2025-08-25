@@ -114,10 +114,23 @@ pub struct AudioSample {
     pub sample_length_samples: u32,
 }
 
-pub type FileCache = HashMap<u64, (Vec<u8>, u64)>;
-pub type ChunksCache = HashMap<u64, Vec<Vec<u8>>>;
+pub type FileCache = HashMap<u64, CachedChannels>;
+pub type ChunksCache = HashMap<u64, Vec<Channels>>;
 pub type CacheTimers = HashMap<u64, TimerId>;
 pub type WipCache = HashMap<u64, WipAngleVectors>;
+
+#[derive(Clone)]
+pub struct CachedChannels {
+    pub left_channel: Vec<i16>,
+    pub right_channel: Vec<i16>,
+    pub epoch: u64,
+}
+
+#[derive(Serialize, Clone, Default)]
+pub struct Channels {
+    pub left_channel: Vec<i16>,
+    pub right_channel: Vec<i16>,
+}
 
 #[derive(Clone)]
 pub struct FadesCache {

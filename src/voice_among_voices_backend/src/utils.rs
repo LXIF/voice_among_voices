@@ -24,6 +24,23 @@ pub fn split_into_chunks(data: Vec<u8>, audio_params: &AudioParameters) -> Vec<V
         .collect()
 }
 
+pub fn split_into_channel_chunks(
+    left_channel: Vec<i16>,
+    right_channel: Vec<i16>,
+    audio_params: &AudioParameters,
+) -> Vec<Channels> {
+    let chunk_size_samples = audio_params.chunk_size as usize / 2;
+
+    left_channel
+        .chunks(chunk_size_samples / 2)
+        .zip(right_channel.chunks(chunk_size_samples / 2))
+        .map(|(left_chunk, right_chunk)| Channels {
+            left_channel: left_chunk.to_vec(),
+            right_channel: right_chunk.to_vec(),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::storage::SIMULATION_PARAMETERS;

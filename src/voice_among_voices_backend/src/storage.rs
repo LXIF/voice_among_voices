@@ -55,7 +55,7 @@ thread_local! {
     pub static ANGLE_FILE_EGRESS_CACHE: RefCell<ChunksCache> = RefCell::new(HashMap::new());
     pub static ANGLE_FILE_EGRESS_TIMERS: RefCell<CacheTimers> = RefCell::new(HashMap::new());
     pub static ANGLE_FILE_WIP_CACHE: RefCell<WipCache> = RefCell::new(HashMap::new());
-    pub static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Vec<u8>>> = RefCell::new(vec![]);
+    pub static ZERO_DEGREE_FILE_CACHE: RefCell<Vec<Channels>> = RefCell::new(vec![]);
 }
 
 pub static STREAMING_CALLBACK: Lazy<CallbackFunc> =
@@ -231,28 +231,41 @@ pub fn get_maybe_cached_angle_file_epoch(angle: u64) -> Option<u64> {
     ANGLE_FILE_FILE_CACHE.with_borrow(|cache| {
         cache
             .get(&angle.try_into().expect("unexpected overflow"))
-            .and_then(|(_cache, epoch)| Some(epoch).copied())
+            .and_then(
+                |CachedChannels {
+                     left_channel: _,
+                     right_channel: _,
+                     epoch,
+                 }| Some(epoch).copied(),
+            )
     })
 }
 
-pub fn get_maybe_cached_angle_file(angle: u64) -> Option<Vec<u8>> {
+pub fn get_maybe_cached_angle_channels(angle: u64) -> Option<CachedChannels> {
     ANGLE_FILE_FILE_CACHE.with_borrow(|cache| {
         cache
             .get(&angle.try_into().expect("unexpected overflow"))
             .cloned()
-            .and_then(|(cache, _epoch)| Some(cache))
+            .and_then(|cached_chans| Some(cached_chans))
     })
 }
 
-pub fn cache_angle_file(angle: u64, file: Vec<u8>) {
+pub fn cache_angle_file(angle: u64, left_channel: Vec<i16>, right_channel: Vec<i16>) -> u64 {
     VOICE_LOG.with_borrow(|log| {
         ANGLE_FILE_FILE_CACHE.with_borrow_mut(|cache| {
+            let epoch = log.len();
             cache.insert(
                 angle.try_into().expect("unexpected overflow"),
-                (file, log.len()),
-            )
-        });
-    });
+                CachedChannels {
+                    left_channel,
+                    right_channel,
+                    epoch,
+                },
+            );
+
+            epoch
+        })
+    })
 }
 
 pub fn invalidate_angle_file_cache() {

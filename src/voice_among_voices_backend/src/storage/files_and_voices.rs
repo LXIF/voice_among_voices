@@ -2,14 +2,18 @@ use alloy::primitives::Address;
 use ic_cdk_timers::{clear_timer, TimerId};
 
 use crate::{
-    audio::{generate_or_add_angle_vectors, vectors_to_maybe_file},
-    generate_angle_file, performance_counter, set_timer, split_into_chunks,
+    audio::{generate_angle_vecs, generate_or_add_angle_vectors, vectors_to_maybe_channels},
+    performance_counter, set_timer,
     storage::{
-        cache_angle_file, get_maybe_cached_angle_file, get_maybe_cached_angle_file_epoch,
+        cache_angle_file, get_maybe_cached_angle_channels, get_maybe_cached_angle_file_epoch,
         ANGLE_FILE_EGRESS_TIMERS, ANGLE_FILE_WIP_CACHE, VOICE_LOG,
     },
-    structs::{AudioSample, CensorshipError, MulticallResponse, StorableAudioSample},
+    structs::{
+        AudioSample, CachedChannels, CensorshipError, Channels, MulticallResponse,
+        StorableAudioSample,
+    },
     test_functions::{generate_test_sample_vec, generate_test_wav},
+    utils::split_into_channel_chunks,
     ByteBuf, Duration, HttpStreamingResponse, StreamingCallbackHttpResponse,
     StreamingCallbackToken, StreamingStrategy, ANGLE_FILE_EGRESS_CACHE, AUDIO_PARAMETERS,
     SAMPLES_MEMORY, SIMULATION_PARAMETERS, STREAMING_CALLBACK, VOICE_NODES_MEMORY,
@@ -26,24 +30,31 @@ const CHUNK_CACHE_TIMEOUT_SECONDS: u64 = 60;
 pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
     let beginning_cost = performance_counter(0);
 
-    let result: Vec<u8> = get_maybe_cached_angle_file(angle).unwrap_or_else(|| {
+    let CachedChannels {
+        left_channel,
+        right_channel,
+        epoch: _,
+    } = get_maybe_cached_angle_file(angle).unwrap_or_else(|| {
         VOICE_NODES_MEMORY.with_borrow(|nodes| {
             SAMPLES_MEMORY.with_borrow(|samples_map| {
-                let file = generate_angle_file(
+                let (left_channel, right_channel) = generate_angle_vecs(
                     angle as f64,
                     nodes,
                     samples_map,
                     &AUDIO_PARAMETERS,
                     &SIMULATION_PARAMETERS,
-                )
-                .unwrap(); // TODO: error handling
-                cache_angle_file(angle, file.clone());
-                file
+                );
+                let epoch = cache_angle_file(angle, left_channel, right_channel);
+                CachedChannels {
+                    left_channel,
+                    right_channel,
+                    epoch,
+                }
             })
         })
     });
 
-    let (token, first_chunk) = prepare_stream_file(result, angle);
+    let (token, first_chunk) = prepare_stream_chunks(left_channel, right_channel, angle);
 
     let end_cost = performance_counter(0);
 
@@ -54,14 +65,19 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
             ("x-beginning-cost".to_string(), beginning_cost.to_string()), // Profiling header
             ("x-end-cost".to_string(), end_cost.to_string()),             // Profiling header
         ],
-        body: ByteBuf::from(first_chunk),
+        body: ByteBuf::from(serde_json::ser::to_vec(&first_chunk).unwrap()),
         upgrade: None,
         streaming_strategy: create_strategy(token),
     }
 }
 
-fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Vec<u8>) {
-    let chunks = split_into_chunks(file, &AUDIO_PARAMETERS);
+fn prepare_stream_chunks(
+    left_channel: Vec<i16>,
+    right_channel: Vec<i16>,
+    angle: u64,
+) -> (StreamingCallbackToken, Channels) {
+    let chunks: Vec<Channels> =
+        split_into_channel_chunks(left_channel, right_channel, &AUDIO_PARAMETERS);
 
     // Clear old timers if still around
     with_egress_timers(|timers| {
@@ -92,7 +108,7 @@ fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Ve
 
     let total_chunks = chunks.len() as u32;
 
-    let first_chunk = chunks.get(0).cloned().unwrap_or_default();
+    let first_chunk: Channels = chunks.get(0).cloned().unwrap_or_default();
     let token = StreamingCallbackToken {
         angle: angle as u32,
         chunk_index: 0,
@@ -105,7 +121,7 @@ fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Ve
 
 fn try_get_chunk_response_and_refresh_timers(
     angle: u64,
-) -> Option<(StreamingCallbackToken, Vec<u8>)> {
+) -> Option<(StreamingCallbackToken, Channels)> {
     with_egress_cache_mut(|cache| {
         if let Some(chunks) = cache.get(&angle) {
             // Refresh timer
@@ -141,9 +157,9 @@ fn try_get_chunk_response_and_refresh_timers(
     })
 }
 
-fn set_zero_file(new_file: Vec<u8>) {
+fn set_zero_file(left_channel: Vec<i16>, right_channel: Vec<i16>) {
     ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
-        let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
+        let chunks = split_into_channel_chunks(left_channel, right_channel, &AUDIO_PARAMETERS);
         cache.clear();
         cache.extend(chunks.clone());
     })
@@ -164,14 +180,18 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                         ("content-type".to_string(), "audio/wav".to_string()),
                         ("x-from".to_string(), "cached".to_string()),
                     ],
-                    body: ByteBuf::from(first_chunk),
+                    body: ByteBuf::from(serde_json::ser::to_vec(&first_chunk).unwrap()),
                     upgrade: None,
                     streaming_strategy: create_strategy(token),
                 });
             } else {
                 // OTHERWISE WE REPOPULATE THE CHUNK CACHE
-                if let Some(file) = get_maybe_cached_angle_file(angle) {
-                    let (token, first_chunk) = prepare_stream_file(file, angle);
+                if let Some(cached_channels) = get_maybe_cached_angle_channels(angle) {
+                    let (token, first_chunk) = prepare_stream_chunks(
+                        cached_channels.left_channel,
+                        cached_channels.right_channel,
+                        angle,
+                    );
 
                     return MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
                         status_code: 200,
@@ -179,7 +199,7 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                             ("content-type".to_string(), "audio/wav".to_string()),
                             ("x-from".to_string(), "repopulated".to_string()),
                         ],
-                        body: ByteBuf::from(first_chunk),
+                        body: ByteBuf::from(serde_json::ser::to_vec(&first_chunk).unwrap()),
                         upgrade: None,
                         streaming_strategy: create_strategy(token),
                     });
@@ -206,18 +226,22 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                 );
 
                 // if finished, return file
-                match vectors_to_maybe_file(&new_wip) {
-                    Some(maybe_file_result) => {
-                        let result = maybe_file_result.unwrap();
+                match vectors_to_maybe_channels(&new_wip) {
+                    Some(maybe_channels) => {
+                        let Channels {
+                            left_channel,
+                            right_channel,
+                        } = maybe_channels.unwrap();
 
                         if angle == 0 {
-                            set_zero_file(result);
+                            set_zero_file(left_channel, right_channel);
                             return MulticallResponse::ZeroFinished;
                         }
 
-                        cache_angle_file(angle, result.clone());
+                        cache_angle_file(angle, left_channel, right_channel);
 
-                        let (token, first_chunk) = prepare_stream_file(result, angle);
+                        let (token, first_chunk) =
+                            prepare_stream_chunks(left_channel, right_channel, angle);
 
                         MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
                             status_code: 200,
@@ -226,7 +250,7 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                                 ("x-n-calls".to_string(), new_wip.n_calls.to_string()), // Profiling header
                                 ("x-from".to_string(), "fresh".to_string()),
                             ],
-                            body: ByteBuf::from(first_chunk),
+                            body: ByteBuf::from(serde_json::ser::to_vec(&first_chunk).unwrap()),
                             upgrade: None,
                             streaming_strategy: create_strategy(token),
                         })
@@ -256,7 +280,7 @@ pub fn get_file_for_zero_angle() -> HttpStreamingResponse {
         HttpStreamingResponse {
             status_code: 200,
             headers: vec![("content-type".to_string(), "audio/wav".to_string())],
-            body: ByteBuf::from(first_chunk),
+            body: ByteBuf::from(serde_json::ser::to_vec(&first_chunk).unwrap()),
             upgrade: None,
             streaming_strategy: create_strategy(token),
         }
@@ -264,7 +288,7 @@ pub fn get_file_for_zero_angle() -> HttpStreamingResponse {
 }
 
 pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHttpResponse {
-    let chunks: Vec<Vec<u8>>;
+    let chunks: Vec<Channels>;
     let angle = token.angle as u64;
 
     match token.angle {
@@ -283,7 +307,7 @@ pub fn get_streaming_chunk(token: StreamingCallbackToken) -> StreamingCallbackHt
         if let Some(chunk) = chunks.get((token.chunk_index) as usize) {
             StreamingCallbackHttpResponse {
                 headers: vec![],
-                body: ByteBuf::from(chunk.clone()),
+                body: ByteBuf::from(serde_json::ser::to_vec(&chunk).unwrap()),
                 token: Some(token),
             }
         } else {
@@ -351,14 +375,14 @@ fn generate_censored_sample_vec(duration_samples: u32, sample_rate: u32) -> Vec<
 
 fn with_egress_cache<F, R>(f: F) -> R
 where
-    F: FnOnce(&std::collections::HashMap<u64, Vec<Vec<u8>>>) -> R,
+    F: FnOnce(&std::collections::HashMap<u64, Vec<Channels>>) -> R,
 {
     ANGLE_FILE_EGRESS_CACHE.with_borrow(f)
 }
 
 fn with_egress_cache_mut<F, R>(f: F) -> R
 where
-    F: FnOnce(&mut std::collections::HashMap<u64, Vec<Vec<u8>>>) -> R,
+    F: FnOnce(&mut std::collections::HashMap<u64, Vec<Channels>>) -> R,
 {
     ANGLE_FILE_EGRESS_CACHE.with_borrow_mut(f)
 }

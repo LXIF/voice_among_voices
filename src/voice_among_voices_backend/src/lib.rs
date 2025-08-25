@@ -27,7 +27,7 @@ use storage::{
 };
 use structs::*;
 use test_functions::generate_test_wav;
-use utils::{node_within_circle, split_into_chunks};
+use utils::node_within_circle;
 use voice_nodes::get_stored_voice_nodes;
 
 use evm::{check_auth_for_single_node_id, get_caller_wallet_address, StorableAddress};
