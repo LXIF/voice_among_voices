@@ -2,7 +2,10 @@
     import { tick } from "svelte";
     import { backend } from "$lib/canisters";
     import { handleBackendAudioData } from "$lib/utils/convUtils";
-    import type { HttpStreamingResponse } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+    import type {
+        HttpStreamingResponse,
+        StreamingCallbackToken,
+    } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     import {
         loadingProgress,
         applicationState,
@@ -45,6 +48,9 @@
 
     async function newFetchAudioAndPlay() {
         if (!$audioParameters) throw "No audio parameters";
+
+        onPressPlay();
+
         const ctx = new AudioContext();
         const totalLength =
             ($audioParameters.total_length_ms / 1000) *
@@ -58,12 +64,73 @@
         source.buffer = buffer;
         source.connect(ctx.destination);
         // TODO: fetch first chunk of raw PCM data
+        const response: HttpStreamingResponse | null =
+            $selectedAngle === 0
+                ? await getZeroFile()
+                : await getAngleFile($selectedAngle);
 
-        addToBuffer(left, right, buffer);
+        if (!response || !response.body) throw "Invalid response";
+
+        const responseText = new TextDecoder().decode(
+            response.body instanceof Uint8Array
+                ? response.body
+                : new Uint8Array(response.body),
+        );
+        const chunkData = JSON.parse(responseText);
+
+        const { left_channel, right_channel } = chunkData;
+
+        addToBuffer(left_channel, right_channel, buffer);
 
         source.start(0, 0); // second parameter is where in the piece we play
 
-        // TODO: fetch subsequent chunks and add them to buffer with offset
+        fetchChunksAndAddToBuffer(response, buffer);
+    }
+
+    async function fetchChunksAndAddToBuffer(
+        response: HttpStreamingResponse,
+        buffer: AudioBuffer,
+    ) {
+        if (!response.streaming_strategy) return;
+
+        const streamingToken = response.streaming_strategy[0]?.Callback.token;
+        const nTokens = streamingToken?.chunks;
+        if (!nTokens) return;
+
+        // Fetch all remaining chunks in parallel
+        const chunkPromises = [];
+        for (let i = 0; i < nTokens - 1; i++) {
+            const chunkToken = {
+                angle: streamingToken.angle!,
+                auth_token: streamingToken.auth_token!,
+                chunk_index: i,
+                chunks: streamingToken.chunks!,
+            };
+            chunkPromises.push(
+                backend.http_request_streaming_callback(chunkToken),
+            );
+        }
+
+        // Wait for all chunks and sort them by index
+        const chunkResults = await Promise.all(chunkPromises);
+        chunkResults.sort(
+            (a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!,
+        );
+
+        // Add chunks to buffer with offset
+        let offset = 0;
+        for (const result of chunkResults) {
+            const responseText = new TextDecoder().decode(
+                result.body instanceof Uint8Array
+                    ? result.body
+                    : new Uint8Array(result.body),
+            );
+            const chunkData = JSON.parse(responseText);
+            const { left_channel, right_channel } = chunkData;
+
+            addToBuffer(left_channel, right_channel, buffer, offset);
+            offset += left_channel.length; // Assuming both channels have same length
+        }
     }
 
     function addToBuffer(
