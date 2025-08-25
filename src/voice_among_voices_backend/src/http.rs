@@ -19,9 +19,11 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         regex::Regex::new(r"^/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
     let direct_re =
         regex::Regex::new(r"^/nft/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
-    let nft_images_re =
+    let nft_images_deprecated_re =
         regex::Regex::new(r"^/nft_images/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$")
             .unwrap();
+    let nft_images_re =
+        regex::Regex::new(r"^/nft_img/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
 
     if let Some(caps) = direct_re.captures(path) {
         let nft_id: usize = caps[1].parse().unwrap();
@@ -31,7 +33,7 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         let json_data = json!({
             "id": nft_id,
             "name": format!("VaV {}°", nft_id),
-            "image": format!("https://{}.icp0.io/nft_images/{}", ic_cdk::api::id(), nft_id),
+            "image": format!("https://{}.icp0.io/nft_img/{}", ic_cdk::api::id(), nft_id),
             "external_url": "https://voiceamongvoic.es",
             "description": "This token gives access to your own listening angle and voice in Voice among Voices.",
             "background_color": hex_color
@@ -45,7 +47,28 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
         response
     } else if let Some(_caps) = direct_re_deprecated.captures(path) {
         let json_data = json!({
-            "deprecated": "deprecated"
+            "id": nft_id,
+            "name": format!("DEPRECATED"),
+            "image": format!("DEPRECATED"),
+            "external_url": "DEPRECATED",
+            "description": "DEPRECATED",
+            "background_color": "DEPRECATED"
+        });
+
+        // Convert to string and then to bytes
+        let json_body = json_data.to_string().into_bytes();
+
+        let mut response = create_json_response(StatusCode::from_u16(200).unwrap(), json_body);
+        add_skip_certification_header(data_certificate().unwrap(), &mut response);
+        response
+    } else if let Some(caps) = nft_images_deprecated_re.captures(path) {
+        let json_data = json!({
+            "id": nft_id,
+            "name": format!("DEPRECATED"),
+            "image": format!("DEPRECATED"),
+            "external_url": "DEPRECATED",
+            "description": "DEPRECATED",
+            "background_color": "DEPRECATED"
         });
 
         // Convert to string and then to bytes
