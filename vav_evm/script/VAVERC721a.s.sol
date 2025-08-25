@@ -44,23 +44,36 @@ contract DisburseNFTsScript is Script {
         console.log("Network: Base Mainnet");
         console.log("Estimated needed: 0.0001 ETH");
         
-        vm.startBroadcast(deployerPrivateKey);
+        // COMMENT OUT OR REMOVE THE DEPLOYMENT SECTION
+        // vm.startBroadcast(deployerPrivateKey);
         
-        // Step 1: Deploy the NFT contract
-        console.log("Deploying VoiceAmongVoices NFT contract...");
-        nftContract = new VoiceAmongVoices();
-        console.log("Contract deployed at:", address(nftContract));
+        // Step 1: Use existing deployed contract instead of deploying new one
+        console.log("Using existing VoiceAmongVoices NFT contract...");
+        // Replace this address with your actual deployed contract address
+        address existingContractAddress = 0xb32CEf004a828F0E2f87c6b188593f9cEd8FD01D;
+        nftContract = VoiceAmongVoices(existingContractAddress);
+        console.log("Contract address:", address(nftContract));
         
-        // Step 2: Mint all 360 tokens to disbursement wallet
-        console.log("Minting 360 tokens to disbursement wallet...");
-        nftContract.mint{value: 0}(360);
-        console.log("Minting complete!");
+        // COMMENT OUT MINTING SINCE TOKENS ARE ALREADY MINTED
+        // console.log("Minting 360 tokens to disbursement wallet...");
+        // nftContract.mint{value: 0}(360);
+        // console.log("Minting complete!");
         
         console.log("Starting token disbursement...");
         Disbursement[] memory disbursements = readDisbursementCSV();
         
+        // Start broadcasting here for the transfers
+        vm.startBroadcast(deployerPrivateKey);
+        
         for (uint256 i = 0; i < disbursements.length; i++) {
             Disbursement memory disp = disbursements[i];
+            
+            // Check if token is already transferred to avoid errors
+            address currentOwner = nftContract.ownerOf(disp.tokenId);
+            if (currentOwner == disp.recipient) {
+                console.log("Skipping", disp.tokenId);
+                continue;
+            }
             
             console.log("Transferring token", disp.tokenId, "to", disp.recipient);
             
