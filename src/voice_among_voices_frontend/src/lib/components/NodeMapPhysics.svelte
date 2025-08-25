@@ -231,13 +231,14 @@
 
     const setupAndSimulate = () => {
         console.log("Setting up physics engine and rendering...");
+        if (!$simulationParameters) {
+            console.error("no simulation parameters");
+            $toastMessage = "No simulation parameters - retrying";
+            setTimeout(setupAndSimulate, 300);
+            return;
+        }
         RAPIER.init()
             .then(() => {
-                if (!$simulationParameters) {
-                    console.error("no simulation parameters");
-                    $toastMessage = "No simulation parameters";
-                    return;
-                }
                 let world: RAPIER.World;
                 let physicsBodies: PhysicsBody[] = [];
                 let gravity = { x: 0, y: 0 };

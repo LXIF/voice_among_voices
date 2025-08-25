@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tick } from "svelte";
+    import { onMount, tick } from "svelte";
     import { backend } from "$lib/canisters";
     import { handleBackendAudioData } from "$lib/utils/convUtils";
     import type {
@@ -46,23 +46,39 @@
 
     let generating = $state(false);
 
+    const audioCtx = new AudioContext();
+    let totalLength;
+    let audioBuffer: AudioBuffer;
+    let audioBufferSource;
+
+    function setupAudio() {
+        if (!$audioParameters) {
+            console.log("No audio params yet, retrying");
+            setTimeout(setupAudio, 300);
+            return;
+        }
+        totalLength =
+            ($audioParameters.total_length_ms / 1000) *
+            $audioParameters.sample_rate;
+        audioBuffer = audioCtx.createBuffer(
+            // TODO: buffer is for short files only.
+            2,
+            totalLength,
+            $audioParameters!.sample_rate,
+        );
+        audioBufferSource = audioCtx.createBufferSource();
+        audioBufferSource.buffer = audioBuffer;
+        audioBufferSource.connect(audioCtx.destination);
+    }
+
+    onMount(setupAudio);
+
     async function newFetchAudioAndPlay() {
         if (!$audioParameters) throw "No audio parameters";
 
         onPressPlay();
 
-        const ctx = new AudioContext();
-        const totalLength =
-            ($audioParameters.total_length_ms / 1000) *
-            $audioParameters.sample_rate;
-        const buffer = ctx.createBuffer(
-            2,
-            length,
-            $audioParameters.sample_rate,
-        );
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
+        audioBuffer;
         // TODO: fetch first chunk of raw PCM data
         const response: HttpStreamingResponse | null =
             $selectedAngle === 0
@@ -77,12 +93,13 @@
                 : new Uint8Array(response.body),
         );
         const chunkData = JSON.parse(responseText);
-
+        console.log("got chunks!");
         const { left_channel, right_channel } = chunkData;
 
         addToBuffer(left_channel, right_channel, buffer);
 
         source.start(0, 0); // second parameter is where in the piece we play
+        console.log("started playback!");
 
         fetchChunksAndAddToBuffer(response, buffer);
     }
@@ -106,31 +123,33 @@
                 chunk_index: i,
                 chunks: streamingToken.chunks!,
             };
-            chunkPromises.push(
-                backend.http_request_streaming_callback(chunkToken),
-            );
+
+            const promise = backend
+                .http_request_streaming_callback(chunkToken)
+                .then((result) => {
+                    // Decode and add to buffer immediately when chunk arrives
+                    const responseText = new TextDecoder().decode(
+                        result.body instanceof Uint8Array
+                            ? result.body
+                            : new Uint8Array(result.body),
+                    );
+                    const chunkData = JSON.parse(responseText);
+                    const { left_channel, right_channel } = chunkData;
+                    console.log("got channels for chunk " + i);
+                    // Calculate offset based on chunk index
+                    const offset =
+                        left_channel.length *
+                        (result.token[0]?.chunk_index || 0);
+                    addToBuffer(left_channel, right_channel, buffer, offset);
+
+                    return result;
+                });
+
+            chunkPromises.push(promise);
         }
 
-        // Wait for all chunks and sort them by index
-        const chunkResults = await Promise.all(chunkPromises);
-        chunkResults.sort(
-            (a, b) => a.token[0]?.chunk_index! - b.token[0]?.chunk_index!,
-        );
-
-        // Add chunks to buffer with offset
-        let offset = 0;
-        for (const result of chunkResults) {
-            const responseText = new TextDecoder().decode(
-                result.body instanceof Uint8Array
-                    ? result.body
-                    : new Uint8Array(result.body),
-            );
-            const chunkData = JSON.parse(responseText);
-            const { left_channel, right_channel } = chunkData;
-
-            addToBuffer(left_channel, right_channel, buffer, offset);
-            offset += left_channel.length; // Assuming both channels have same length
-        }
+        // Wait for all chunks to complete
+        await Promise.all(chunkPromises);
     }
 
     function addToBuffer(
@@ -352,7 +371,7 @@
     {:else}
         <Button
             class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
-            onclick={fetchAudioFileOrPlayPause}>Load</Button
+            onclick={newFetchAudioAndPlay}>Load</Button
         >
     {/if}
     <h1
