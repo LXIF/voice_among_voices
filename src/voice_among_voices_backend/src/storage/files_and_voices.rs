@@ -227,18 +227,18 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
 
                 // if finished, return file
                 match vectors_to_maybe_channels(&new_wip) {
-                    Some(maybe_channels) => {
+                    Some(channels) => {
                         let Channels {
                             left_channel,
                             right_channel,
-                        } = maybe_channels.unwrap();
+                        } = channels;
 
                         if angle == 0 {
                             set_zero_file(left_channel, right_channel);
                             return MulticallResponse::ZeroFinished;
                         }
 
-                        cache_angle_file(angle, left_channel, right_channel);
+                        cache_angle_file(angle, left_channel.clone(), right_channel.clone());
 
                         let (token, first_chunk) =
                             prepare_stream_chunks(left_channel, right_channel, angle);

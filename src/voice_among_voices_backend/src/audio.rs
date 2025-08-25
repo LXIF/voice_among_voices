@@ -1,5 +1,5 @@
 use crate::storage::{get_fades, AUDIO_PARAMETERS};
-use crate::structs::{FadesCache, WipAngleVectors};
+use crate::structs::{Channels, FadesCache, WipAngleVectors};
 use crate::{
     AddVoiceNodeError, AudioParameters, AudioSampleMemory, SimulationParameters,
     VoiceNodeLocalMemory,
@@ -78,8 +78,8 @@ pub fn vectors_to_maybe_channels(wip: &WipAngleVectors) -> Option<Channels> {
             .sample_id;
     if is_finished {
         return Some(Channels {
-            left_channel: wip.left_samples,
-            right_channel: wip.right_samples,
+            left_channel: wip.left_samples.clone(),
+            right_channel: wip.right_samples.clone(),
         });
     }
     None

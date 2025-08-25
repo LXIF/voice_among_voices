@@ -1,4 +1,4 @@
-use crate::{AudioParameters, SimulationParameters, VoiceNodeIngress};
+use crate::{structs::Channels, AudioParameters, SimulationParameters, VoiceNodeIngress};
 
 pub fn node_within_circle(
     node: &VoiceNodeIngress,
