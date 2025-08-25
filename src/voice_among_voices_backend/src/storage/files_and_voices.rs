@@ -34,7 +34,7 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
         left_channel,
         right_channel,
         epoch: _,
-    } = get_maybe_cached_angle_file(angle).unwrap_or_else(|| {
+    } = get_maybe_cached_angle_channels(angle).unwrap_or_else(|| {
         VOICE_NODES_MEMORY.with_borrow(|nodes| {
             SAMPLES_MEMORY.with_borrow(|samples_map| {
                 let (left_channel, right_channel) = generate_angle_vecs(
@@ -44,7 +44,7 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
                     &AUDIO_PARAMETERS,
                     &SIMULATION_PARAMETERS,
                 );
-                let epoch = cache_angle_file(angle, left_channel, right_channel);
+                let epoch = cache_angle_file(angle, left_channel.clone(), right_channel.clone());
                 CachedChannels {
                     left_channel,
                     right_channel,
