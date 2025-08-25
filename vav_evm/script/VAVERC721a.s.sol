@@ -96,7 +96,7 @@ contract DisburseNFTsScript is Script {
         console.log("Note: This wallet was generated for this operation only");
         console.log("");
         console.log("To verify on Basescan, use:");
-        console.log("forge verify-contract", address(nftContract), "contracts/VAVERC721a.sol:VoiceAmongVoices --chain-id 8453 --etherscan-api-key $BASESCAN_API_KEY --compiler-version 0.8.19");
+        console.log("forge verify-contract", address(nftContract), "src/VAVERC721a.sol:VoiceAmongVoices --chain-id 8453 --etherscan-api-key $BASESCAN_API_KEY --compiler-version 0.8.19");
     }
     
     function readDisbursementCSV() internal view returns (Disbursement[] memory) {

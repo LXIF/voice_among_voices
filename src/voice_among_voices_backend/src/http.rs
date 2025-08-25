@@ -15,8 +15,10 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
     let path = parts[0];
 
     // Match paths like "/123"
-    let direct_re =
+    let direct_re_deprecated =
         regex::Regex::new(r"^/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
+    let direct_re =
+        regex::Regex::new(r"^/nft/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$").unwrap();
     let nft_images_re =
         regex::Regex::new(r"^/nft_images/([1-9]|[1-9][0-9]|[1-2][0-9]{2}|3[0-5][0-9]|360)$")
             .unwrap();
@@ -33,6 +35,17 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
             "external_url": "https://voiceamongvoic.es",
             "description": "This token gives access to your own listening angle and voice in Voice among Voices.",
             "background_color": hex_color
+        });
+
+        // Convert to string and then to bytes
+        let json_body = json_data.to_string().into_bytes();
+
+        let mut response = create_json_response(StatusCode::from_u16(200).unwrap(), json_body);
+        add_skip_certification_header(data_certificate().unwrap(), &mut response);
+        response
+    } else if let Some(_caps) = direct_re_deprecated.captures(path) {
+        let json_data = json!({
+            "deprecated": "deprecated"
         });
 
         // Convert to string and then to bytes

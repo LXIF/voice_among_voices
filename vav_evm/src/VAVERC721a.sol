@@ -7,7 +7,7 @@ contract VoiceAmongVoices is ERC721A {
     constructor() ERC721A("VoiceAmongVoices", "VAV") {}
 
     uint256 public constant MAX_SUPPLY = 360;
-    string constant BASE_URI = "https://anpkp-byaaa-aaaad-aamdq-cai.icp0.io/";
+    string constant BASE_URI = "https://anpkp-byaaa-aaaad-aamdq-cai.icp0.io/nft/";
 
     function mint(uint256 quantity) external payable {
         require(_totalMinted() + quantity <= MAX_SUPPLY, "Exceeds max supply");
