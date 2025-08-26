@@ -21,7 +21,7 @@ use super::{
     voice_log::{VoiceAction, VoiceLog},
 };
 
-const CHUNK_CACHE_TIMEOUT_SECONDS: u64 = 60;
+const CHUNK_CACHE_TIMEOUT_SECONDS: u64 = 300;
 
 pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
     let beginning_cost = performance_counter(0);

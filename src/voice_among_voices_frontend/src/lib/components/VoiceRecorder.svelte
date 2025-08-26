@@ -4,18 +4,18 @@
     import { browser } from "$app/environment";
     import { encodeWav } from "$lib/utils/convUtils";
     import type { AudioParameters } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
-    import { scale } from "svelte/transition";
+    import { fade, scale } from "svelte/transition";
     import { elasticOut } from "svelte/easing";
     import {
         applicationState,
         applicationStates,
-        backendSimulationResult,
         selectedAngle,
         toastMessage,
-        voiceNodes,
+        sampleLength,
     } from "$lib/state/uxState";
 
     import { getVoiceNodes } from "$lib/icInteractions";
+    import { getProgressArc } from "$lib/utils/uxUtils";
 
     // time the rec button needs to be held to be push-action
     const recordActionTimingCutoff = 200;
@@ -29,6 +29,7 @@
     // let connect: any = $state();
     let recordingTimeout: ReturnType<typeof setTimeout> | undefined = $state();
     let encoderInitialized = $state(false);
+    let elapsed = $state(0);
 
     let {
         audioParameters,
@@ -105,6 +106,19 @@
 
     let audioDuration: number = 0;
 
+    let progressPath = $derived(
+        getProgressArc(
+            40,
+            40,
+            34,
+            0,
+            !!audioParameters
+                ? Math.min(elapsed / audioParameters.max_sample_length_ms, 1) *
+                      360
+                : 0,
+        ),
+    );
+
     $effect(() => recordingLength(audioDuration));
 
     function checkAudioLength(blob: Blob) {
@@ -156,7 +170,7 @@
 
         recordingStart = Date.now();
         recordingInterval = setInterval(() => {
-            const elapsed = Date.now() - recordingStart;
+            elapsed = Date.now() - recordingStart;
             recordingLength(elapsed);
         }, 16);
 
@@ -184,6 +198,7 @@
         window.removeEventListener("pointerup", handleRecordUp);
         mediaRecorder?.stop();
         $applicationState = applicationStates.loggedInIdle;
+        elapsed = 0;
     }
 
     function handleActivateMicrophone() {
@@ -235,7 +250,7 @@
 
 <button
     onpointerdown={handleRecordDown}
-    class={"pointer-events-auto h-20 w-20 cursor-pointer select-none rounded-full bg-red-600 text-2xl font-bold text-white transition-all disabled:cursor-wait disabled:bg-slate-500"}
+    class={"pointer-events-auto relative h-20 max-h-20 min-h-20 w-20 min-w-20 max-w-20 cursor-pointer select-none rounded-full bg-red-600 text-2xl font-bold text-white transition-all disabled:cursor-wait disabled:bg-slate-500"}
     class:recording={$applicationState.state === "recordingVoice"}
     transition:scale={{
         duration: 500,
@@ -243,8 +258,25 @@
     }}
     disabled={!$applicationState.recorderActive ||
         $selectedAngle < 1 ||
-        $selectedAngle > 359}>Rec</button
->
+        $selectedAngle > 359}
+    >Rec
+    {#if elapsed > 0 && elapsed < 10000}
+        <svg
+            transition:fade
+            height="80"
+            width="80"
+            class="pointer-events-none absolute inset-0"
+        >
+            <path
+                d={progressPath}
+                fill="none"
+                stroke-width="5"
+                stroke-linecap="round"
+                class="stroke-slate-50 dark:stroke-slate-900"
+            />
+        </svg>
+    {/if}
+</button>
 
 <style lang="postcss">
     .recording {

@@ -13,7 +13,7 @@
     } from "$lib/state/uxState";
     import { identityAgent } from "$lib/canisters";
     import { blur } from "svelte/transition";
-    import { isDarkMode } from "$lib/utils/uxUtils";
+    import { getProgressArc, isDarkMode } from "$lib/utils/uxUtils";
     import { untrack } from "svelte";
     import { isTouch } from "$lib/state/isMobile";
 
@@ -347,31 +347,6 @@
             window.addEventListener("pointermove", handlePointerMove);
             window.addEventListener("pointerup", handlePointerUp);
         }
-    }
-
-    // Helper function to generate SVG arc path
-    function getProgressArc(
-        cx: number,
-        cy: number,
-        r: number,
-        startAngle: number,
-        endAngle: number,
-    ): string {
-        // Convert angles from degrees to radians and adjust for SVG coordinates
-        const start = angleToRadians(270 - startAngle);
-        const end = angleToRadians(270 - endAngle);
-
-        // Calculate start and end points
-        const startX = cx + r * Math.cos(start);
-        const startY = cy - r * Math.sin(start);
-        const endX = cx + r * Math.cos(end);
-        const endY = cy - r * Math.sin(end);
-
-        // Determine if the arc should be drawn the long way around
-        const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-
-        // Create the SVG arc path
-        return `M ${startX} ${startY} A ${r} ${r} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
     }
 
     function openBuyPage(angle: number) {

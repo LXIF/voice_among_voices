@@ -42,8 +42,8 @@
                     moment.
                 </p>
                 <p class="mb-4">
-                    Press <span class="font-bold text-red-400">Rec</span> and sing
-                    or sigh, verbalize or hum etc.
+                    Press <span class="font-bold text-red-400">Rec</span> and
+                    sing or sigh, verbalize or hum etc. <b>max. 10 seconds</b>
                 </p>
                 <p>Make your voice heard among voices.</p>
             {:else}

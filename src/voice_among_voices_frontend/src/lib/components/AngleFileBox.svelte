@@ -210,10 +210,14 @@
 
     $effect(() => {
         if ($selectedAngle) {
-            audioURL = "";
-            isPlaying = false;
+            resetAngleFile();
         }
     });
+
+    export function resetAngleFile() {
+        audioURL = "";
+        isPlaying = false;
+    }
 
     // Listen for playback end
     function onEnded() {

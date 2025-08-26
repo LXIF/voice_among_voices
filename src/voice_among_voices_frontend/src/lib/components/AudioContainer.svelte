@@ -45,6 +45,8 @@
         onFinishRecord: () => void;
     } = $props();
 
+    let angleFileBox = $state<AngleFileBox>();
+
     onMount(async () => {
         $audioParameters = await getAudioParameters();
         $simulationParameters = await getSimulationParameters();
@@ -99,6 +101,9 @@
             nodeY: y,
             nodeRadius: $nodeWidthLogical / 2,
         });
+        if (angleFileBox) {
+            angleFileBox.resetAngleFile();
+        }
     };
 </script>
 
@@ -132,5 +137,6 @@
             // nodeWidthLogical = 0;
             // $backendSimulationResult = [];
         }}
+        bind:this={angleFileBox}
     />
 </div>
