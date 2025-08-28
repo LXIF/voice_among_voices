@@ -62,6 +62,8 @@
             $audioParameters.sample_rate;
 
         player = new MultiBufferPlayer();
+        player.setOnTimeUpdate(onTimeUpdate);
+        player.setOnEnded(onEnded);
     }
 
     onMount(setupAudio);
@@ -72,6 +74,7 @@
 
         onPressPlay();
 
+        generating = true;
         // fetch first chunk of raw PCM data
         const response: HttpStreamingResponse | null =
             $selectedAngle === 0
@@ -101,6 +104,8 @@
         player.appendPCMData(rightArray, 1);
 
         player.play();
+        generating = false;
+        isPlaying = true;
         console.log("started playback!");
 
         fetchChunksAndAddToPlayer(response, player);
@@ -266,19 +271,13 @@
     // Toggle play/pause
     async function togglePlayPause() {
         if (isPlaying) {
-            audioElement!.pause();
+            player?.pause();
             isPlaying = false;
             $applicationState = applicationStates.loggedInIdle;
         } else {
             try {
-                const playPromise = audioElement!.play();
-                if (playPromise !== undefined) {
-                    await playPromise;
-                    isPlaying = true;
-                    $applicationState = applicationStates.playingFile;
-                } else {
-                    throw "empty audio element play promise!";
-                }
+                player?.play();
+                isPlaying = true;
             } catch (error) {
                 console.error("Playback failed:", error);
                 // If autoplay fails, we'll let the user manually trigger play
@@ -289,15 +288,9 @@
     }
 
     // Dispatch the current playback position (normalized)
-    function onTimeUpdate() {
-        if (
-            !audioElement ||
-            !audioElement.duration ||
-            !audioElement.currentTime
-        )
-            return;
-        const playbackPosition =
-            audioElement!.currentTime / audioElement!.duration;
+    function onTimeUpdate(currentTime: number) {
+        if (!$audioParameters) throw "no audio params";
+        const playbackPosition = currentTime / $audioParameters.total_length_ms;
         onPlaybackPosition(playbackPosition);
     }
 
@@ -366,9 +359,8 @@
         <p class="error">{error}</p>
     {/if}
 
-    {#if audioURL}
+    <!-- {#if audioURL}
         <div>
-            <!-- Hidden audio element (no controls) -->
             <audio
                 bind:this={audioElement}
                 ontimeupdate={onTimeUpdate}
@@ -378,15 +370,13 @@
                 <source src={audioURL} type="audio/wav" />
                 Your browser does not support the audio element.
             </audio>
-
-            <!-- Download link for the audio -->
             <Button class="z-10 w-min text-center text-lg "
                 ><a bind:this={downloadLink} href={audioURL} download>
                     Download
                 </a>
             </Button>
         </div>
-    {/if}
+    {/if} -->
 </div>
 
 <style>

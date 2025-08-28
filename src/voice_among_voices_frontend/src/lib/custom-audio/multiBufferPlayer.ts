@@ -12,6 +12,9 @@ export class MultiBufferPlayer {
     private channels: number = 2; // Stereo
     private onBufferComplete: (() => void) | null = null;
     private onPlaybackComplete: (() => void) | null = null;
+    private onTimeUpdate: ((currentTime: number) => void) | null = null;
+    private onEnded: (() => void) | null = null;
+    private timeUpdateInterval: ReturnType<typeof setInterval> | null = null;
   
     constructor() {
       this.audioContext = new AudioContext();
@@ -117,6 +120,7 @@ export class MultiBufferPlayer {
     private playCurrentBuffer(offsetInSamples: number = 0): void {
       if (this.currentBufferIndex >= this.buffers.length) {
         this.onPlaybackComplete?.();
+        this.onEnded?.();
         return;
       }
   
@@ -137,6 +141,9 @@ export class MultiBufferPlayer {
       const startTime = this.audioContext.currentTime;
       this.currentSource.start(startTime, startTimeInBuffer);
       this.isPlaying = true;
+      
+      // Start time update interval
+      this.startTimeUpdateInterval();
     }
   
     private playNextBuffer(): void {
@@ -146,6 +153,7 @@ export class MultiBufferPlayer {
       } else {
         this.isPlaying = false;
         this.onPlaybackComplete?.();
+        this.onEnded?.();
       }
     }
   
@@ -172,6 +180,7 @@ export class MultiBufferPlayer {
       if (this.isPlaying && this.currentSource) {
         this.currentSource.stop();
         this.isPlaying = false;
+        this.stopTimeUpdateInterval();
         
         // Calculate current position
         const currentTime = this.audioContext.currentTime;
@@ -193,6 +202,7 @@ export class MultiBufferPlayer {
       this.currentBufferIndex = 0;
       this.startTime = 0;
       this.pausedTime = 0;
+      this.stopTimeUpdateInterval();
     }
   
     /**
@@ -247,6 +257,20 @@ export class MultiBufferPlayer {
     setOnPlaybackComplete(callback: () => void): void {
       this.onPlaybackComplete = callback;
     }
+
+    /**
+     * Set callback for time updates during playback
+     */
+    setOnTimeUpdate(callback: (currentTime: number) => void): void {
+      this.onTimeUpdate = callback;
+    }
+
+    /**
+     * Set callback for when playback ends
+     */
+    setOnEnded(callback: () => void): void {
+      this.onEnded = callback;
+    }
   
     /**
      * Get the number of buffers
@@ -267,6 +291,28 @@ export class MultiBufferPlayer {
      */
     dispose(): void {
       this.stop();
+      this.stopTimeUpdateInterval();
       this.audioContext.close();
+    }
+
+    private startTimeUpdateInterval(): void {
+      // Clear any existing interval
+      if (this.timeUpdateInterval) {
+        clearInterval(this.timeUpdateInterval);
+      }
+      
+      // Update time every 100ms (similar to HTML audio element)
+      this.timeUpdateInterval = setInterval(() => {
+        if (this.isPlaying && this.onTimeUpdate) {
+          this.onTimeUpdate(this.getCurrentTime());
+        }
+      }, 100);
+    }
+
+    private stopTimeUpdateInterval(): void {
+      if (this.timeUpdateInterval) {
+        clearInterval(this.timeUpdateInterval);
+        this.timeUpdateInterval = null;
+      }
     }
   }
