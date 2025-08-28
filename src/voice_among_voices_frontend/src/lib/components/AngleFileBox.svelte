@@ -24,6 +24,7 @@
         getVoiceNodes,
         getZeroFile,
     } from "$lib/icInteractions";
+    import { MultiBufferPlayer } from "$lib/custom-audio/multiBufferPlayer";
 
     let {
         onPlaybackPosition,
@@ -46,10 +47,9 @@
 
     let generating = $state(false);
 
-    const audioCtx = new AudioContext();
     let totalLength;
-    let audioBuffer: AudioBuffer;
-    let audioBufferSource;
+
+    let player = $state<MultiBufferPlayer>();
 
     function setupAudio() {
         if (!$audioParameters) {
@@ -60,26 +60,19 @@
         totalLength =
             ($audioParameters.total_length_ms / 1000) *
             $audioParameters.sample_rate;
-        audioBuffer = audioCtx.createBuffer(
-            // TODO: buffer is for short files only.
-            2,
-            totalLength,
-            $audioParameters!.sample_rate,
-        );
-        audioBufferSource = audioCtx.createBufferSource();
-        audioBufferSource.buffer = audioBuffer;
-        audioBufferSource.connect(audioCtx.destination);
+
+        player = new MultiBufferPlayer();
     }
 
     onMount(setupAudio);
 
     async function newFetchAudioAndPlay() {
         if (!$audioParameters) throw "No audio parameters";
+        if (!player) throw "No player";
 
         onPressPlay();
 
-        audioBuffer;
-        // TODO: fetch first chunk of raw PCM data
+        // fetch first chunk of raw PCM data
         const response: HttpStreamingResponse | null =
             $selectedAngle === 0
                 ? await getZeroFile()
@@ -96,17 +89,26 @@
         console.log("got chunks!");
         const { left_channel, right_channel } = chunkData;
 
-        addToBuffer(left_channel, right_channel, buffer);
+        const leftArray = new Float32Array(left_channel.length);
+        const rightArray = new Float32Array(right_channel.length);
 
-        source.start(0, 0); // second parameter is where in the piece we play
+        for (let i = 0; i < left_channel.length; i++) {
+            leftArray[i] = left_channel[i] / 32768.0;
+            rightArray[i] = right_channel[i] / 32768.0;
+        }
+
+        player.appendPCMData(leftArray, 0);
+        player.appendPCMData(rightArray, 1);
+
+        player.play();
         console.log("started playback!");
 
-        fetchChunksAndAddToBuffer(response, buffer);
+        fetchChunksAndAddToPlayer(response, player);
     }
 
-    async function fetchChunksAndAddToBuffer(
+    async function fetchChunksAndAddToPlayer(
         response: HttpStreamingResponse,
-        buffer: AudioBuffer,
+        player: MultiBufferPlayer,
     ) {
         if (!response.streaming_strategy) return;
 
@@ -115,7 +117,6 @@
         if (!nTokens) return;
 
         // Fetch all remaining chunks in parallel
-        const chunkPromises = [];
         for (let i = 0; i < nTokens - 1; i++) {
             const chunkToken = {
                 angle: streamingToken.angle!,
@@ -124,50 +125,30 @@
                 chunks: streamingToken.chunks!,
             };
 
-            const promise = backend
-                .http_request_streaming_callback(chunkToken)
-                .then((result) => {
-                    // Decode and add to buffer immediately when chunk arrives
-                    const responseText = new TextDecoder().decode(
-                        result.body instanceof Uint8Array
-                            ? result.body
-                            : new Uint8Array(result.body),
-                    );
-                    const chunkData = JSON.parse(responseText);
-                    const { left_channel, right_channel } = chunkData;
-                    console.log("got channels for chunk " + i);
-                    // Calculate offset based on chunk index
-                    const offset =
-                        left_channel.length *
-                        (result.token[0]?.chunk_index || 0);
-                    addToBuffer(left_channel, right_channel, buffer, offset);
+            const result =
+                await backend.http_request_streaming_callback(chunkToken);
 
-                    return result;
-                });
+            // Decode and add to buffer immediately when chunk arrives
+            const responseText = new TextDecoder().decode(
+                result.body instanceof Uint8Array
+                    ? result.body
+                    : new Uint8Array(result.body),
+            );
+            const chunkData = JSON.parse(responseText);
+            const { left_channel, right_channel } = chunkData;
+            console.log("got channels for chunk " + i);
 
-            chunkPromises.push(promise);
+            const leftArray = new Float32Array(left_channel.length);
+            const rightArray = new Float32Array(right_channel.length);
+
+            for (let i = 0; i < left_channel.length; i++) {
+                leftArray[i] = left_channel[i] / 32768.0;
+                rightArray[i] = right_channel[i] / 32768.0;
+            }
+
+            player.appendPCMData(leftArray, 0);
+            player.appendPCMData(rightArray, 1);
         }
-
-        // Wait for all chunks to complete
-        await Promise.all(chunkPromises);
-    }
-
-    function addToBuffer(
-        left: Int16Array,
-        right: Int16Array,
-        buffer: AudioBuffer,
-        offset = 0,
-    ) {
-        const leftArray = new Float32Array(left.length);
-        const rightArray = new Float32Array(right.length);
-
-        for (let i = 0; i < left.length; i++) {
-            leftArray[i] = left[i] / 32768.0;
-            rightArray[i] = right[i] / 32768.0;
-        }
-
-        buffer.copyToChannel(leftArray, 0, offset);
-        buffer.copyToChannel(rightArray, 1, offset);
     }
 
     // Fetch audio file based on angle
