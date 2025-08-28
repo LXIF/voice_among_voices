@@ -2,7 +2,11 @@
     import { tick } from "svelte";
     import { backend } from "$lib/canisters";
     import { handleBackendAudioData } from "$lib/utils/convUtils";
-    import type { HttpStreamingResponse } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+    import type {
+        HttpStreamingResponse,
+        StreamingCallbackToken,
+        StreamingStrategy,
+    } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
     import {
         loadingProgress,
         applicationState,
@@ -34,6 +38,7 @@
         onPressPlay: () => void;
     } = $props();
 
+    const mimeType = "audio/wav";
     let audioURL: string = $state("");
     let error: string = $state("");
     let isPlaying = $state(false); // To track play/pause state
@@ -42,6 +47,155 @@
     let downloadLink: HTMLAnchorElement | undefined = $state();
 
     let generating = $state(false);
+
+    function getMediaSource() {
+        if (
+            window.ManagedMediaSource &&
+            window.ManagedMediaSource.isTypeSupported(mimeType)
+        ) {
+            return new window.ManagedMediaSource();
+        }
+        if (
+            window.MediaSource &&
+            window.MediaSource.isTypeSupported(mimeType)
+        ) {
+            return new window.MediaSource();
+        }
+
+        throw "No MediaSource API available";
+    }
+
+    async function fetchAudioPlayImmediately() {
+        if (audioElement === undefined) throw "No Audio element!";
+
+        const mediaSource = getMediaSource();
+        audioElement.src = URL.createObjectURL(mediaSource);
+
+        let chunkQueue: ArrayBuffer[] = [];
+        let isAppending = false;
+
+        mediaSource.addEventListener("sourceopen", () => {
+            if (audioElement === undefined) throw "No Audio element!";
+            URL.revokeObjectURL(audioElement.src);
+            const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+
+            fetchAudioChunks(sourceBuffer);
+
+            async function fetchAudioChunks(sourceBuffer: SourceBuffer) {
+                generating = true;
+                loadingProgress.set(0, {
+                    duration: 0,
+                });
+                $applicationState = applicationStates.loadingFile;
+
+                const firstResponse: HttpStreamingResponse | null =
+                    $selectedAngle === 0
+                        ? await getZeroFile()
+                        : await getAngleFile($selectedAngle);
+                if (!firstResponse) {
+                    generating = false;
+                    toastMessage.set("Error fetching the audio file.");
+                    throw new Error("No firstResponse provided.");
+                }
+                if (!firstResponse.streaming_strategy) {
+                    generating = false;
+                    throw new Error("No streaming strategy provided.");
+                }
+                generating = false;
+
+                const arrayBuffer =
+                    firstResponse.body instanceof Uint8Array
+                        ? (firstResponse.body.buffer.slice(0) as ArrayBuffer)
+                        : new Uint8Array(firstResponse.body).buffer.slice(0);
+
+                chunkQueue.push(arrayBuffer);
+
+                tryAppendNextChunk(sourceBuffer);
+
+                const streamingStrategy = firstResponse.streaming_strategy[0];
+
+                if (!streamingStrategy) throw "No Streaming Strategy!";
+
+                loadSubsequentChunks(streamingStrategy);
+            }
+
+            function tryAppendNextChunk(sourceBuffer: SourceBuffer) {
+                // If the sourceBuffer is not updating and we have chunks in the queue, append the next one.
+                if (!sourceBuffer.updating && chunkQueue.length > 0) {
+                    isAppending = true;
+                    const nextChunk = chunkQueue.shift(); // Get the first chunk in the queue
+                    if (!nextChunk) return;
+                    sourceBuffer.appendBuffer(nextChunk);
+                } else {
+                    isAppending = false;
+                }
+            }
+
+            async function loadSubsequentChunks(
+                streamingStrategy: StreamingStrategy,
+            ) {
+                let streamingToken = streamingStrategy.Callback.token;
+
+                if (!streamingToken) throw "No Streaming Töggel!";
+                const nTokens = streamingStrategy.Callback.token.chunks;
+
+                if (nTokens === undefined)
+                    throw new Error("No tokens provided.");
+
+                let currentlyDownloaded = 1 / nTokens;
+                // First chunk is already loaded
+                loadingProgress.target = currentlyDownloaded;
+
+                // Load chunks sequentially
+                for (let i = 0; i < nTokens - 1; i++) {
+                    const chunkToken = {
+                        angle: streamingToken?.angle!,
+                        auth_token: streamingToken?.auth_token!,
+                        chunk_index: i,
+                        chunks: streamingToken?.chunks!,
+                    };
+
+                    const result =
+                        await backend.http_request_streaming_callback(
+                            chunkToken,
+                        );
+
+                    // Convert chunk to ArrayBuffer and add to queue
+                    const chunkArrayBuffer =
+                        result.body instanceof Uint8Array
+                            ? (result.body.buffer.slice(0) as ArrayBuffer)
+                            : new Uint8Array(result.body).buffer.slice(0);
+
+                    chunkQueue.push(chunkArrayBuffer);
+
+                    // Update progress
+                    currentlyDownloaded += 1 / nTokens;
+                    loadingProgress.target = currentlyDownloaded;
+
+                    // Try to append this chunk
+                    tryAppendNextChunk(sourceBuffer);
+                }
+            }
+
+            // Listen for the 'updateend' event to append the next chunk in the queue
+            sourceBuffer.addEventListener("updateend", function () {
+                isAppending = false;
+                tryAppendNextChunk(sourceBuffer);
+            });
+
+            // Handle errors on the SourceBuffer
+            sourceBuffer.addEventListener("error", function (e) {
+                console.error("SourceBuffer error:", e);
+            });
+            // Handle errors on the MediaSource
+            mediaSource.addEventListener("sourceended", function (e) {
+                console.log("MediaSource ended.");
+            });
+            mediaSource.addEventListener("sourceclose", function (e) {
+                console.log("MediaSource closed.");
+            });
+        });
+    }
 
     // Fetch audio file based on angle
     async function fetchAudioFileOrPlayPause() {

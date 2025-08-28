@@ -7,6 +7,11 @@ declare global {
         // interface Locals {}
         // interface PageData {}
         // interface Platform {}
+
+        
+    }
+    interface Window {
+        ManagedMediaSource?: typeof MediaSource;
     }
 }
 
