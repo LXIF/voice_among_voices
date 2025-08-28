@@ -231,7 +231,30 @@
 
         encoderInitialized = true;
 
-        mediaRecorder = new AudioRecorder(stream, {
+        // Add audio context with limiter
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+
+        // Create a simple limiter using a WaveShaperNode
+        const limiter = audioContext.createWaveShaper();
+
+        // Limiter curve - prevents values above ~0.8 from going higher
+        const curveLength = 44100;
+        const curve = new Float32Array(curveLength);
+        for (let i = 0; i < curveLength; i++) {
+            const x = (i * 2) / curveLength - 1;
+            curve[i] = Math.tanh(x * 2) * 0.8; // 0.8 = -2dB headroom
+        }
+        limiter.curve = curve;
+        limiter.oversample = "4x";
+
+        source.connect(limiter);
+
+        // Create new stream from limited audio
+        const dest = audioContext.createMediaStreamDestination();
+        limiter.connect(dest);
+
+        mediaRecorder = new AudioRecorder(dest.stream, {
             mimeType: "audio/wav",
         });
 

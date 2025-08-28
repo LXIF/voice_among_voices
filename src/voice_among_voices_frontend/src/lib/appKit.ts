@@ -43,14 +43,12 @@ const initializeStores = () => {
                     metadata: {
                         name: "Voice Among Voices",
                         description: "Voice Among Voices",
-                        url: "voiceamongvoic.es",
+                        url: "https://voiceamongvoic.es",
                         icons: [],
                     },
                     projectId,
                     features: {
                         analytics: true,
-                        email: false,
-                        socials: [],
                     },
                 });
                 set(modal);

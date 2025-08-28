@@ -23,6 +23,5 @@
     "src/voice_among_voices_frontend"
   ],
   "dependencies": {
-    "@dfinity/utils": "^2.12.0"
   }
 }
