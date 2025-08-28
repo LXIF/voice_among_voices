@@ -31,13 +31,13 @@ pub fn get_sample_length(audio_data: &Vec<u8>) -> Result<(u32, f64), AddVoiceNod
 /// Generates the audio file per-angle
 /// Imagine taking a tangent of the world-circle and dragging it across the world-circle
 /// Whichever sample it hits gets played
-pub fn generate_angle_file(
+pub fn generate_angle_file_chunks(
     angle: f64,
     nodes: &VoiceNodeLocalMemory,
     samples: &AudioSampleMemory,
     audio_params: &AudioParameters,
     sim_params: &SimulationParameters,
-) -> Result<Vec<u8>, hound::Error> {
+) -> Result<Vec<Vec<u8>>, hound::Error> {
     // generate sample positions
     let sample_positions = generate_normalized_sample_positions(nodes, sim_params, angle);
     // generate stereo sample vectors
@@ -48,12 +48,13 @@ pub fn generate_angle_file(
 
     // generate resulting file
 
-    let angle_file = write_stereo_wav_to_vec(&audio_params, &left_samples, &right_samples);
+    let angle_file_chunks =
+        write_stereo_wav_chunks_to_vec(&audio_params, &left_samples, &right_samples);
 
-    angle_file
+    angle_file_chunks
 }
 
-pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<u8>, hound::Error>> {
+pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<Vec<u8>>, hound::Error>> {
     let is_finished = wip.last_processed
         == wip
             .sample_positions
@@ -66,7 +67,7 @@ pub fn vectors_to_maybe_file(wip: &WipAngleVectors) -> Option<Result<Vec<u8>, ho
             })
             .sample_id;
     if is_finished {
-        return Some(write_stereo_wav_to_vec(
+        return Some(write_stereo_wav_chunks_to_vec(
             &AUDIO_PARAMETERS,
             &wip.left_samples,
             &wip.right_samples,
@@ -523,14 +524,19 @@ pub fn read_wav(audio_data: &Vec<u8>) -> Vec<i16> {
     result
 }
 
-fn write_stereo_wav_to_vec(
+fn write_stereo_wav_chunks_to_vec(
     audio_params: &AudioParameters,
     left_samples: &Vec<i16>,
     right_samples: &Vec<i16>,
-) -> Result<Vec<u8>, hound::Error> {
+) -> Result<Vec<Vec<u8>>, hound::Error> {
     assert_eq!(left_samples.len(), right_samples.len());
 
     let sample_rate = audio_params.sample_rate;
+    let total_samples = left_samples.len() + right_samples.len();
+    let channel_samples = total_samples / 2;
+    let total_samples_per_chunk = audio_params.chunk_size - 44;
+    let channel_samples_per_chunk = total_samples_per_chunk / 2;
+    let n_chunks = total_samples.div_ceil(total_samples_per_chunk);
 
     let spec = hound::WavSpec {
         channels: 2,
@@ -539,23 +545,36 @@ fn write_stereo_wav_to_vec(
         sample_format: hound::SampleFormat::Int,
     };
 
-    let mut buffer = Cursor::new(Vec::new());
-    let mut writer = WavWriter::new(&mut buffer, spec)?;
-    let mut sample_writer = writer.get_i16_writer((left_samples.len() * 2) as u32);
+    let mut chunks: Vec<Vec<u8>> = Vec::with_capacity(n_chunks);
 
-    for (&left_sample, &right_sample) in left_samples.iter().zip(right_samples.iter()) {
-        unsafe {
-            sample_writer.write_sample_unchecked(left_sample);
-            sample_writer.write_sample_unchecked(right_sample);
+    for chunk_index in 0..n_chunks {
+        let start_sample = chunk_index * channel_samples_per_chunk;
+        let end_sample = std::cmp::min(start_sample + channel_samples_per_chunk, channel_samples);
+
+        // Create a new buffer and writer for each chunk
+        let mut buffer = Cursor::new(Vec::new());
+        let mut writer = WavWriter::new(&mut buffer, spec)?;
+        let chunk_sample_count = end_sample - start_sample;
+        let mut sample_writer = writer.get_i16_writer((chunk_sample_count * 2) as u32);
+
+        // Write samples for this chunk
+        for sample_idx in start_sample..end_sample {
+            if sample_idx < left_samples.len() && sample_idx < right_samples.len() {
+                unsafe {
+                    sample_writer.write_sample_unchecked(left_samples[sample_idx]);
+                    sample_writer.write_sample_unchecked(right_samples[sample_idx]);
+                }
+            }
         }
+
+        sample_writer.flush()?;
+        writer.finalize()?;
+
+        let chunk_wav_data = buffer.into_inner();
+        chunks.push(chunk_wav_data);
     }
 
-    sample_writer.flush()?;
-    writer.finalize()?;
-
-    let wav_data = buffer.into_inner();
-
-    Ok(wav_data)
+    Ok(chunks)
 }
 
 pub fn write_mono_wav_to_vec(

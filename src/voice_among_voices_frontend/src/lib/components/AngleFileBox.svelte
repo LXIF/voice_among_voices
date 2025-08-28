@@ -49,6 +49,8 @@
     let generating = $state(false);
 
     function getMediaSource() {
+        console.log(window.MediaSource);
+        console.log(window.MediaSource.isTypeSupported(mimeType));
         if (
             window.ManagedMediaSource &&
             window.ManagedMediaSource.isTypeSupported(mimeType)
@@ -111,6 +113,8 @@
                 chunkQueue.push(arrayBuffer);
 
                 tryAppendNextChunk(sourceBuffer);
+
+                setTimeout(() => audioElement?.play(), 100);
 
                 const streamingStrategy = firstResponse.streaming_strategy[0];
 
@@ -402,7 +406,7 @@
     {:else}
         <Button
             class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
-            onclick={fetchAudioFileOrPlayPause}>Load</Button
+            onclick={fetchAudioPlayImmediately}>Load</Button
         >
     {/if}
     <h1
@@ -416,27 +420,25 @@
         <p class="error">{error}</p>
     {/if}
 
-    {#if audioURL}
-        <div>
-            <!-- Hidden audio element (no controls) -->
-            <audio
-                bind:this={audioElement}
-                ontimeupdate={onTimeUpdate}
-                onended={onEnded}
-                hidden
-            >
-                <source src={audioURL} type="audio/wav" />
-                Your browser does not support the audio element.
-            </audio>
+    <!-- {#if audioURL} -->
+    <div>
+        <!-- Hidden audio element (no controls) -->
+        <audio
+            bind:this={audioElement}
+            ontimeupdate={onTimeUpdate}
+            onended={onEnded}
+            hidden
+        >
+            <!-- <source type="audio/wav" /> -->
+            Your browser does not support the audio element.
+        </audio>
 
-            <!-- Download link for the audio -->
-            <Button class="z-10 w-min text-center text-lg "
-                ><a bind:this={downloadLink} href={audioURL} download>
-                    Download
-                </a>
-            </Button>
-        </div>
-    {/if}
+        <!-- Download link for the audio -->
+        <!-- <Button class="z-10 w-min text-center text-lg "
+            ><a bind:this={downloadLink} href={audioURL} download> Download </a>
+        </Button> -->
+    </div>
+    <!-- {/if} -->
 </div>
 
 <style>

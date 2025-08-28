@@ -65,7 +65,7 @@ pub const AUDIO_PARAMETERS: AudioParameters = AudioParameters {
     total_length_ms: 4 * 60 * 1000,
     max_sample_length_ms: 10_000,
     sample_rate: 44100,
-    chunk_size: 1024 * 1024,
+    chunk_size: 1000 * 1000,
     fade_ms: 30,
     n_process_per_call: 180,
 };
@@ -235,7 +235,7 @@ pub fn get_maybe_cached_angle_file_epoch(angle: u64) -> Option<u64> {
     })
 }
 
-pub fn get_maybe_cached_angle_file(angle: u64) -> Option<Vec<u8>> {
+pub fn get_maybe_cached_angle_file(angle: u64) -> Option<Vec<Vec<u8>>> {
     ANGLE_FILE_FILE_CACHE.with_borrow(|cache| {
         cache
             .get(&angle.try_into().expect("unexpected overflow"))
@@ -244,12 +244,12 @@ pub fn get_maybe_cached_angle_file(angle: u64) -> Option<Vec<u8>> {
     })
 }
 
-pub fn cache_angle_file(angle: u64, file: Vec<u8>) {
+pub fn cache_angle_file_chunks(angle: u64, file_chunks: Vec<Vec<u8>>) {
     VOICE_LOG.with_borrow(|log| {
         ANGLE_FILE_FILE_CACHE.with_borrow_mut(|cache| {
             cache.insert(
                 angle.try_into().expect("unexpected overflow"),
-                (file, log.len()),
+                (file_chunks, log.len()),
             )
         });
     });

@@ -3,9 +3,9 @@ use ic_cdk_timers::{clear_timer, TimerId};
 
 use crate::{
     audio::{generate_or_add_angle_vectors, vectors_to_maybe_file},
-    generate_angle_file, performance_counter, set_timer, split_into_chunks,
+    generate_angle_file_chunks, performance_counter, set_timer,
     storage::{
-        cache_angle_file, get_maybe_cached_angle_file, get_maybe_cached_angle_file_epoch,
+        cache_angle_file_chunks, get_maybe_cached_angle_file, get_maybe_cached_angle_file_epoch,
         ANGLE_FILE_EGRESS_TIMERS, ANGLE_FILE_WIP_CACHE, VOICE_LOG,
     },
     structs::{AudioSample, CensorshipError, MulticallResponse, StorableAudioSample},
@@ -26,10 +26,10 @@ const CHUNK_CACHE_TIMEOUT_SECONDS: u64 = 300;
 pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
     let beginning_cost = performance_counter(0);
 
-    let result: Vec<u8> = get_maybe_cached_angle_file(angle).unwrap_or_else(|| {
+    let result = get_maybe_cached_angle_file(angle).unwrap_or_else(|| {
         VOICE_NODES_MEMORY.with_borrow(|nodes| {
             SAMPLES_MEMORY.with_borrow(|samples_map| {
-                let file = generate_angle_file(
+                let file = generate_angle_file_chunks(
                     angle as f64,
                     nodes,
                     samples_map,
@@ -37,7 +37,7 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
                     &SIMULATION_PARAMETERS,
                 )
                 .unwrap(); // TODO: error handling
-                cache_angle_file(angle, file.clone());
+                cache_angle_file_chunks(angle, file.clone());
                 file
             })
         })
@@ -60,9 +60,7 @@ pub fn get_file_for_angle(angle: u64) -> HttpStreamingResponse {
     }
 }
 
-fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Vec<u8>) {
-    let chunks = split_into_chunks(file, &AUDIO_PARAMETERS);
-
+fn prepare_stream_file(chunk_files: Vec<Vec<u8>>, angle: u64) -> (StreamingCallbackToken, Vec<u8>) {
     // Clear old timers if still around
     with_egress_timers(|timers| {
         if let Some(old_timer_id) = timers.get(&angle) {
@@ -85,14 +83,14 @@ fn prepare_stream_file(file: Vec<u8>, angle: u64) -> (StreamingCallbackToken, Ve
 
     with_egress_cache_mut(|cache| {
         with_egress_timers_mut(|timers| {
-            cache.insert(angle, chunks.clone());
+            cache.insert(angle, chunk_files.clone());
             timers.insert(angle, timer_id);
         });
     });
 
-    let total_chunks = chunks.len() as u32;
+    let total_chunks = chunk_files.len() as u32;
 
-    let first_chunk = chunks.get(0).cloned().unwrap_or_default();
+    let first_chunk = chunk_files.get(0).cloned().unwrap_or_default();
     let token = StreamingCallbackToken {
         angle: angle as u32,
         chunk_index: 0,
@@ -141,11 +139,10 @@ fn try_get_chunk_response_and_refresh_timers(
     })
 }
 
-fn set_zero_file(new_file: Vec<u8>) {
+fn set_zero_file(new_file_chunks: Vec<Vec<u8>>) {
     ZERO_DEGREE_FILE_CACHE.with_borrow_mut(|cache| {
-        let chunks = split_into_chunks(new_file, &AUDIO_PARAMETERS);
         cache.clear();
-        cache.extend(chunks.clone());
+        cache.extend(new_file_chunks.clone());
     })
 }
 
@@ -170,8 +167,8 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                 });
             } else {
                 // OTHERWISE WE REPOPULATE THE CHUNK CACHE
-                if let Some(file) = get_maybe_cached_angle_file(angle) {
-                    let (token, first_chunk) = prepare_stream_file(file, angle);
+                if let Some(file_chunks) = get_maybe_cached_angle_file(angle) {
+                    let (token, first_chunk) = prepare_stream_file(file_chunks, angle);
 
                     return MulticallResponse::HttpStreamingResponse(HttpStreamingResponse {
                         status_code: 200,
@@ -215,7 +212,7 @@ pub fn get_file_for_angle_multicall(angle: u64) -> MulticallResponse {
                             return MulticallResponse::ZeroFinished;
                         }
 
-                        cache_angle_file(angle, result.clone());
+                        cache_angle_file_chunks(angle, result.clone());
 
                         let (token, first_chunk) = prepare_stream_file(result, angle);
 
