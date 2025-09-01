@@ -1,4 +1,6 @@
+import { get } from "svelte/store";
 import type { ColliderCoordinate } from "../../../../declarations/voice_among_voices_backend/voice_among_voices_backend.did";
+import { audioParameters } from "$lib/state/uxState";
 
 export function convertColliderCoordinatesToFloat32Array(
     coordinates: ColliderCoordinate[],
@@ -55,8 +57,10 @@ export function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
 }
 
 export function encodeWav(audioBuffer: AudioBuffer) {
+    const audioParams = get(audioParameters);
+    if(!audioParams) throw "No audio params";
     const numberOfChannels = audioBuffer.numberOfChannels;
-    const sampleRate = audioBuffer.sampleRate;
+    const sampleRate = audioParams.sample_rate;
     const numSamples = audioBuffer.length;
 
     // Create an empty buffer to hold the WAV file data
@@ -107,13 +111,39 @@ function writeString(view: DataView, offset: number, string: string) {
 
 export function handleBackendAudioData(audioData: Uint8Array): Promise<string> {
     return new Promise((resolve, reject) => {
-        const arrayBuffer = audioData.buffer;
-        const audioBlob = new Blob([arrayBuffer as ArrayBuffer], {
-            type: "audio/wav",
-        });
-
-        const audioURL = window.URL.createObjectURL(audioBlob);
-        resolve(audioURL);
+        // Create audio context to ensure proper stereo handling
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioParams = get(audioParameters);
+        if(!audioParams) throw "No audio params";
+        
+        // Decode the audio data
+        audioContext.decodeAudioData(audioData.buffer as ArrayBuffer)
+            .then(audioBuffer => {
+                // Create a new audio buffer to ensure stereo
+                const stereoBuffer = audioContext.createBuffer(
+                    2, // Force 2 channels
+                    audioBuffer.length,
+                    audioParams.sample_rate
+                );
+                
+                // Copy left channel
+                const leftChannel = stereoBuffer.getChannelData(0);
+                leftChannel.set(audioBuffer.getChannelData(0));
+                
+                // Copy right channel if it exists, otherwise duplicate left
+                const rightChannel = stereoBuffer.getChannelData(1);
+                if (audioBuffer.numberOfChannels > 1) {
+                    rightChannel.set(audioBuffer.getChannelData(1));
+                } else {
+                    rightChannel.set(audioBuffer.getChannelData(0));
+                }
+                
+                // Convert back to WAV
+                const wavBlob = encodeWav(stereoBuffer);
+                const audioURL = window.URL.createObjectURL(wavBlob);
+                resolve(audioURL);
+            })
+            .catch(reject);
     });
 }
 
