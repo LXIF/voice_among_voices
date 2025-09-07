@@ -237,17 +237,17 @@
         <h1 class="h-10 w-min text-center text-2xl font-bold">Loading...</h1>
     {:else if audioURL && !isPlaying}
         <Button
-            class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
+            class="w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
             onclick={togglePlayPause}>Play</Button
         >
     {:else if isPlaying}
         <Button
-            class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
+            class="w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
             onclick={togglePlayPause}>Pause</Button
         >
     {:else}
         <Button
-            class="z-10 w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
+            class="w-min text-center text-4xl font-bold md:text-4xl lg:text-5xl"
             onclick={fetchAudioFileOrPlayPause}>Load</Button
         >
     {/if}
