@@ -154,7 +154,7 @@ export const getSections = () => [
             {
                 title: "Non Fungible Token",
                 content:
-                    "Non-Fungible Tokens (NFTs) are unique digital assets stored on a blockchain, used to represent ownership of a specific item—such as an artwork, a sound recording, or another digital object. In <i>VaV</i>, NFTs assign ownership of one of the 359 available angles, enabling holders to contribute their voices and actively participate in a collective artwork.<br/>If you cannot see the NFT in your wallet, you can import it using the Address 0x62B3B5Baaa2500c54BC0B26746d12B4852F5E318 and the angle number as ID on the BASE Mainnet.",
+                    "Non-Fungible Tokens (NFTs) are unique digital assets stored on a blockchain, used to represent ownership of a specific item—such as an artwork, a sound recording, or another digital object. In <i>VaV</i>, NFTs assign ownership of one of the 359 available angles, enabling holders to contribute their voices and actively participate in a collective artwork.<br/>If you cannot see the NFT in your wallet, you can import it using the Address 0xb32CEf004a828F0E2f87c6b188593f9cEd8FD01D and the angle number as ID on the BASE Mainnet.",
             },
         ],
     },
