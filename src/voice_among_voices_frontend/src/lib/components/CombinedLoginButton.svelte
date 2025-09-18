@@ -82,6 +82,7 @@
         console.log("Logging out of Voice among Voices!"); // somehow needs to be here lol
         isLoggingOut = true;
         if (!$appkitModal) throw "Appkit Modal not initialized!";
+        await $appkitModal.close();
         await $appkitModal.disconnect();
         $siwe!.clear();
         resetUxState();
