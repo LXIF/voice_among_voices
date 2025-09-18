@@ -88,6 +88,7 @@
         isLoggingOut = false;
         isLoggingIn = false;
         $applicationState = applicationStates.loggedOut;
+        localStorage.clear();
     }
 
     async function setSiweWalletClient() {
@@ -144,7 +145,9 @@
         }}
         closeOnOutsideClick
     >
-        Not connecting automatically?
+        You have connected your wallet, but you still need one more step to
+        finish logging in. If your wallet does not prompt you automatically,
+        click "finish logging in" below.
         <div class="m-2 mt-4 flex justify-between lg:min-w-96">
             <Button
                 class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
@@ -152,7 +155,7 @@
             >
             <Button
                 class="rounded-full border border-slate-950 px-4 py-2 dark:border-white"
-                onclick={loginSiwe}>Finish connecting</Button
+                onclick={loginSiwe}>Finish logging in</Button
             >
         </div>
     </Dialog>
