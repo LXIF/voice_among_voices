@@ -62,7 +62,7 @@ export const getSections = () => [
             {
                 title: "Community",
                 content:
-                    "Join our <i>VaV</i>-Community on <a class='underline' href='https://oc.app' target='_blank'>OpenChat</a> and share your experiences, thoughts, and questions.",
+                    "Join our <i>VaV</i>-Community on <a class='underline' href='https://oc.app' target='_blank'>Telegram</a> and share your experiences, thoughts, and questions.",
             },
             {
                 title: "Copyright & Privacy",
